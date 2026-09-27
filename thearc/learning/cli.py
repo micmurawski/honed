@@ -8,16 +8,16 @@ from .models import SearchFilters, SearchQuery, SourceConfig
 from .service import HistoryService
 
 
-@click.group()
-@click.option("--index", type=click.Path(path_type=Path), default=Path("~/.thearc/history.sqlite"), show_default=True)
+@click.group(name="sessions")
+@click.option("--index", type=click.Path(path_type=Path), default=Path("~/.thearc/learning.sqlite"), show_default=True)
 @click.pass_context
-def history(ctx, index):
+def sessions(ctx, index):
     """Index and search local agent transcripts."""
     ctx.obj = index
 
 
-@history.command("index")
-@click.option("--source", required=True, type=click.Choice(["pi", "codex", "claude"]))
+@sessions.command("index")
+@click.option("--source", required=True, type=click.Choice(["pi", "codex", "claude", "antigravity"]))
 @click.option("--format", "source_format", type=click.Choice(["native", "dataclaw"]), default="native")
 @click.option("--root", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.option("--source-id", help="Stable identity for this source; defaults to harness and absolute root.")
@@ -36,7 +36,7 @@ def index_command(index, source, root, source_id, source_format):
         click.echo(service.sync().model_dump_json(indent=2))
 
 
-@history.command("sync")
+@sessions.command("sync")
 @click.pass_obj
 def sync_command(index):
     """Refresh all previously registered sources."""
@@ -44,10 +44,10 @@ def sync_command(index):
         click.echo(service.sync().model_dump_json(indent=2))
 
 
-@history.command("search")
+@sessions.command("search")
 @click.argument("text")
 @click.option("--mode", type=click.Choice(["literal", "lexical"]), default="literal")
-@click.option("--harness", multiple=True, type=click.Choice(["pi", "codex", "claude"]))
+@click.option("--harness", multiple=True, type=click.Choice(["pi", "codex", "claude", "antigravity"]))
 @click.option("--kind", multiple=True)
 @click.option("--action", multiple=True)
 @click.option("--ignore-case", is_flag=True)
@@ -68,7 +68,7 @@ def search_command(index, text, mode, harness, kind, action, ignore_case, limit,
         click.echo(service.search(query).model_dump_json(indent=2))
 
 
-@history.command("show")
+@sessions.command("show")
 @click.argument("event_id")
 @click.option("--context", type=click.IntRange(0, 1000), default=3)
 @click.pass_obj
@@ -83,7 +83,7 @@ def show_command(index, event_id, context):
             click.echo(event.model_dump_json())
 
 
-@history.command("trace")
+@sessions.command("trace")
 @click.argument("run_id")
 @click.pass_obj
 def trace_command(index, run_id):

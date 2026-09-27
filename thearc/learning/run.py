@@ -122,16 +122,18 @@ class AdaptationRun:
                 )
             )
 
-    def complete(self, state: dict[str, Any], *, node: str = "update") -> None:
-        self._completed = True
+    def complete(
+        self, state: dict[str, Any], *, node: str = "update", completed_nodes: list[str] | None = None,
+    ) -> None:
         if self.journal:
             self.journal.record(self.run_id, "adaptation_completed", node=node, **state)
         self.save(
             "completed",
             node,
             state,
-            completed_nodes=["query", "materialize", "reflection", "curation", "update"],
+            completed_nodes=completed_nodes or ["query", "materialize", "reflection", "curation", "update"],
         )
+        self._completed = True
 
     def __exit__(self, exc_type, exc_value, traceback) -> bool:
         if exc_type is not None and not self._completed:

@@ -130,6 +130,11 @@ class HistoryService:
         with self.connection:
             self.connection.execute("INSERT OR IGNORE INTO sources VALUES (?,?)", (source.id, source.model_dump_json()))
 
+    def list_sources(self) -> list[SourceConfig]:
+        """Read registered roots without scanning or modifying the source corpus."""
+        return [SourceConfig.model_validate_json(row[0]) for row in
+                self.connection.execute("SELECT config FROM sources ORDER BY id")]
+
     def sync(self) -> SyncReport:
         report = SyncReport()
         sources = self.connection.execute("SELECT config FROM sources ORDER BY id").fetchall()

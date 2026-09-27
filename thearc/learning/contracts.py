@@ -56,38 +56,6 @@ class ContextSnapshot(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class ChangeIntent(BaseModel):
-    """A typed proposed mutation before validation or commit."""
-
-    id: str
-    resource_kind: str
-    resource_name: str
-    operation: Literal["add", "update", "delete", "increment_rank"]
-    payload: dict[str, Any] = Field(default_factory=dict)
-    reason: str = Field(min_length=1)
-    evidence_ids: list[str] = Field(default_factory=list)
-    reflection_ids: list[str] = Field(default_factory=list)
-    confidence: float | None = Field(default=None, ge=0, le=1)
-
-
-class ChangeSet(BaseModel):
-    id: str
-    base_context_revision: str
-    changes: list[ChangeIntent] = Field(default_factory=list)
-    curator_model: str | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class CommitResult(BaseModel):
-    change_set_id: str
-    context_revision_before: str
-    context_revision_after: str
-    applied_change_ids: list[str] = Field(default_factory=list)
-    rejected_change_ids: list[str] = Field(default_factory=list)
-    journal_entry_ids: list[str] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
-
-
 class RunCheckpoint(BaseModel):
     run_id: str
     flow_name: str

@@ -1,43 +1,40 @@
-"""Unified local history search for Pi, Codex, and Claude Code."""
+"""Session-driven agent learning: trace indexing, reflection, evaluation, and ACE."""
 
 from .ace import (
     AceConfig,
-    AceContext,
     AcePipeline,
     AceQuery,
     AceRunResult,
     Curation,
     HistorySessionMaterializer,
     HistorySessionSelector,
-    Playbook,
     Reflection,
+    ReflectionEvidence,
+    ReflectionItem,
+    ReflectionRating,
     SessionBundle,
     UpdateResult,
+    apply_curations,
     build_ace_flow,
 )
 from .ace_toy import (
     ChangeJournal,
     ChangeReason,
-    FileResourceStore,
     JournalEntry,
-    RankOperation,
     RankProposal,
-    ReasonedResourceStore,
     ToyCurator,
     ToyReflector,
-    ToyUpdater,
     run_toy_flow,
 )
+from .codex_reflector import CodexReflector, CodexReflectorConfig, ReflectionError
 from .contracts import (
-    ChangeIntent,
-    ChangeSet,
-    CommitResult,
     ContextSnapshot,
     Episode,
     EpisodeOutcome,
     EpisodeQuery,
     RunCheckpoint,
 )
+from .evaluation import EvaluationResult, TaskScore, compare_agents
 from .models import (
     Event,
     Run,
@@ -51,38 +48,38 @@ from .models import (
     SourceReference,
     SyncReport,
 )
+from .reflections import build_reflection_flow, run_reflections
 from .run import AdaptationRun, CheckpointStore, RunJournal, RunJournalRecord
 from .service import HistoryService
 
 __all__ = [
     "AceConfig",
-    "AceContext",
     "AcePipeline",
     "AceQuery",
     "AceRunResult",
     "AdaptationRun",
-    "ChangeIntent",
     "ChangeJournal",
     "ChangeReason",
-    "ChangeSet",
     "CheckpointStore",
-    "CommitResult",
+    "CodexReflector",
+    "CodexReflectorConfig",
     "ContextSnapshot",
     "Curation",
     "Episode",
     "EpisodeOutcome",
     "EpisodeQuery",
+    "EvaluationResult",
     "Event",
-    "FileResourceStore",
     "HistoryService",
     "HistorySessionMaterializer",
     "HistorySessionSelector",
     "JournalEntry",
-    "Playbook",
-    "RankOperation",
     "RankProposal",
-    "ReasonedResourceStore",
     "Reflection",
+    "ReflectionError",
+    "ReflectionEvidence",
+    "ReflectionItem",
+    "ReflectionRating",
     "Run",
     "RunCheckpoint",
     "RunJournal",
@@ -97,10 +94,14 @@ __all__ = [
     "SourceConfig",
     "SourceReference",
     "SyncReport",
+    "TaskScore",
     "ToyCurator",
     "ToyReflector",
-    "ToyUpdater",
     "UpdateResult",
+    "apply_curations",
     "build_ace_flow",
+    "build_reflection_flow",
+    "compare_agents",
+    "run_reflections",
     "run_toy_flow",
 ]
