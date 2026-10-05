@@ -1,0 +1,5 @@
+[93m[1m! [0mpermission requested: external_directory (/System/Volumes/Data/Users/micmur/SHELL/geosigns-si-wbsds-token-service/.venv/lib/python3.11/site-packages/starlette/*); auto-rejecting
+[93m[1m! [0mpermission requested: external_directory (/System/Volumes/Data/Users/micmur/SHELL/geosigns-si-wbsds-token-service/.venv/lib/python3.11/site-packages/starlette/*); auto-rejecting
+[93m[1m! [0mpermission requested: external_directory (/Users/micmur/GITHUB/thearc/.venv/lib/python3.13/site-packages/starlette/*); auto-rejecting
+[93m[1m! [0mpermission requested: external_directory (/Users/micmur/GITHUB/thearc/.venv/lib/python3.13/site-packages/starlette/*); auto-rejecting
+[93m[1m! [0mpermission requested: external_directory (/Users/micmur/GITHUB/thearc/logs/opencode-traning/worktrees/87608ada56cb4d3d3d8a26d5e766200795/fastapi/*); auto-rejecting

@@ -1,0 +1,27 @@
+diff --git a/fastapi/exception_handlers.py b/fastapi/exception_handlers.py
+index 475dd7bdd..b46842fa4 100644
+--- a/fastapi/exception_handlers.py
++++ b/fastapi/exception_handlers.py
+@@ -20,9 +20,12 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> Respon
+ async def request_validation_exception_handler(
+     request: Request, exc: RequestValidationError
+ ) -> JSONResponse:
++    errors = exc.errors()
++    for error in errors:
++        error["code"] = str(error.get("type", "")).upper().replace(".", "_")
+     return JSONResponse(
+         status_code=422,
+-        content={"detail": jsonable_encoder(exc.errors())},
++        content={"detail": jsonable_encoder(errors)},
+     )
+ 
+ 
+diff --git a/graphify-out/cache/last_query_stamp b/graphify-out/cache/last_query_stamp
+index 0a0b88be1..d911b169a 100644
+--- a/graphify-out/cache/last_query_stamp
++++ b/graphify-out/cache/last_query_stamp
+@@ -1 +1 @@
+-1790438836.555423
+\ No newline at end of file
++1791167114.940732
+\ No newline at end of file

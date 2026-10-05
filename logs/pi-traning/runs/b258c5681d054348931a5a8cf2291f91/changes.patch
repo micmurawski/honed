@@ -1,0 +1,68 @@
+diff --git a/fastapi/applications.py b/fastapi/applications.py
+index b5fc76d16..64f5a0655 100644
+--- a/fastapi/applications.py
++++ b/fastapi/applications.py
+@@ -1,4 +1,5 @@
+ import os
++import uuid
+ from collections.abc import Awaitable, Callable, Coroutine, Sequence
+ from enum import Enum
+ from typing import Annotated, Any, Literal, TypeVar
+@@ -39,6 +40,23 @@ from typing_extensions import deprecated
+ AppType = TypeVar("AppType", bound="FastAPI")
+ 
+ 
++class RequestIDMiddleware(BaseHTTPMiddleware):
++    """
++    Middleware that generates a unique request ID for each incoming HTTP request,
++    exposes it as `request.state.request_id`, and adds it to the response as the
++    `X-Request-ID` header.
++    """
++
++    async def dispatch(
++        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
++    ) -> Response:
++        request_id = str(uuid.uuid4())
++        request.state.request_id = request_id
++        response = await call_next(request)
++        response.headers["X-Request-ID"] = request_id
++        return response
++
++
+ class FastAPI(Starlette):
+     """
+     `FastAPI` app class, the main entrypoint to use FastAPI.
+@@ -860,6 +878,21 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        add_request_id_header: Annotated[
++            bool,
++            Doc(
++                """
++                Whether to automatically add a request ID to each incoming request.
++
++                When `True`, a middleware is added that generates a UUID4 for each
++                incoming request, makes it available as `request.state.request_id`,
++                and sets it as the `X-Request-ID` header on the response. This is
++                useful for tracing and correlating logs across services.
++
++                When `False` (the default), no request ID middleware is added.
++                """
++            ),
++        ] = False,
+         **extra: Annotated[
+             Any,
+             Doc(
+@@ -1014,6 +1047,11 @@ class FastAPI(Starlette):
+         self.user_middleware: list[Middleware] = (
+             [] if middleware is None else list(middleware)
+         )
++        if add_request_id_header:
++            # Insert at the beginning so that the request ID is available to all
++            # subsequent user middlewares and is set on the response before any
++            # other user middleware can modify it.
++            self.user_middleware.insert(0, Middleware(RequestIDMiddleware))
+         self.middleware_stack: ASGIApp | None = None
+         self.setup()
+ 

@@ -1,0 +1,291 @@
+diff --git a/fastapi/applications.py b/fastapi/applications.py
+index b5fc76d16..31d61ea3b 100644
+--- a/fastapi/applications.py
++++ b/fastapi/applications.py
+@@ -1611,6 +1611,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        strict_slashes: Annotated[
++            bool | DefaultPlaceholder,
++            Doc(
++                """
++                The `strict_slashes` value to use for the included router.
++
++                When not specified, the `strict_slashes` value of the included
++                router is used, so the router's setting carries through to the
++                included routes.
++                """
++            ),
++        ] = Default(True),
+     ) -> None:
+         """
+         Include an `APIRouter` in the same app.
+@@ -1641,6 +1653,7 @@ class FastAPI(Starlette):
+             default_response_class=default_response_class,
+             callbacks=callbacks,
+             generate_unique_id_function=generate_unique_id_function,
++            strict_slashes=strict_slashes,
+         )
+ 
+     def get(
+diff --git a/fastapi/routing.py b/fastapi/routing.py
+index dc48a33d6..c9535a17c 100644
+--- a/fastapi/routing.py
++++ b/fastapi/routing.py
+@@ -937,6 +937,7 @@ class _APIRouteLike(Protocol):
+     openapi_extra: dict[str, Any] | None
+     generate_unique_id_function: Callable[[Any], str] | DefaultPlaceholder
+     strict_content_type: bool | DefaultPlaceholder
++    strict_slashes: bool | DefaultPlaceholder
+     tags: list[str | Enum]
+     responses: dict[int | str, dict[str, Any]]
+     name: str
+@@ -990,6 +991,7 @@ def _populate_api_route_state(
+         generate_unique_id
+     ),
+     strict_content_type: bool | DefaultPlaceholder = Default(True),
++    strict_slashes: bool | DefaultPlaceholder = Default(True),
+     stream_item_type: Any | None = None,
+ ) -> None:
+     route.path = path
+@@ -1012,6 +1014,7 @@ def _populate_api_route_state(
+     route.openapi_extra = openapi_extra
+     route.generate_unique_id_function = generate_unique_id_function
+     route.strict_content_type = strict_content_type
++    route.strict_slashes = strict_slashes
+     route.tags = tags or []
+     route.responses = responses or {}
+     route.name = get_name(endpoint) if name is None else name
+@@ -1143,6 +1146,7 @@ class APIRoute(routing.Route):
+     openapi_extra: dict[str, Any] | None
+     generate_unique_id_function: Callable[[Any], str] | DefaultPlaceholder
+     strict_content_type: bool | DefaultPlaceholder
++    strict_slashes: bool | DefaultPlaceholder
+     tags: list[str | Enum]
+     responses: dict[int | str, dict[str, Any]]
+     unique_id: str
+@@ -1189,6 +1193,7 @@ class APIRoute(routing.Route):
+         generate_unique_id_function: Callable[["APIRoute"], str]
+         | DefaultPlaceholder = Default(generate_unique_id),
+         strict_content_type: bool | DefaultPlaceholder = Default(True),
++        strict_slashes: bool | DefaultPlaceholder = Default(True),
+     ) -> None:
+         _populate_api_route_state(
+             cast(_APIRouteLike, self),
+@@ -1219,6 +1224,7 @@ class APIRoute(routing.Route):
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
+             strict_content_type=strict_content_type,
++            strict_slashes=strict_slashes,
+         )
+         self.app = request_response(self.get_route_handler())
+ 
+@@ -1300,6 +1306,9 @@ class _RouterIncludeContext:
+     strict_content_type: bool | DefaultPlaceholder = field(
+         default_factory=lambda: Default(True)
+     )
++    strict_slashes: bool | DefaultPlaceholder = field(
++        default_factory=lambda: Default(True)
++    )
+     dependency_overrides_provider: Any | None = None
+ 
+     @classmethod
+@@ -1320,6 +1329,7 @@ class _RouterIncludeContext:
+         include_in_schema: bool = True,
+         generate_unique_id_function: Callable[[APIRoute], str]
+         | DefaultPlaceholder = Default(generate_unique_id),
++        strict_slashes: bool | DefaultPlaceholder = Default(True),
+     ) -> "_RouterIncludeContext":
+         return cls(
+             included_router=included_router,
+@@ -1337,6 +1347,9 @@ class _RouterIncludeContext:
+                 generate_unique_id_function, parent_router.generate_unique_id_function
+             ),
+             strict_content_type=parent_router.strict_content_type,
++            strict_slashes=get_value_or_default(
++                strict_slashes, included_router.strict_slashes
++            ),
+             dependency_overrides_provider=parent_router.dependency_overrides_provider,
+         )
+ 
+@@ -1363,6 +1376,9 @@ class _RouterIncludeContext:
+             strict_content_type=get_value_or_default(
+                 child_context.strict_content_type, self.strict_content_type
+             ),
++            strict_slashes=get_value_or_default(
++                child_context.strict_slashes, self.strict_slashes
++            ),
+             dependency_overrides_provider=self.dependency_overrides_provider,
+         )
+ 
+@@ -1402,6 +1418,9 @@ class _EffectiveRouteContext:
+     strict_content_type: bool | DefaultPlaceholder = field(
+         default_factory=lambda: Default(True)
+     )
++    strict_slashes: bool | DefaultPlaceholder = field(
++        default_factory=lambda: Default(True)
++    )
+     tags: list[str | Enum] = field(default_factory=list)
+     responses: dict[int | str, dict[str, Any]] = field(default_factory=dict)
+     name: str = ""
+@@ -1473,6 +1492,11 @@ class _EffectiveRouteContext:
+                 include_context.included_router.strict_content_type,
+                 include_context.strict_content_type,
+             ),
++            strict_slashes=get_value_or_default(
++                route.strict_slashes,
++                include_context.included_router.strict_slashes,
++                include_context.strict_slashes,
++            ),
+             stream_item_type=route.stream_item_type,
+         )
+         return context
+@@ -2516,6 +2540,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(True),
++        strict_slashes: Annotated[
++            bool,
++            Doc(
++                """
++                Whether to strictly match the trailing slash on incoming requests.
++
++                When `True` (the default), a request for `/items/` will be redirected
++                to `/items` (or vice versa) when only the alternate form is
++                registered, matching the standard Starlette behavior.
++
++                When `False`, a request for `/items` or `/items/` will match either
++                form of the registered route without redirecting, returning the
++                endpoint response directly.
++                """
++            ),
++        ] = True,
+     ) -> None:
+         # Determine the lifespan context to use
+         if lifespan is None:
+@@ -2531,7 +2571,7 @@ class APIRouter(routing.Router):
+ 
+         super().__init__(
+             routes=routes,
+-            redirect_slashes=redirect_slashes,
++            redirect_slashes=redirect_slashes and strict_slashes,
+             default=default,
+             lifespan=lifespan_context,
+         )
+@@ -2563,6 +2603,7 @@ class APIRouter(routing.Router):
+         self.default_response_class = default_response_class
+         self.generate_unique_id_function = generate_unique_id_function
+         self.strict_content_type = strict_content_type
++        self.strict_slashes = strict_slashes
+         self._routes_version = 0
+         self._low_priority_routes: list[BaseRoute] = []
+         self._frontend_routes: _FrontendRouteGroup | None = None
+@@ -2743,20 +2784,42 @@ class APIRouter(routing.Router):
+             return
+ 
+         route_path = get_route_path(scope)
+-        if scope["type"] == "http" and self.redirect_slashes and route_path != "/":
+-            redirect_scope = dict(scope)
++        if scope["type"] == "http" and route_path != "/":
++            alternate_scope = dict(scope)
+             if route_path.endswith("/"):
+-                redirect_scope["path"] = redirect_scope["path"].rstrip("/")
++                alternate_scope["path"] = alternate_scope["path"].rstrip("/")
+             else:
+-                redirect_scope["path"] = redirect_scope["path"] + "/"
+-
+-            for route in self.routes:
+-                match, _ = route.matches(redirect_scope)
+-                if match != Match.NONE:
+-                    redirect_url = URL(scope=redirect_scope)
+-                    response = RedirectResponse(url=str(redirect_url))
+-                    await response(scope, receive, send)
+-                    return
++                alternate_scope["path"] = alternate_scope["path"] + "/"
++
++            if self.redirect_slashes:
++                for route in self.routes:
++                    match, child_scope = route.matches(alternate_scope)
++                    if match != Match.NONE:
++                        # If the matching route is an included router with
++                        # strict_slashes=False, dispatch directly to it instead
++                        # of redirecting. Use the alternate path so the included
++                        # router can match the route with the alternate slash
++                        # form.
++                        if (
++                            match == Match.FULL
++                            and isinstance(route, _IncludedRouter)
++                            and not route.original_router.strict_slashes
++                        ):
++                            scope["path"] = alternate_scope["path"]
++                            scope.update(child_scope)
++                            await route.handle(scope, receive, send)
++                            return
++                        redirect_url = URL(scope=alternate_scope)
++                        response = RedirectResponse(url=str(redirect_url))
++                        await response(scope, receive, send)
++                        return
++            elif not self.strict_slashes:
++                for route in self.routes:
++                    match, child_scope = route.matches(alternate_scope)
++                    if match == Match.FULL:
++                        scope.update(child_scope)
++                        await route.handle(scope, receive, send)
++                        return
+ 
+         (
+             low_priority_match,
+@@ -2917,6 +2980,7 @@ class APIRouter(routing.Router):
+         generate_unique_id_function: Callable[[APIRoute], str]
+         | DefaultPlaceholder = Default(generate_unique_id),
+         strict_content_type: bool | DefaultPlaceholder = Default(True),
++        strict_slashes: bool | DefaultPlaceholder = Default(True),
+     ) -> None:
+         route_class = route_class_override or self.route_class
+         responses = responses or {}
+@@ -2936,6 +3000,9 @@ class APIRouter(routing.Router):
+         current_generate_unique_id = get_value_or_default(
+             generate_unique_id_function, self.generate_unique_id_function
+         )
++        current_strict_slashes = get_value_or_default(
++            strict_slashes, self.strict_slashes
++        )
+         route = route_class(
+             self.prefix + path,
+             endpoint=endpoint,
+@@ -2966,6 +3033,7 @@ class APIRouter(routing.Router):
+             strict_content_type=get_value_or_default(
+                 strict_content_type, self.strict_content_type
+             ),
++            strict_slashes=current_strict_slashes,
+         )
+         self.routes.append(route)
+         self._mark_routes_changed()
+@@ -3241,6 +3309,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        strict_slashes: Annotated[
++            bool | DefaultPlaceholder,
++            Doc(
++                """
++                The `strict_slashes` value to use for the included router.
++
++                When not specified, the `strict_slashes` value of the included
++                router is used, so the router's setting carries through to the
++                included routes.
++                """
++            ),
++        ] = Default(True),
+     ) -> None:
+         """
+         Include another `APIRouter` in the same current `APIRouter`.
+@@ -3305,6 +3385,7 @@ class APIRouter(routing.Router):
+             deprecated=deprecated,
+             include_in_schema=include_in_schema,
+             generate_unique_id_function=generate_unique_id_function,
++            strict_slashes=strict_slashes,
+         )
+         self.routes.append(
+             _IncludedRouter(original_router=router, include_context=include_context)

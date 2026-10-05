@@ -1,0 +1,655 @@
+diff --git a/fastapi/applications.py b/fastapi/applications.py
+index b5fc76d16..eae9f30dc 100644
+--- a/fastapi/applications.py
++++ b/fastapi/applications.py
+@@ -1191,6 +1191,7 @@ class FastAPI(Starlette):
+         generate_unique_id_function: Callable[[routing.APIRoute], str] = Default(
+             generate_unique_id
+         ),
++        default_response_headers: dict[str, str] | None = None,
+     ) -> None:
+         self.router.add_api_route(
+             path,
+@@ -1217,6 +1218,7 @@ class FastAPI(Starlette):
+             name=name,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def frontend(
+@@ -1326,6 +1328,7 @@ class FastAPI(Starlette):
+         generate_unique_id_function: Callable[[routing.APIRoute], str] = Default(
+             generate_unique_id
+         ),
++        default_response_headers: dict[str, str] | None = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         def decorator(func: DecoratedCallable) -> DecoratedCallable:
+             self.router.add_api_route(
+@@ -1353,6 +1356,7 @@ class FastAPI(Starlette):
+                 name=name,
+                 openapi_extra=openapi_extra,
+                 generate_unique_id_function=generate_unique_id_function,
++                default_response_headers=default_response_headers,
+             )
+             return func
+ 
+@@ -1974,6 +1978,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP GET operation.
+@@ -2014,6 +2030,7 @@ class FastAPI(Starlette):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def put(
+@@ -2347,6 +2364,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP PUT operation.
+@@ -2392,6 +2421,7 @@ class FastAPI(Starlette):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def post(
+@@ -2725,6 +2755,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP POST operation.
+@@ -2770,6 +2812,7 @@ class FastAPI(Starlette):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def delete(
+@@ -3103,6 +3146,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP DELETE operation.
+@@ -3143,6 +3198,7 @@ class FastAPI(Starlette):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def options(
+@@ -3476,6 +3532,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP OPTIONS operation.
+@@ -3516,6 +3584,7 @@ class FastAPI(Starlette):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def head(
+@@ -3849,6 +3918,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP HEAD operation.
+@@ -3889,6 +3970,7 @@ class FastAPI(Starlette):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def patch(
+@@ -4222,6 +4304,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP PATCH operation.
+@@ -4267,6 +4361,7 @@ class FastAPI(Starlette):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def trace(
+@@ -4600,6 +4695,18 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP TRACE operation.
+@@ -4640,6 +4747,7 @@ class FastAPI(Starlette):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def websocket_route(
+diff --git a/fastapi/routing.py b/fastapi/routing.py
+index dc48a33d6..579c3d2e0 100644
+--- a/fastapi/routing.py
++++ b/fastapi/routing.py
+@@ -372,6 +372,19 @@ def _build_response_args(
+     return response_args
+ 
+ 
++def _apply_default_response_headers(
++    response: Response, default_response_headers: Mapping[str, str]
++) -> None:
++    """
++    Apply default response headers to ``response``, only filling in keys that
++    have not already been set explicitly by the route handler or by FastAPI
++    itself (e.g. ``Cache-Control`` on SSE responses).
++    """
++    for key, value in default_response_headers.items():
++        if key not in response.headers:
++            response.headers[key] = value
++
++
+ def get_request_handler(
+     dependant: Dependant,
+     body_field: ModelField | None = None,
+@@ -389,6 +402,7 @@ def get_request_handler(
+     strict_content_type: bool | DefaultPlaceholder = Default(True),
+     stream_item_field: ModelField | None = None,
+     is_json_stream: bool = False,
++    default_response_headers: Mapping[str, str] | None = None,
+ ) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+     assert dependant.call is not None, "dependant.call must be a function"
+     is_coroutine = _is_coroutine_callable(dependant.call)
+@@ -643,6 +657,8 @@ def get_request_handler(
+                 response.headers["Cache-Control"] = "no-cache"
+                 # For Nginx proxies to not buffer server sent events
+                 response.headers["X-Accel-Buffering"] = "no"
++                if default_response_headers:
++                    _apply_default_response_headers(response, default_response_headers)
+                 response.headers.raw.extend(solved_result.response.headers.raw)
+             elif is_json_stream:
+                 # Generator endpoint: stream as JSONL
+@@ -679,6 +695,8 @@ def get_request_handler(
+                     media_type="application/jsonl",
+                     **response_args,
+                 )
++                if default_response_headers:
++                    _apply_default_response_headers(response, default_response_headers)
+                 response.headers.raw.extend(solved_result.response.headers.raw)
+             elif _is_async_gen_callable(dependant.call) or _is_gen_callable(
+                 dependant.call
+@@ -701,6 +719,8 @@ def get_request_handler(
+                     status_code=status_code, solved_result=solved_result
+                 )
+                 response = actual_response_class(content=gen, **response_args)
++                if default_response_headers:
++                    _apply_default_response_headers(response, default_response_headers)
+                 response.headers.raw.extend(solved_result.response.headers.raw)
+             else:
+                 raw_response = await run_endpoint_function(
+@@ -712,6 +732,10 @@ def get_request_handler(
+                     if raw_response.background is None:
+                         raw_response.background = solved_result.background_tasks
+                     response = raw_response
++                    if default_response_headers:
++                        _apply_default_response_headers(
++                            response, default_response_headers
++                        )
+                 else:
+                     response_args = _build_response_args(
+                         status_code=status_code, solved_result=solved_result
+@@ -747,6 +771,10 @@ def get_request_handler(
+                         response = actual_response_class(content, **response_args)
+                     if not is_body_allowed_for_status_code(response.status_code):
+                         response.body = b""
++                    if default_response_headers:
++                        _apply_default_response_headers(
++                            response, default_response_headers
++                        )
+                     response.headers.raw.extend(solved_result.response.headers.raw)
+         if errors:
+             validation_error = RequestValidationError(
+@@ -956,6 +984,7 @@ class _APIRouteLike(Protocol):
+     body_field: ModelField | None
+     is_sse_stream: bool
+     is_json_stream: bool
++    default_response_headers: Mapping[str, str] | None
+ 
+ 
+ def _populate_api_route_state(
+@@ -991,6 +1020,7 @@ def _populate_api_route_state(
+     ),
+     strict_content_type: bool | DefaultPlaceholder = Default(True),
+     stream_item_type: Any | None = None,
++    default_response_headers: Mapping[str, str] | None = None,
+ ) -> None:
+     route.path = path
+     route.endpoint = endpoint
+@@ -1014,6 +1044,9 @@ def _populate_api_route_state(
+     route.strict_content_type = strict_content_type
+     route.tags = tags or []
+     route.responses = responses or {}
++    route.default_response_headers = (
++        dict(default_response_headers) if default_response_headers else None
++    )
+     route.name = get_name(endpoint) if name is None else name
+     route.path_regex, route.path_format, route.param_convertors = compile_path(path)
+     if methods is None:
+@@ -1157,6 +1190,7 @@ class APIRoute(routing.Route):
+     body_field: ModelField | None
+     is_sse_stream: bool
+     is_json_stream: bool
++    default_response_headers: dict[str, str] | None
+ 
+     def __init__(
+         self,
+@@ -1189,6 +1223,7 @@ class APIRoute(routing.Route):
+         generate_unique_id_function: Callable[["APIRoute"], str]
+         | DefaultPlaceholder = Default(generate_unique_id),
+         strict_content_type: bool | DefaultPlaceholder = Default(True),
++        default_response_headers: dict[str, str] | None = None,
+     ) -> None:
+         _populate_api_route_state(
+             cast(_APIRouteLike, self),
+@@ -1219,6 +1254,7 @@ class APIRoute(routing.Route):
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
+             strict_content_type=strict_content_type,
++            default_response_headers=default_response_headers,
+         )
+         self.app = request_response(self.get_route_handler())
+ 
+@@ -1246,6 +1282,7 @@ class APIRoute(routing.Route):
+             strict_content_type=route.strict_content_type,
+             stream_item_field=route.stream_item_field,
+             is_json_stream=route.is_json_stream,
++            default_response_headers=route.default_response_headers,
+         )
+ 
+     def matches(self, scope: Scope) -> tuple[Match, Scope]:
+@@ -1421,6 +1458,7 @@ class _EffectiveRouteContext:
+     body_field: ModelField | None = None
+     is_sse_stream: bool = False
+     is_json_stream: bool = False
++    default_response_headers: dict[str, str] | None = None
+ 
+     @classmethod
+     def from_api_route(
+@@ -1474,6 +1512,7 @@ class _EffectiveRouteContext:
+                 include_context.strict_content_type,
+             ),
+             stream_item_type=route.stream_item_type,
++            default_response_headers=route.default_response_headers,
+         )
+         return context
+ 
+@@ -2917,6 +2956,7 @@ class APIRouter(routing.Router):
+         generate_unique_id_function: Callable[[APIRoute], str]
+         | DefaultPlaceholder = Default(generate_unique_id),
+         strict_content_type: bool | DefaultPlaceholder = Default(True),
++        default_response_headers: dict[str, str] | None = None,
+     ) -> None:
+         route_class = route_class_override or self.route_class
+         responses = responses or {}
+@@ -2966,6 +3006,7 @@ class APIRouter(routing.Router):
+             strict_content_type=get_value_or_default(
+                 strict_content_type, self.strict_content_type
+             ),
++            default_response_headers=default_response_headers,
+         )
+         self.routes.append(route)
+         self._mark_routes_changed()
+@@ -2999,6 +3040,7 @@ class APIRouter(routing.Router):
+         generate_unique_id_function: Callable[[APIRoute], str] = Default(
+             generate_unique_id
+         ),
++        default_response_headers: dict[str, str] | None = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         def decorator(func: DecoratedCallable) -> DecoratedCallable:
+             self.add_api_route(
+@@ -3027,6 +3069,7 @@ class APIRouter(routing.Router):
+                 callbacks=callbacks,
+                 openapi_extra=openapi_extra,
+                 generate_unique_id_function=generate_unique_id_function,
++                default_response_headers=default_response_headers,
+             )
+             return func
+ 
+@@ -3650,6 +3693,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP GET operation.
+@@ -3694,6 +3749,7 @@ class APIRouter(routing.Router):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def put(
+@@ -4027,6 +4083,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP PUT operation.
+@@ -4076,6 +4144,7 @@ class APIRouter(routing.Router):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def post(
+@@ -4409,6 +4478,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP POST operation.
+@@ -4458,6 +4539,7 @@ class APIRouter(routing.Router):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def delete(
+@@ -4791,6 +4873,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP DELETE operation.
+@@ -4835,6 +4929,7 @@ class APIRouter(routing.Router):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def options(
+@@ -5168,6 +5263,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP OPTIONS operation.
+@@ -5212,6 +5319,7 @@ class APIRouter(routing.Router):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def head(
+@@ -5545,6 +5653,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP HEAD operation.
+@@ -5594,6 +5714,7 @@ class APIRouter(routing.Router):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def patch(
+@@ -5927,6 +6048,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP PATCH operation.
+@@ -5976,6 +6109,7 @@ class APIRouter(routing.Router):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     def trace(
+@@ -6309,6 +6443,18 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(generate_unique_id),
++        default_response_headers: Annotated[
++            dict[str, str] | None,
++            Doc(
++                """
++                Default response headers to be set on every response from this *path
++                operation*.
++
++                Headers that the route handler (or a dependency) sets itself are
++                preserved - they are not overridden by these defaults.
++                """
++            ),
++        ] = None,
+     ) -> Callable[[DecoratedCallable], DecoratedCallable]:
+         """
+         Add a *path operation* using an HTTP TRACE operation.
+@@ -6358,6 +6504,7 @@ class APIRouter(routing.Router):
+             callbacks=callbacks,
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
++            default_response_headers=default_response_headers,
+         )
+ 
+     # TODO: remove this once the lifespan (or alternative) interface is improved
