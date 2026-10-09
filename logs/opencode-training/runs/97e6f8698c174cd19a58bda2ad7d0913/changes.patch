@@ -1,0 +1,97 @@
+diff --git a/fastapi/applications.py b/fastapi/applications.py
+index b5fc76d16..bda2f487a 100644
+--- a/fastapi/applications.py
++++ b/fastapi/applications.py
+@@ -511,6 +511,25 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        on_startup_error: Annotated[
++            Callable[[Exception], None] | None,
++            Doc(
++                """
++                An optional callback to be invoked when a registered startup
++                event handler raises an exception.
++
++                When set, exceptions raised by startup handlers are passed to
++                this callback and are **not** propagated, allowing the
++                application to continue starting up. When not set (the
++                default), exceptions raised by startup handlers propagate
++                normally, preserving the existing behavior.
++
++                This is useful to gracefully handle recoverable startup
++                failures (e.g. a database connection that is briefly
++                unavailable) without crashing the whole application.
++                """
++            ),
++        ] = None,
+         on_shutdown: Annotated[
+             Sequence[Callable[[], Any]] | None,
+             Doc(
+@@ -987,6 +1006,7 @@ class FastAPI(Starlette):
+             dependency_overrides_provider=self,
+             on_startup=on_startup,
+             on_shutdown=on_shutdown,
++            on_startup_error=on_startup_error,
+             lifespan=lifespan,
+             default_response_class=default_response_class,
+             dependencies=dependencies,
+diff --git a/fastapi/routing.py b/fastapi/routing.py
+index dc48a33d6..a24fe509f 100644
+--- a/fastapi/routing.py
++++ b/fastapi/routing.py
+@@ -2424,6 +2424,19 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        on_startup_error: Annotated[
++            Callable[[Exception], None] | None,
++            Doc(
++                """
++                An optional callback to be invoked when a registered startup
++                event handler raises an exception.
++
++                When set, exceptions raised by startup handlers are passed to
++                this callback and are **not** propagated. When not set, the
++                default behavior of propagating the exception is preserved.
++                """
++            ),
++        ] = None,
+         on_shutdown: Annotated[
+             Sequence[Callable[[], Any]] | None,
+             Doc(
+@@ -2550,6 +2563,7 @@ class APIRouter(routing.Router):
+         self.on_shutdown: list[Callable[[], Any]] = (
+             [] if on_shutdown is None else list(on_shutdown)
+         )
++        self.on_startup_error: Callable[[Exception], None] | None = on_startup_error
+ 
+         self.prefix = prefix
+         self.tags: list[str | Enum] = tags or []
+@@ -6371,10 +6385,22 @@ class APIRouter(routing.Router):
+         Ref: https://github.com/Kludex/starlette/pull/3117
+         """
+         for handler in self.on_startup:
+-            if is_async_callable(handler):
+-                await handler()
+-            else:
+-                handler()
++            try:
++                if is_async_callable(handler):
++                    await handler()
++                else:
++                    handler()
++            except Exception as exc:
++                # If a startup error handler is set, delegate the exception
++                # to it instead of propagating. This allows applications to
++                # gracefully handle recoverable startup failures (for example
++                # a database that is briefly unavailable) without crashing.
++                # When no error handler is set, propagate the exception
++                # unchanged so that the existing behavior is preserved.
++                if self.on_startup_error is not None:
++                    self.on_startup_error(exc)
++                else:
++                    raise
+ 
+     # TODO: remove this once the lifespan (or alternative) interface is improved
+     async def _shutdown(self) -> None:

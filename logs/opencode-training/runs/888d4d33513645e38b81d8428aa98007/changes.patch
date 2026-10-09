@@ -1,0 +1,785 @@
+diff --git a/fastapi/applications.py b/fastapi/applications.py
+index b5fc76d16..dc7b02eb3 100644
+--- a/fastapi/applications.py
++++ b/fastapi/applications.py
+@@ -736,6 +736,21 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark all *path operations* as deprecated at the specified date.
++
++                When set, each route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to each
++                operation with this value, documenting when the endpoints were
++                deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -992,6 +1007,7 @@ class FastAPI(Starlette):
+             dependencies=dependencies,
+             callbacks=callbacks,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             include_in_schema=include_in_schema,
+             responses=responses,
+             generate_unique_id_function=generate_unique_id_function,
+@@ -1176,6 +1192,7 @@ class FastAPI(Starlette):
+         response_description: str = "Successful Response",
+         responses: dict[int | str, dict[str, Any]] | None = None,
+         deprecated: bool | None = None,
++        deprecated_at: str | None = None,
+         methods: list[str] | None = None,
+         operation_id: str | None = None,
+         response_model_include: IncEx | None = None,
+@@ -1204,6 +1221,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=methods,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -1311,6 +1329,7 @@ class FastAPI(Starlette):
+         response_description: str = "Successful Response",
+         responses: dict[int | str, dict[str, Any]] | None = None,
+         deprecated: bool | None = None,
++        deprecated_at: str | None = None,
+         methods: list[str] | None = None,
+         operation_id: str | None = None,
+         response_model_include: IncEx | None = None,
+@@ -1340,6 +1359,7 @@ class FastAPI(Starlette):
+                 response_description=response_description,
+                 responses=responses,
+                 deprecated=deprecated,
++                deprecated_at=deprecated_at,
+                 methods=methods,
+                 operation_id=operation_id,
+                 response_model_include=response_model_include,
+@@ -1526,6 +1546,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark all the *path operations* in this router as deprecated at the
++                specified date.
++
++                When set, each route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to each
++                operation with this value, documenting when the endpoints were
++                deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -1637,6 +1673,7 @@ class FastAPI(Starlette):
+             dependencies=dependencies,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             include_in_schema=include_in_schema,
+             default_response_class=default_response_class,
+             callbacks=callbacks,
+@@ -1789,6 +1826,20 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -2001,6 +2052,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+             response_model_exclude=response_model_exclude,
+@@ -2162,6 +2214,20 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -2379,6 +2445,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+             response_model_exclude=response_model_exclude,
+@@ -2540,6 +2607,20 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -2757,6 +2838,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+             response_model_exclude=response_model_exclude,
+@@ -2918,6 +3000,20 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -3130,6 +3226,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+             response_model_exclude=response_model_exclude,
+@@ -3291,6 +3388,20 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -3503,6 +3614,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+             response_model_exclude=response_model_exclude,
+@@ -3664,6 +3776,20 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -3876,6 +4002,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+             response_model_exclude=response_model_exclude,
+@@ -4037,6 +4164,20 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -4254,6 +4395,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+             response_model_exclude=response_model_exclude,
+@@ -4415,6 +4557,20 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -4627,6 +4783,7 @@ class FastAPI(Starlette):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+             response_model_exclude=response_model_exclude,
+diff --git a/fastapi/openapi/utils.py b/fastapi/openapi/utils.py
+index 74caac44a..2173dc76a 100644
+--- a/fastapi/openapi/utils.py
++++ b/fastapi/openapi/utils.py
+@@ -305,6 +305,11 @@ def get_openapi_operation_metadata(
+     operation["operationId"] = operation_id
+     if route.deprecated:
+         operation["deprecated"] = route.deprecated
++    if route.deprecated_at:
++        # Document when the endpoint was deprecated via the
++        # `x-deprecated-at` OpenAPI extension. The `deprecated` flag above is
++        # already set automatically when `deprecated_at` is provided.
++        operation["x-deprecated-at"] = route.deprecated_at
+     return operation
+ 
+ 
+diff --git a/fastapi/routing.py b/fastapi/routing.py
+index dc48a33d6..f400f581d 100644
+--- a/fastapi/routing.py
++++ b/fastapi/routing.py
+@@ -923,6 +923,7 @@ class _APIRouteLike(Protocol):
+     summary: str | None
+     response_description: str
+     deprecated: bool | None
++    deprecated_at: str | None
+     operation_id: str | None
+     response_model_include: IncEx | None
+     response_model_exclude: IncEx | None
+@@ -972,6 +973,7 @@ def _populate_api_route_state(
+     response_description: str = "Successful Response",
+     responses: dict[int | str, dict[str, Any]] | None = None,
+     deprecated: bool | None = None,
++    deprecated_at: str | None = None,
+     name: str | None = None,
+     methods: set[str] | list[str] | None = None,
+     operation_id: str | None = None,
+@@ -997,7 +999,11 @@ def _populate_api_route_state(
+     route.stream_item_type = stream_item_type
+     route.summary = summary
+     route.response_description = response_description
+-    route.deprecated = deprecated
++    # When `deprecated_at` is provided, the endpoint is documented as deprecated.
++    # We automatically set `deprecated = True` so that the standard OpenAPI
++    # `deprecated: true` flag is emitted and tooling can react to it.
++    route.deprecated = True if deprecated_at is not None else deprecated
++    route.deprecated_at = deprecated_at
+     route.operation_id = operation_id
+     route.response_model_include = response_model_include
+     route.response_model_exclude = response_model_exclude
+@@ -1129,6 +1135,7 @@ class APIRoute(routing.Route):
+     summary: str | None
+     response_description: str
+     deprecated: bool | None
++    deprecated_at: str | None
+     operation_id: str | None
+     response_model_include: IncEx | None
+     response_model_exclude: IncEx | None
+@@ -1172,6 +1179,7 @@ class APIRoute(routing.Route):
+         response_description: str = "Successful Response",
+         responses: dict[int | str, dict[str, Any]] | None = None,
+         deprecated: bool | None = None,
++        deprecated_at: str | None = None,
+         name: str | None = None,
+         methods: set[str] | list[str] | None = None,
+         operation_id: str | None = None,
+@@ -1203,6 +1211,7 @@ class APIRoute(routing.Route):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             name=name,
+             methods=methods,
+             operation_id=operation_id,
+@@ -1293,6 +1302,7 @@ class _RouterIncludeContext:
+     responses: dict[int | str, dict[str, Any]] = field(default_factory=dict)
+     callbacks: list[BaseRoute] = field(default_factory=list)
+     deprecated: bool | None = None
++    deprecated_at: str | None = None
+     include_in_schema: bool = True
+     generate_unique_id_function: Callable[[APIRoute], str] | DefaultPlaceholder = field(
+         default_factory=lambda: Default(generate_unique_id)
+@@ -1317,6 +1327,7 @@ class _RouterIncludeContext:
+         responses: dict[int | str, dict[str, Any]] | None = None,
+         callbacks: list[BaseRoute] | None = None,
+         deprecated: bool | None = None,
++        deprecated_at: str | None = None,
+         include_in_schema: bool = True,
+         generate_unique_id_function: Callable[[APIRoute], str]
+         | DefaultPlaceholder = Default(generate_unique_id),
+@@ -1332,6 +1343,7 @@ class _RouterIncludeContext:
+             responses={**parent_router.responses, **(responses or {})},
+             callbacks=[*parent_router.callbacks, *(callbacks or [])],
+             deprecated=deprecated or parent_router.deprecated,
++            deprecated_at=deprecated_at or parent_router.deprecated_at,
+             include_in_schema=parent_router.include_in_schema and include_in_schema,
+             generate_unique_id_function=get_value_or_default(
+                 generate_unique_id_function, parent_router.generate_unique_id_function
+@@ -1354,6 +1366,7 @@ class _RouterIncludeContext:
+             responses={**self.responses, **child_context.responses},
+             callbacks=[*self.callbacks, *child_context.callbacks],
+             deprecated=self.deprecated or child_context.deprecated,
++            deprecated_at=self.deprecated_at or child_context.deprecated_at,
+             include_in_schema=self.include_in_schema
+             and child_context.include_in_schema,
+             generate_unique_id_function=get_value_or_default(
+@@ -1382,6 +1395,7 @@ class _EffectiveRouteContext:
+     summary: str | None = None
+     response_description: str = "Successful Response"
+     deprecated: bool | None = None
++    deprecated_at: str | None = None
+     operation_id: str | None = None
+     response_model_include: IncEx | None = None
+     response_model_exclude: IncEx | None = None
+@@ -1444,6 +1458,7 @@ class _EffectiveRouteContext:
+             response_description=route.response_description,
+             responses={**include_context.responses, **route.responses},
+             deprecated=route.deprecated or include_context.deprecated,
++            deprecated_at=route.deprecated_at or include_context.deprecated_at,
+             methods=route.methods,
+             operation_id=route.operation_id,
+             response_model_include=route.response_model_include,
+@@ -2464,6 +2479,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark all *path operations* in this router as deprecated at the
++                specified date.
++
++                When set, each route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to each
++                operation with this value, documenting when the endpoints were
++                deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -2555,6 +2586,7 @@ class APIRouter(routing.Router):
+         self.tags: list[str | Enum] = tags or []
+         self.dependencies = list(dependencies or [])
+         self.deprecated = deprecated
++        self.deprecated_at = deprecated_at
+         self.include_in_schema = include_in_schema
+         self.responses = responses or {}
+         self.callbacks = callbacks or []
+@@ -2900,6 +2932,7 @@ class APIRouter(routing.Router):
+         response_description: str = "Successful Response",
+         responses: dict[int | str, dict[str, Any]] | None = None,
+         deprecated: bool | None = None,
++        deprecated_at: str | None = None,
+         methods: set[str] | list[str] | None = None,
+         operation_id: str | None = None,
+         response_model_include: IncEx | None = None,
+@@ -2948,6 +2981,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=combined_responses,
+             deprecated=deprecated or self.deprecated,
++            deprecated_at=deprecated_at or self.deprecated_at,
+             methods=methods,
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -2983,6 +3017,7 @@ class APIRouter(routing.Router):
+         response_description: str = "Successful Response",
+         responses: dict[int | str, dict[str, Any]] | None = None,
+         deprecated: bool | None = None,
++        deprecated_at: str | None = None,
+         methods: list[str] | None = None,
+         operation_id: str | None = None,
+         response_model_include: IncEx | None = None,
+@@ -3013,6 +3048,7 @@ class APIRouter(routing.Router):
+                 response_description=response_description,
+                 responses=responses,
+                 deprecated=deprecated,
++                deprecated_at=deprecated_at,
+                 methods=methods,
+                 operation_id=operation_id,
+                 response_model_include=response_model_include,
+@@ -3215,6 +3251,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark all *path operations* in this router as deprecated at the
++                specified date.
++
++                When set, each route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to each
++                operation with this value, documenting when the endpoints were
++                deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -3303,6 +3355,7 @@ class APIRouter(routing.Router):
+             responses=responses,
+             callbacks=callbacks,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             include_in_schema=include_in_schema,
+             generate_unique_id_function=generate_unique_id_function,
+         )
+@@ -3465,6 +3518,20 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -3680,6 +3747,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=["GET"],
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -3842,6 +3910,20 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -4062,6 +4144,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=["PUT"],
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -4224,6 +4307,20 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -4444,6 +4541,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=["POST"],
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -4606,6 +4704,20 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -4821,6 +4933,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=["DELETE"],
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -4983,6 +5096,20 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -5198,6 +5325,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=["OPTIONS"],
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -5360,6 +5488,20 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -5580,6 +5722,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=["HEAD"],
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -5742,6 +5885,20 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -5962,6 +6119,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=["PATCH"],
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+@@ -6124,6 +6282,20 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = None,
++        deprecated_at: Annotated[
++            str | None,
++            Doc(
++                """
++                Mark this *path operation* as deprecated at the specified date.
++
++                When set, the route is automatically marked as deprecated and a
++                custom OpenAPI extension `x-deprecated-at` is added to the operation
++                with this value, documenting when the endpoint was deprecated.
++
++                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
++                """
++            ),
++        ] = None,
+         operation_id: Annotated[
+             str | None,
+             Doc(
+@@ -6344,6 +6516,7 @@ class APIRouter(routing.Router):
+             response_description=response_description,
+             responses=responses,
+             deprecated=deprecated,
++            deprecated_at=deprecated_at,
+             methods=["TRACE"],
+             operation_id=operation_id,
+             response_model_include=response_model_include,
+diff --git a/graphify-out/cache/last_query_stamp b/graphify-out/cache/last_query_stamp
+index 0a0b88be1..d0e789e24 100644
+--- a/graphify-out/cache/last_query_stamp
++++ b/graphify-out/cache/last_query_stamp
+@@ -1 +1 @@
+-1790438836.555423
+\ No newline at end of file
++1791142722.405196
+\ No newline at end of file
