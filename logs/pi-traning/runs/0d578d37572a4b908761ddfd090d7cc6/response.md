@@ -189,10 +189,8 @@ I need to add the `rate_limit: str | None = None` parameter to each of the 8 HTT
 Let me look at what `api_route` has and follow the same convention. Looking at `api_route` (in `routing.py`) it has:
 
 ```python
-generate_unique_id_function: Callable[[APIRoute], str] = Default(
-    generate_unique_id
-),
-rate_limit: str | None = None,
+generate_unique_id_function: Callable[[APIRoute], str] = (Default(generate_unique_id),)
+rate_limit: str | None = (None,)
 ```
 
 So in `routing.py` HTTP method decorators, I should add the same convention. But in `applications.py`, they use `Annotated[..., Doc(...)]` because they have richer docstrings. Let me look at the existing applications.py `get` method to see what style is used:
