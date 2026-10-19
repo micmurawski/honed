@@ -1,0 +1,41 @@
+{
+  "harness": "opencode",
+  "prompt": "prompts/06_structured_validation_error_code.md",
+  "prompt_index": 5,
+  "cwd": "/Users/micmur/GITHUB/thearc/logs/opencode-training/worktrees/9bfe3062ba8c4368b626763c5cb4859a",
+  "source_checkout": "/Users/micmur/GITHUB/thearc/tests/fastapi",
+  "base_commit": "75e0095ea8bb94412bb4ce5a4ef8ef873fbf2dfb",
+  "run_dir": "/Users/micmur/GITHUB/thearc/logs/opencode-training/runs/9bfe3062ba8c4368b626763c5cb4859a",
+  "started_at": "2026-10-12T13:59:40.539863+00:00",
+  "command": [
+    "/Users/micmur/.opencode/bin/opencode",
+    "run",
+    "--standalone",
+    "--format",
+    "json",
+    "--model",
+    "minimax/MiniMax-M3#thinking"
+  ],
+  "git_head": "75e0095ea8bb94412bb4ce5a4ef8ef873fbf2dfb",
+  "git_status_before": "M .opencode/skills/graphify/SKILL.md\n?? .thearc/",
+  "skills_installed": [
+    "graphify"
+  ],
+  "status": "completed",
+  "exit_code": 0,
+  "thread_id": "ses_ecf968720ffeY2y0I4NiNhI5LD",
+  "turn_completed": true,
+  "turn_failed": false,
+  "malformed_stream": false,
+  "tool_items": 41,
+  "assistant_messages": 14,
+  "errors": [],
+  "transcript": "/Users/micmur/GITHUB/thearc/logs/opencode-training/sessions/ses_ecf968720ffeY2y0I4NiNhI5LD.jsonl",
+  "indexed_activity_events": 96,
+  "indexed_tool_events": 82,
+  "skills_advertised": null,
+  "failure_reason": null,
+  "has_activity": true,
+  "finished_at": "2026-10-12T14:01:59.364240+00:00",
+  "git_status_after": "M .opencode/skills/graphify/SKILL.md\n M fastapi/exception_handlers.py\n?? .thearc/\n?? tests/test_validation_error_code.py"
+}

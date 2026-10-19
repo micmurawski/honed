@@ -1,0 +1,45 @@
+{
+  "harness": "pi",
+  "prompt": "prompts/07_include_in_schema_if.md",
+  "prompt_index": 6,
+  "cwd": "/Users/micmur/GITHUB/thearc/logs/pi-training/worktrees/9d205a9c61f3492eb6820ed4f4bad001",
+  "source_checkout": "/Users/micmur/GITHUB/thearc/tests/fastapi",
+  "base_commit": "75e0095ea8bb94412bb4ce5a4ef8ef873fbf2dfb",
+  "run_dir": "/Users/micmur/GITHUB/thearc/logs/pi-training/runs/9d205a9c61f3492eb6820ed4f4bad001",
+  "started_at": "2026-10-12T10:12:25.595893+00:00",
+  "command": [
+    "/Users/micmur/.local/bin/pi",
+    "--print",
+    "--approve",
+    "--mode",
+    "json",
+    "--session-dir",
+    "/Users/micmur/GITHUB/thearc/logs/pi-training/runs/9d205a9c61f3492eb6820ed4f4bad001/native",
+    "--model",
+    "minimax/MiniMax-M3#thinking"
+  ],
+  "git_head": "75e0095ea8bb94412bb4ce5a4ef8ef873fbf2dfb",
+  "git_status_before": "D .pi/agent/skills/graphify/.graphify_version\n D .pi/agent/skills/graphify/SKILL.md\n D .pi/agent/skills/graphify/references/add-watch.md\n D .pi/agent/skills/graphify/references/exports.md\n D .pi/agent/skills/graphify/references/extraction-spec.md\n D .pi/agent/skills/graphify/references/github-and-merge.md\n D .pi/agent/skills/graphify/references/hooks.md\n D .pi/agent/skills/graphify/references/query.md\n D .pi/agent/skills/graphify/references/transcribe.md\n D .pi/agent/skills/graphify/references/update.md\n?? .pi/.thearc-agent.json\n?? .pi/skills/",
+  "skills_installed": [
+    "graphify"
+  ],
+  "status": "completed",
+  "exit_code": 0,
+  "thread_id": "01a12f99-6afc-77e3-8a93-2091df017f69",
+  "turn_completed": true,
+  "turn_failed": false,
+  "malformed_stream": false,
+  "tool_items": 108,
+  "assistant_messages": 14,
+  "errors": [],
+  "transcript": "/Users/micmur/GITHUB/thearc/logs/pi-training/sessions/2026-10-12T10-12-25-985Z_01a12f99-6afc-77e3-8a93-2091df017f69.jsonl",
+  "indexed_activity_events": 230,
+  "indexed_tool_events": 216,
+  "skills_advertised": [
+    "graphify"
+  ],
+  "failure_reason": null,
+  "has_activity": true,
+  "finished_at": "2026-10-12T10:18:45.777619+00:00",
+  "git_status_after": "D .pi/agent/skills/graphify/.graphify_version\n D .pi/agent/skills/graphify/SKILL.md\n D .pi/agent/skills/graphify/references/add-watch.md\n D .pi/agent/skills/graphify/references/exports.md\n D .pi/agent/skills/graphify/references/extraction-spec.md\n D .pi/agent/skills/graphify/references/github-and-merge.md\n D .pi/agent/skills/graphify/references/hooks.md\n D .pi/agent/skills/graphify/references/query.md\n D .pi/agent/skills/graphify/references/transcribe.md\n D .pi/agent/skills/graphify/references/update.md\n M fastapi/applications.py\n M fastapi/openapi/utils.py\n M fastapi/routing.py\n M graphify-out/.graphify_labels.json\n M graphify-out/.graphify_root\n M graphify-out/GRAPH_REPORT.md\n M graphify-out/cache/last_query_stamp\n M graphify-out/cache/stat-index.json\n M graphify-out/graph.html\n M graphify-out/graph.json\n M graphify-out/manifest.json\n?? .pi/.thearc-agent.json\n?? .pi/skills/\n?? graphify-out/.graphify_labels.json.sig\n?? graphify-out/2026-10-12/\n?? graphify-out/cache/ast/v0.9.68-s4/0249cd6ceae6effdfc7371b51d00c462f51d95700101dcedd36255bab1b4ce7a.json\n?? graphify-out/cache/ast/v0.9.68-s4/04ec1e47319f250721a9e8201a4ce7ca4ec8534dd2f4b20a10a43cbdaf05964a.json\n?? graphify-out/cache/ast/v0.9.68-s4/151ad7ed0ee4aefe411f026261f605a61134cc6247324fe8df3ae1e785321283.json\n?? graphify-out/cache/ast/v0.9.68-s4/189cf7c8c51988d23f6ad25dff96855ce0e7336bffa352dedb3867954e702f7b.json\n?? graphify-out/cache/ast/v0.9.68-s4/1b9a86f459755461cd7c4890070527c0d23e80778f91bfa6eb1e924894229416.json\n?? graphify-out/cache/ast/v0.9.68-s4/1d5afbaccf36e952e71082591edfc9e4fbd9946eb85b01855a1d0bd810b7623d.json\n?? graphify-out/cache/ast/v0.9.68-s4/233fd2a374607d5a44b54dd87e4812f9a208193eb5680ca7fa61e3df29eb44cb.json\n?? graphify-out/cache/ast/v0.9.68-s4/25f6e2877a7f439d97cbfb995d8f9358d8ddc72bf717559ff23250519aca5145.json\n?? graphify-out/cache/ast/v0.9.68-s4/26f2577a68d808f7f33ec3e418b95b635aec180d93b22b975e9ae67c47e361c8.json\n?? graphify-out/cache/ast/v0.9.68-s4/290d211571d0dce347009842a1d0386bf46d94d762c7eba3baa67890d3f28248.json\n?? graphify-out/cache/ast/v0.9.68-s4/3612256e7473a2e5f67ef4778d4edeefb44794ef22bac5529bee9c87dc5d8f3d.json\n?? graphify-out/cache/ast/v0.9.68-s4/3e7d2df361e7059e921192b1693cc7859e4a2b0474446f8352be5a4624790eaa.json\n?? graphify-out/cache/ast/v0.9.68-s4/46192f1eac124b5cc309c6c28f7b9106a0413e2f1a65c388513f5db585a0eb13.json\n?? graphify-out/cache/ast/v0.9.68-s4/54526cc3e2392922d344f14767f09037ef85fb7ec5cc7911b749b35bcb004fbf.json\n?? graphify-out/cache/ast/v0.9.68-s4/5519ca9cd5d0dc7c0e5c727e4a6e4c2bf5f81dfaf81a9d51e233ee51c05fb754.json\n?? graphify-out/cache/ast/v0.9.68-s4/5b5c5b883c27137d6f2c67b5bddb0b7b89a280d9f24dbaf0eb5eda482328a28b.json\n?? graphify-out/cache/ast/v0.9.68-s4/609de4b1331ddb2f8c80e97aac0a5de782a373d6f5af858e10a731c20b35c0e2.json\n?? graphify-out/cache/ast/v0.9.68-s4/6d935b31aa6d2e753330d1d07451efd6d77c5ac6aabdfa237ecbd396699424a5.json\n?? graphify-out/cache/ast/v0.9.68-s4/7aa8b606e5c19334b6c9fe62a12fc30eb46c0320d1dbb5726cfda0becdd04a5a.json\n?? graphify-out/cache/ast/v0.9.68-s4/7c7827f2f29d6e2cb6cc6902558dac08380f60c414b4968f83e1bc4e61b3e268.json\n?? graphify-out/cache/ast/v0.9.68-s4/7d08c9945fd968267a47c1bcab7f2eefa78d504a645afa76bad59b04390e8f68.json\n?? graphify-out/cache/ast/v0.9.68-s4/81b09c0ad09d54d52b68755c32544024e290c02f53bdeb283b1b76d7eebc2445.json\n?? graphify-out/cache/ast/v0.9.68-s4/82e17358f26169787e0f905071c6ca6677ea954fa20f7debffa98e12b8d3084b.json\n?? graphify-out/cache/ast/v0.9.68-s4/8b122104625724bb3859e537963490156304edfb986b717bf8f4335ea6f99b2d.json\n?? graphify-out/cache/ast/v0.9.68-s4/96964729c8e8be4db3175c1430d035241d1e580d622147ecf1e8e3aaa6a9f100.json\n?? graphify-out/cache/ast/v0.9.68-s4/9cf5d515d0d8584aeef36708df34f560078772a568ed599cac5ba20b089e563d.json\n?? graphify-out/cache/ast/v0.9.68-s4/a6d228d4eadd4e7ff41d91152b9488108d5c76ac1d9a02efb5538a6ec5127674.json\n?? graphify-out/cache/ast/v0.9.68-s4/a81e2d017e0669c71099362b20854e4d9ed68753f1c240d0682120bdb9aa3c72.json\n?? graphify-out/cache/ast/v0.9.68-s4/b1cea6e32aea3b30043f3c86446d8c8a96d11cb5458214ad06d6a30292e4e054.json\n?? graphify-out/cache/ast/v0.9.68-s4/b209dbb3bb5466e601a530b65925c55c34f040ffcf56d38ea64be9aaf75f92ce.json\n?? graphify-out/cache/ast/v0.9.68-s4/c47a81290e7818257944e28cdc05e9250c59b9141aac8df47b5af09fb627940f.json\n?? graphify-out/cache/ast/v0.9.68-s4/c6f7fc2f062904d246b700d446ba3ad03e77f41809b12eccfb5e090a11f4fad2.json\n?? graphify-out/cache/ast/v0.9.68-s4/c774beafd384cb11d61525a6d4ade43848b76161a24bd7ce20f4f1868eeafc3f.json\n?? graphify-out/cache/ast/v0.9.68-s4/cbbbae90e451d722b39df0df7bc267bb9b7ecb3dd8a9e8be4b40237df053c8d6.json\n?? graphify-out/cache/ast/v0.9.68-s4/d07c5b2e8224b1006b1a336f77d0af22f637fe8d20166895bf852c32324d851b.json\n?? graphify-out/cache/ast/v0.9.68-s4/d0c56ce308791a058af73bc0f6db3355423999c4c8ba3b019bd7da7191461ac8.json\n?? graphify-out/cache/ast/v0.9.68-s4/d3547a8b5bab6a898c4c6df5640a49d2d036cf950f543426b9ba7c191bbd0bd9.json\n?? graphify-out/cache/ast/v0.9.68-s4/e10c0af8212cc0742f4353faf12a6082fe54fdf8f1bcececc08c831253522da8.json\n?? graphify-out/cache/ast/v0.9.68-s4/e2fb732c0930ec847797c081289e605670bc94fd87609bbd400c2f6271592c21.json\n?? graphify-out/cache/ast/v0.9.68-s4/eec641b4aaab7acb91319ad7cf7c34910fdf16cd47206b4ae858b19fc39214f4.json\n?? graphify-out/cache/ast/v0.9.68-s4/eefb9993a83682c2beae3ebf68cd8fc47fcceac95d0f336ae7efff0c1a2af828.json\n?? graphify-out/cache/ast/v0.9.68-s4/f2d994f1f6f2a2ebccf9fb9a3820374a2e6c6f16ad4f8317727c1639203bcded.json\n?? graphify-out/cache/ast/v0.9.68-s4/f3913fc476540502825b50944ae9222e00e205d530c92474b259d389ac9cc993.json\n?? graphify-out/cache/ast/v0.9.68-s4/fbb873a50ea67a61eb625bf540db64aab21d11489329f349e5eabb0a6ba67abb.json\n?? tests/test_include_in_schema_if.py"
+}

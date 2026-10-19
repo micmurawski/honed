@@ -1,0 +1,3 @@
+[93m[1m! [0mpermission requested: external_directory (/System/Volumes/Data/private/tmp/fastapi-venv/lib/python3.12/site-packages/starlette/*); auto-rejecting
+[93m[1m! [0mpermission requested: external_directory (/private/tmp/fastapi-venv/lib/python3.12/site-packages/starlette/middleware/*); auto-rejecting
+[93m[1m! [0mpermission requested: external_directory (/private/tmp/fastapi-venv/lib/python3.12/site-packages/starlette/*); auto-rejecting

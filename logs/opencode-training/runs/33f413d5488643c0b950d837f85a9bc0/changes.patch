@@ -1,0 +1,524 @@
+diff --git a/fastapi/applications.py b/fastapi/applications.py
+index b5fc76d16..4cdc8f83a 100644
+--- a/fastapi/applications.py
++++ b/fastapi/applications.py
+@@ -860,6 +860,31 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        default_response_model_exclude_none: Annotated[
++            bool,
++            Doc(
++                """
++                The default value for `response_model_exclude_none` to be used for all
++                the *path operations* registered on this `FastAPI` app.
++
++                When a *path operation* does not explicitly pass
++                `response_model_exclude_none`, this value is used instead. Individual
++                *path operations* can still override this by passing their own value
++                for `response_model_exclude_none`.
++
++                Read more about it in the
++                [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
++
++                **Example**
++
++                ```python
++                from fastapi import FastAPI
++
++                app = FastAPI(default_response_model_exclude_none=True)
++                ```
++                """
++            ),
++        ] = False,
+         **extra: Annotated[
+             Any,
+             Doc(
+@@ -889,6 +914,7 @@ class FastAPI(Starlette):
+         self.servers = servers or []
+         self.separate_input_output_schemas = separate_input_output_schemas
+         self.openapi_external_docs = openapi_external_docs
++        self.default_response_model_exclude_none = default_response_model_exclude_none
+         self.extra = extra
+         self.openapi_version: Annotated[
+             str,
+@@ -1183,7 +1209,7 @@ class FastAPI(Starlette):
+         response_model_by_alias: bool = True,
+         response_model_exclude_unset: bool = False,
+         response_model_exclude_defaults: bool = False,
+-        response_model_exclude_none: bool = False,
++        response_model_exclude_none: bool | DefaultPlaceholder = Default(False),
+         include_in_schema: bool = True,
+         response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+         name: str | None = None,
+@@ -1211,7 +1237,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+@@ -1318,7 +1348,7 @@ class FastAPI(Starlette):
+         response_model_by_alias: bool = True,
+         response_model_exclude_unset: bool = False,
+         response_model_exclude_defaults: bool = False,
+-        response_model_exclude_none: bool = False,
++        response_model_exclude_none: bool | DefaultPlaceholder = Default(False),
+         include_in_schema: bool = True,
+         response_class: type[Response] = Default(JSONResponse),
+         name: str | None = None,
+@@ -1347,7 +1377,11 @@ class FastAPI(Starlette):
+                 response_model_by_alias=response_model_by_alias,
+                 response_model_exclude_unset=response_model_exclude_unset,
+                 response_model_exclude_defaults=response_model_exclude_defaults,
+-                response_model_exclude_none=response_model_exclude_none,
++                response_model_exclude_none=(
++                    self.default_response_model_exclude_none
++                    if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                    else response_model_exclude_none
++                ),
+                 include_in_schema=include_in_schema,
+                 response_class=response_class,
+                 name=name,
+@@ -1881,7 +1915,7 @@ class FastAPI(Starlette):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -1896,7 +1930,7 @@ class FastAPI(Starlette):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -2007,7 +2041,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+@@ -2254,7 +2292,7 @@ class FastAPI(Starlette):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -2269,7 +2307,7 @@ class FastAPI(Starlette):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -2385,7 +2423,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+@@ -2632,7 +2674,7 @@ class FastAPI(Starlette):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -2647,7 +2689,7 @@ class FastAPI(Starlette):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -2763,7 +2805,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+@@ -3010,7 +3056,7 @@ class FastAPI(Starlette):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -3025,7 +3071,7 @@ class FastAPI(Starlette):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -3136,7 +3182,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+@@ -3383,7 +3433,7 @@ class FastAPI(Starlette):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -3398,7 +3448,7 @@ class FastAPI(Starlette):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -3509,7 +3559,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+@@ -3756,7 +3810,7 @@ class FastAPI(Starlette):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -3771,7 +3825,7 @@ class FastAPI(Starlette):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -3882,7 +3936,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+@@ -4129,7 +4187,7 @@ class FastAPI(Starlette):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -4144,7 +4202,7 @@ class FastAPI(Starlette):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -4260,7 +4318,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+@@ -4507,7 +4569,7 @@ class FastAPI(Starlette):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -4522,7 +4584,7 @@ class FastAPI(Starlette):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -4633,7 +4695,11 @@ class FastAPI(Starlette):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                self.default_response_model_exclude_none
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema,
+             response_class=response_class,
+             name=name,
+diff --git a/fastapi/routing.py b/fastapi/routing.py
+index dc48a33d6..bb2cde41a 100644
+--- a/fastapi/routing.py
++++ b/fastapi/routing.py
+@@ -1180,7 +1180,7 @@ class APIRoute(routing.Route):
+         response_model_by_alias: bool = True,
+         response_model_exclude_unset: bool = False,
+         response_model_exclude_defaults: bool = False,
+-        response_model_exclude_none: bool = False,
++        response_model_exclude_none: bool | DefaultPlaceholder = Default(False),
+         include_in_schema: bool = True,
+         response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+         dependency_overrides_provider: Any | None = None,
+@@ -2907,7 +2907,7 @@ class APIRouter(routing.Router):
+         response_model_by_alias: bool = True,
+         response_model_exclude_unset: bool = False,
+         response_model_exclude_defaults: bool = False,
+-        response_model_exclude_none: bool = False,
++        response_model_exclude_none: bool | DefaultPlaceholder = Default(False),
+         include_in_schema: bool = True,
+         response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+         name: str | None = None,
+@@ -2955,7 +2955,11 @@ class APIRouter(routing.Router):
+             response_model_by_alias=response_model_by_alias,
+             response_model_exclude_unset=response_model_exclude_unset,
+             response_model_exclude_defaults=response_model_exclude_defaults,
+-            response_model_exclude_none=response_model_exclude_none,
++            response_model_exclude_none=(
++                response_model_exclude_none.value
++                if isinstance(response_model_exclude_none, DefaultPlaceholder)
++                else response_model_exclude_none
++            ),
+             include_in_schema=include_in_schema and self.include_in_schema,
+             response_class=current_response_class,
+             name=name,
+@@ -2990,7 +2994,7 @@ class APIRouter(routing.Router):
+         response_model_by_alias: bool = True,
+         response_model_exclude_unset: bool = False,
+         response_model_exclude_defaults: bool = False,
+-        response_model_exclude_none: bool = False,
++        response_model_exclude_none: bool | DefaultPlaceholder = Default(False),
+         include_in_schema: bool = True,
+         response_class: type[Response] = Default(JSONResponse),
+         name: str | None = None,
+@@ -3557,7 +3561,7 @@ class APIRouter(routing.Router):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -3572,7 +3576,7 @@ class APIRouter(routing.Router):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -3934,7 +3938,7 @@ class APIRouter(routing.Router):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -3949,7 +3953,7 @@ class APIRouter(routing.Router):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -4316,7 +4320,7 @@ class APIRouter(routing.Router):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -4331,7 +4335,7 @@ class APIRouter(routing.Router):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -4698,7 +4702,7 @@ class APIRouter(routing.Router):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -4713,7 +4717,7 @@ class APIRouter(routing.Router):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -5075,7 +5079,7 @@ class APIRouter(routing.Router):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -5090,7 +5094,7 @@ class APIRouter(routing.Router):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -5452,7 +5456,7 @@ class APIRouter(routing.Router):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -5467,7 +5471,7 @@ class APIRouter(routing.Router):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -5834,7 +5838,7 @@ class APIRouter(routing.Router):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -5849,7 +5853,7 @@ class APIRouter(routing.Router):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(
+@@ -6216,7 +6220,7 @@ class APIRouter(routing.Router):
+             ),
+         ] = False,
+         response_model_exclude_none: Annotated[
+-            bool,
++            bool | DefaultPlaceholder,
+             Doc(
+                 """
+                 Configuration passed to Pydantic to define if the response data should
+@@ -6231,7 +6235,7 @@ class APIRouter(routing.Router):
+                 [FastAPI docs for Response Model - Return Type](https://fastapi.tiangolo.com/tutorial/response-model/#response_model_exclude_none).
+                 """
+             ),
+-        ] = False,
++        ] = Default(False),
+         include_in_schema: Annotated[
+             bool,
+             Doc(

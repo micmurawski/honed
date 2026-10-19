@@ -1,0 +1,719 @@
+diff --git a/.opencode/skills/graphify/SKILL.md b/.opencode/skills/graphify/SKILL.md
+index c5dd37d91..934e98493 100644
+--- a/.opencode/skills/graphify/SKILL.md
++++ b/.opencode/skills/graphify/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: graphify
+-description: "Use for any question about a codebase, its architecture, file relationships, or project content — especially when graphify-out/ exists, where the question should be treated as a graphify query first. Turns any input (code, docs, papers, images, videos) into a persistent knowledge graph with god nodes, community detection, and query/path/explain tools."
++description: Use for any question about a codebase, its architecture, file relationships, or project content — especially when graphify-out/ exists, where the question should be treated as a graphify query first. Turns any input (code, docs, papers, images, videos) into a persistent knowledge graph with god nodes, community detection, and query/path/explain tools.
+ ---
+ 
+ # /graphify
+@@ -256,23 +256,31 @@ Only dispatch subagents for files listed in `graphify-out/.graphify_uncached.txt
+ 
+ Load files from `graphify-out/.graphify_uncached.txt`. Split into chunks of 20-25 files each. Each image gets its own chunk (vision needs separate context). When splitting, group files from the same directory together so related artifacts land in the same chunk and cross-file relationships are more likely to be extracted.
+ 
+-**Step B2 - Dispatch ALL subagents in a single message (OpenCode)**
++**Step B2 - Dispatch ALL subagents in a single message**
+ 
+-> **OpenCode platform:** Uses `@mention` dispatch instead of the Agent tool. All mentions in a single message run in parallel.
++Call the Agent tool multiple times IN THE SAME RESPONSE - one call per chunk. This is the only way they run in parallel. If you make one Agent call, wait, then make another, you are doing it sequentially and defeating the purpose.
+ 
+-Dispatch one `@mention` per chunk — ALL in the same response:
++**IMPORTANT - subagent type:** Always use `subagent_type="general-purpose"`. Do NOT use `Explore` - it is read-only and cannot write chunk files to disk, which silently drops extraction results. General-purpose has Write and Bash access which the subagent needs.
+ 
++Concrete example for 3 chunks:
+ ```
+-@agent Chunk CHUNK_NUM of TOTAL_CHUNKS: [extraction prompt with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, DEEP_MODE substituted]
+-
+-@agent Chunk 2 of TOTAL_CHUNKS: [next chunk]
++[Agent tool call 1: files 1-15, subagent_type="general-purpose"]
++[Agent tool call 2: files 16-30, subagent_type="general-purpose"]
++[Agent tool call 3: files 31-45, subagent_type="general-purpose"]
+ ```
++All three in one message. Not three separate messages.
++
++Each subagent receives this exact prompt (substitute FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, DEEP_MODE, and CHUNK_PATH).
+ 
+-Wait for all agents to return. Parse each response as JSON. Accumulate nodes/edges/hyperedges across all results and write to `graphify-out/.graphify_semantic_new.json`. If the `@agent` path cannot write chunk files, fall back to the serial path that writes each `graphify-out/.graphify_chunk_NN.json` before merge.
++CHUNK_PATH must be an **absolute** path — derive it before dispatching:
++```bash
++PROJECT_ROOT=$(pwd)  # cwd — where Part C globs graphify-out/ (NOT .graphify_root/scan dir, #1392)
++# Then for chunk N: CHUNK_PATH="${PROJECT_ROOT}/graphify-out/.graphify_chunk_0N.json"
++```
+ 
+ Subagent prompt template:
+ 
+-See `references/extraction-spec.md` for the exact subagent prompt (JSON schema, node-ID rules, confidence rubric, hyperedge, and vision rules). Load it only here, only when at least one chunk holds a doc, paper, or image; a pure-code corpus has skipped Part B and never reads it. Pass each agent that prompt verbatim with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, and DEEP_MODE substituted.
++See `references/extraction-spec.md` for the exact subagent prompt (JSON schema, node-ID rules, confidence rubric, frontmatter, hyperedge, and vision rules). Load it only here, only when at least one chunk holds a doc, paper, or image; a pure-code corpus has skipped Part B and never reads it. Pass each subagent that prompt verbatim with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, DEEP_MODE, and CHUNK_PATH substituted, and have it write the result to CHUNK_PATH.
+ 
+ **Step B3 - Collect, cache, and merge**
+ 
+diff --git a/fastapi/applications.py b/fastapi/applications.py
+index b5fc76d16..a5c079a4c 100644
+--- a/fastapi/applications.py
++++ b/fastapi/applications.py
+@@ -1185,6 +1185,7 @@ class FastAPI(Starlette):
+         response_model_exclude_defaults: bool = False,
+         response_model_exclude_none: bool = False,
+         include_in_schema: bool = True,
++        include_in_schema_if: Callable[[], bool] | None = None,
+         response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+         name: str | None = None,
+         openapi_extra: dict[str, Any] | None = None,
+@@ -1213,6 +1214,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             openapi_extra=openapi_extra,
+@@ -1320,6 +1322,7 @@ class FastAPI(Starlette):
+         response_model_exclude_defaults: bool = False,
+         response_model_exclude_none: bool = False,
+         include_in_schema: bool = True,
++        include_in_schema_if: Callable[[], bool] | None = None,
+         response_class: type[Response] = Default(JSONResponse),
+         name: str | None = None,
+         openapi_extra: dict[str, Any] | None = None,
+@@ -1349,6 +1352,7 @@ class FastAPI(Starlette):
+                 response_model_exclude_defaults=response_model_exclude_defaults,
+                 response_model_exclude_none=response_model_exclude_none,
+                 include_in_schema=include_in_schema,
++                include_in_schema_if=include_in_schema_if,
+                 response_class=response_class,
+                 name=name,
+                 openapi_extra=openapi_extra,
+@@ -1910,6 +1914,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -2009,6 +2029,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -2283,6 +2304,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -2387,6 +2424,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -2661,6 +2699,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -2765,6 +2819,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -3039,6 +3094,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -3138,6 +3209,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -3412,6 +3484,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -3511,6 +3599,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -3785,6 +3874,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -3884,6 +3989,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -4158,6 +4264,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -4262,6 +4384,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -4536,6 +4659,22 @@ class FastAPI(Starlette):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -4635,6 +4774,7 @@ class FastAPI(Starlette):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+diff --git a/fastapi/openapi/utils.py b/fastapi/openapi/utils.py
+index 74caac44a..7b9909f80 100644
+--- a/fastapi/openapi/utils.py
++++ b/fastapi/openapi/utils.py
+@@ -96,6 +96,20 @@ class _OpenAPIDependencyData:
+     )
+ 
+ 
++def _route_should_be_included_in_schema(route: routing._APIRouteLike) -> bool:
++    """
++    Determine if a route should be included in the generated OpenAPI schema.
++
++    If the route has ``include_in_schema_if`` set, it overrides the
++    ``include_in_schema`` flag and is evaluated each time the schema is
++    generated. Otherwise the ``include_in_schema`` boolean is used.
++    """
++    include_in_schema_if = getattr(route, "include_in_schema_if", None)
++    if include_in_schema_if is not None:
++        return bool(include_in_schema_if())
++    return route.include_in_schema
++
++
+ def _get_openapi_dependency_data(dependant: Dependant) -> _OpenAPIDependencyData:
+     dependency_data = _OpenAPIDependencyData()
+     visited: list[DependencyCacheKey] = []
+@@ -328,7 +342,7 @@ def get_openapi_path(
+         current_response_class = route.response_class
+     assert current_response_class, "A response class is needed to generate OpenAPI"
+     route_response_media_type: str | None = current_response_class.media_type
+-    if route.include_in_schema:
++    if _route_should_be_included_in_schema(route):
+         dependency_data = _get_openapi_dependency_data(route.dependant)
+         all_route_params = [
+             field
+@@ -559,7 +573,7 @@ def get_fields_from_routes(
+         api_route = _get_api_route_for_openapi(route_context)
+         if api_route is None:
+             continue
+-        if api_route.include_in_schema:
++        if _route_should_be_included_in_schema(api_route):
+             if api_route.body_field:
+                 assert isinstance(api_route.body_field, ModelField), (
+                     "A request body must be a Pydantic Field"
+diff --git a/fastapi/routing.py b/fastapi/routing.py
+index dc48a33d6..57cd9fc04 100644
+--- a/fastapi/routing.py
++++ b/fastapi/routing.py
+@@ -931,6 +931,7 @@ class _APIRouteLike(Protocol):
+     response_model_exclude_defaults: bool
+     response_model_exclude_none: bool
+     include_in_schema: bool
++    include_in_schema_if: Callable[[], bool] | None
+     response_class: type[Response] | DefaultPlaceholder
+     dependency_overrides_provider: Any | None
+     callbacks: list[BaseRoute] | None
+@@ -982,6 +983,7 @@ def _populate_api_route_state(
+     response_model_exclude_defaults: bool = False,
+     response_model_exclude_none: bool = False,
+     include_in_schema: bool = True,
++    include_in_schema_if: Callable[[], bool] | None = None,
+     response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+     dependency_overrides_provider: Any | None = None,
+     callbacks: list[BaseRoute] | None = None,
+@@ -1006,6 +1008,7 @@ def _populate_api_route_state(
+     route.response_model_exclude_defaults = response_model_exclude_defaults
+     route.response_model_exclude_none = response_model_exclude_none
+     route.include_in_schema = include_in_schema
++    route.include_in_schema_if = include_in_schema_if
+     route.response_class = response_class
+     route.dependency_overrides_provider = dependency_overrides_provider
+     route.callbacks = callbacks
+@@ -1182,6 +1185,7 @@ class APIRoute(routing.Route):
+         response_model_exclude_defaults: bool = False,
+         response_model_exclude_none: bool = False,
+         include_in_schema: bool = True,
++        include_in_schema_if: Callable[[], bool] | None = None,
+         response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+         dependency_overrides_provider: Any | None = None,
+         callbacks: list[BaseRoute] | None = None,
+@@ -1213,6 +1217,7 @@ class APIRoute(routing.Route):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             dependency_overrides_provider=dependency_overrides_provider,
+             callbacks=callbacks,
+@@ -1390,6 +1395,7 @@ class _EffectiveRouteContext:
+     response_model_exclude_defaults: bool = False
+     response_model_exclude_none: bool = False
+     include_in_schema: bool = True
++    include_in_schema_if: Callable[[], bool] | None = None
+     response_class: type[Response] | DefaultPlaceholder = field(
+         default_factory=lambda: Default(JSONResponse)
+     )
+@@ -1454,6 +1460,7 @@ class _EffectiveRouteContext:
+             response_model_exclude_none=route.response_model_exclude_none,
+             include_in_schema=route.include_in_schema
+             and include_context.include_in_schema,
++            include_in_schema_if=route.include_in_schema_if,
+             response_class=get_value_or_default(
+                 route.response_class,
+                 include_context.included_router.default_response_class,
+@@ -2909,6 +2916,7 @@ class APIRouter(routing.Router):
+         response_model_exclude_defaults: bool = False,
+         response_model_exclude_none: bool = False,
+         include_in_schema: bool = True,
++        include_in_schema_if: Callable[[], bool] | None = None,
+         response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+         name: str | None = None,
+         route_class_override: type[APIRoute] | None = None,
+@@ -2957,6 +2965,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema and self.include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=current_response_class,
+             name=name,
+             dependency_overrides_provider=self.dependency_overrides_provider,
+@@ -2992,6 +3001,7 @@ class APIRouter(routing.Router):
+         response_model_exclude_defaults: bool = False,
+         response_model_exclude_none: bool = False,
+         include_in_schema: bool = True,
++        include_in_schema_if: Callable[[], bool] | None = None,
+         response_class: type[Response] = Default(JSONResponse),
+         name: str | None = None,
+         callbacks: list[BaseRoute] | None = None,
+@@ -3022,6 +3032,7 @@ class APIRouter(routing.Router):
+                 response_model_exclude_defaults=response_model_exclude_defaults,
+                 response_model_exclude_none=response_model_exclude_none,
+                 include_in_schema=include_in_schema,
++                include_in_schema_if=include_in_schema_if,
+                 response_class=response_class,
+                 name=name,
+                 callbacks=callbacks,
+@@ -3586,6 +3597,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -3689,6 +3716,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -3963,6 +3991,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -4071,6 +4115,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -4345,6 +4390,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -4453,6 +4514,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -4727,6 +4789,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -4830,6 +4908,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -5104,6 +5183,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -5207,6 +5302,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -5481,6 +5577,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -5589,6 +5701,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -5863,6 +5976,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -5971,6 +6100,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,
+@@ -6245,6 +6375,22 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = True,
++        include_in_schema_if: Annotated[
++            Callable[[], bool] | None,
++            Doc(
++                """
++                Conditional callable to control whether this *path operation* is
++                included in the generated OpenAPI schema at runtime.
++
++                If provided, it overrides `include_in_schema` and is evaluated
++                each time the OpenAPI schema is generated. When it returns
++                `True`, the operation is included; when it returns `False`, it
++                is excluded.
++
++                This is useful for feature flags or other dynamic configuration.
++                """
++            ),
++        ] = None,
+         response_class: Annotated[
+             type[Response],
+             Doc(
+@@ -6353,6 +6499,7 @@ class APIRouter(routing.Router):
+             response_model_exclude_defaults=response_model_exclude_defaults,
+             response_model_exclude_none=response_model_exclude_none,
+             include_in_schema=include_in_schema,
++            include_in_schema_if=include_in_schema_if,
+             response_class=response_class,
+             name=name,
+             callbacks=callbacks,

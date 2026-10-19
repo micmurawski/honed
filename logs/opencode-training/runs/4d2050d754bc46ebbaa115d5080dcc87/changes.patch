@@ -1,0 +1,318 @@
+diff --git a/.opencode/skills/graphify/SKILL.md b/.opencode/skills/graphify/SKILL.md
+index c5dd37d91..934e98493 100644
+--- a/.opencode/skills/graphify/SKILL.md
++++ b/.opencode/skills/graphify/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: graphify
+-description: "Use for any question about a codebase, its architecture, file relationships, or project content — especially when graphify-out/ exists, where the question should be treated as a graphify query first. Turns any input (code, docs, papers, images, videos) into a persistent knowledge graph with god nodes, community detection, and query/path/explain tools."
++description: Use for any question about a codebase, its architecture, file relationships, or project content — especially when graphify-out/ exists, where the question should be treated as a graphify query first. Turns any input (code, docs, papers, images, videos) into a persistent knowledge graph with god nodes, community detection, and query/path/explain tools.
+ ---
+ 
+ # /graphify
+@@ -256,23 +256,31 @@ Only dispatch subagents for files listed in `graphify-out/.graphify_uncached.txt
+ 
+ Load files from `graphify-out/.graphify_uncached.txt`. Split into chunks of 20-25 files each. Each image gets its own chunk (vision needs separate context). When splitting, group files from the same directory together so related artifacts land in the same chunk and cross-file relationships are more likely to be extracted.
+ 
+-**Step B2 - Dispatch ALL subagents in a single message (OpenCode)**
++**Step B2 - Dispatch ALL subagents in a single message**
+ 
+-> **OpenCode platform:** Uses `@mention` dispatch instead of the Agent tool. All mentions in a single message run in parallel.
++Call the Agent tool multiple times IN THE SAME RESPONSE - one call per chunk. This is the only way they run in parallel. If you make one Agent call, wait, then make another, you are doing it sequentially and defeating the purpose.
+ 
+-Dispatch one `@mention` per chunk — ALL in the same response:
++**IMPORTANT - subagent type:** Always use `subagent_type="general-purpose"`. Do NOT use `Explore` - it is read-only and cannot write chunk files to disk, which silently drops extraction results. General-purpose has Write and Bash access which the subagent needs.
+ 
++Concrete example for 3 chunks:
+ ```
+-@agent Chunk CHUNK_NUM of TOTAL_CHUNKS: [extraction prompt with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, DEEP_MODE substituted]
+-
+-@agent Chunk 2 of TOTAL_CHUNKS: [next chunk]
++[Agent tool call 1: files 1-15, subagent_type="general-purpose"]
++[Agent tool call 2: files 16-30, subagent_type="general-purpose"]
++[Agent tool call 3: files 31-45, subagent_type="general-purpose"]
+ ```
++All three in one message. Not three separate messages.
++
++Each subagent receives this exact prompt (substitute FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, DEEP_MODE, and CHUNK_PATH).
+ 
+-Wait for all agents to return. Parse each response as JSON. Accumulate nodes/edges/hyperedges across all results and write to `graphify-out/.graphify_semantic_new.json`. If the `@agent` path cannot write chunk files, fall back to the serial path that writes each `graphify-out/.graphify_chunk_NN.json` before merge.
++CHUNK_PATH must be an **absolute** path — derive it before dispatching:
++```bash
++PROJECT_ROOT=$(pwd)  # cwd — where Part C globs graphify-out/ (NOT .graphify_root/scan dir, #1392)
++# Then for chunk N: CHUNK_PATH="${PROJECT_ROOT}/graphify-out/.graphify_chunk_0N.json"
++```
+ 
+ Subagent prompt template:
+ 
+-See `references/extraction-spec.md` for the exact subagent prompt (JSON schema, node-ID rules, confidence rubric, hyperedge, and vision rules). Load it only here, only when at least one chunk holds a doc, paper, or image; a pure-code corpus has skipped Part B and never reads it. Pass each agent that prompt verbatim with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, and DEEP_MODE substituted.
++See `references/extraction-spec.md` for the exact subagent prompt (JSON schema, node-ID rules, confidence rubric, frontmatter, hyperedge, and vision rules). Load it only here, only when at least one chunk holds a doc, paper, or image; a pure-code corpus has skipped Part B and never reads it. Pass each subagent that prompt verbatim with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, DEEP_MODE, and CHUNK_PATH substituted, and have it write the result to CHUNK_PATH.
+ 
+ **Step B3 - Collect, cache, and merge**
+ 
+diff --git a/fastapi/routing.py b/fastapi/routing.py
+index dc48a33d6..308507871 100644
+--- a/fastapi/routing.py
++++ b/fastapi/routing.py
+@@ -6,6 +6,7 @@ import functools
+ import inspect
+ import json
+ import os
++import re
+ import stat
+ import threading
+ import types
+@@ -958,6 +959,25 @@ class _APIRouteLike(Protocol):
+     is_json_stream: bool
+ 
+ 
++def _alternate_strict_slashes_path(path: str) -> str:
++    """
++    Return the alternate form of ``path`` with the trailing slash toggled.
++
++    - ``"/"`` and ``""`` map to themselves (root has no alternate).
++    - ``"/items"`` maps to ``"/items/"``.
++    - ``"/items/"`` maps to ``"/items"``.
++
++    The result is the URL that, combined with the original, will match both
++    with-trailing-slash and without-trailing-slash variants of the route.
++    """
++    if not path or path == "/":
++        return path
++    if path.endswith("/"):
++        stripped = path[:-1]
++        return stripped if stripped else "/"
++    return path + "/"
++
++
+ def _populate_api_route_state(
+     route: _APIRouteLike,
+     path: str,
+@@ -990,6 +1010,7 @@ def _populate_api_route_state(
+         generate_unique_id
+     ),
+     strict_content_type: bool | DefaultPlaceholder = Default(True),
++    strict_slashes: bool | DefaultPlaceholder = Default(True),
+     stream_item_type: Any | None = None,
+ ) -> None:
+     route.path = path
+@@ -1012,10 +1033,24 @@ def _populate_api_route_state(
+     route.openapi_extra = openapi_extra
+     route.generate_unique_id_function = generate_unique_id_function
+     route.strict_content_type = strict_content_type
++    if isinstance(strict_slashes, DefaultPlaceholder):
++        actual_strict_slashes: bool = strict_slashes.value
++    else:
++        actual_strict_slashes = strict_slashes
++    route.strict_slashes = actual_strict_slashes
+     route.tags = tags or []
+     route.responses = responses or {}
+     route.name = get_name(endpoint) if name is None else name
+     route.path_regex, route.path_format, route.param_convertors = compile_path(path)
++    if actual_strict_slashes:
++        route.alt_path_regex = None
++    else:
++        alt_path = _alternate_strict_slashes_path(path)
++        if alt_path == path:
++            route.alt_path_regex = None
++        else:
++            alt_regex, _, _ = compile_path(alt_path)
++            route.alt_path_regex = alt_regex
+     if methods is None:
+         methods = ["GET"]
+     route.methods = {method.upper() for method in methods}
+@@ -1143,6 +1178,8 @@ class APIRoute(routing.Route):
+     openapi_extra: dict[str, Any] | None
+     generate_unique_id_function: Callable[[Any], str] | DefaultPlaceholder
+     strict_content_type: bool | DefaultPlaceholder
++    strict_slashes: bool
++    alt_path_regex: re.Pattern[str] | None
+     tags: list[str | Enum]
+     responses: dict[int | str, dict[str, Any]]
+     unique_id: str
+@@ -1189,6 +1226,7 @@ class APIRoute(routing.Route):
+         generate_unique_id_function: Callable[["APIRoute"], str]
+         | DefaultPlaceholder = Default(generate_unique_id),
+         strict_content_type: bool | DefaultPlaceholder = Default(True),
++        strict_slashes: bool | DefaultPlaceholder = Default(True),
+     ) -> None:
+         _populate_api_route_state(
+             cast(_APIRouteLike, self),
+@@ -1219,6 +1257,7 @@ class APIRoute(routing.Route):
+             openapi_extra=openapi_extra,
+             generate_unique_id_function=generate_unique_id_function,
+             strict_content_type=strict_content_type,
++            strict_slashes=strict_slashes,
+         )
+         self.app = request_response(self.get_route_handler())
+ 
+@@ -1254,10 +1293,39 @@ class APIRoute(routing.Route):
+             match, child_scope = effective_context.matches(scope)
+         else:
+             match, child_scope = super().matches(scope)
++            if match == Match.NONE and self.alt_path_regex is not None:
++                match, child_scope = self._matches_with_alt_regex(scope)
+         if match != Match.NONE:
+             child_scope["route"] = self
+         return match, child_scope
+ 
++    def _matches_with_alt_regex(
++        self, scope: Scope
++    ) -> tuple[Match, Scope]:
++        """
++        Try matching the scope against ``alt_path_regex`` (the regex for the
++        toggled-trailing-slash variant of the route). Used by ``matches`` when
++        ``strict_slashes=False`` and the primary regex did not match.
++        """
++        if scope["type"] != "http" or self.alt_path_regex is None:
++            return Match.NONE, {}
++        route_path = get_route_path(scope)
++        match = self.alt_path_regex.match(route_path)
++        if not match:
++            return Match.NONE, {}
++        matched_params = match.groupdict()
++        for key, value in matched_params.items():
++            matched_params[key] = self.param_convertors[key].convert(value)
++        path_params = dict(scope.get("path_params", {}))
++        path_params.update(matched_params)
++        child_scope: dict[str, Any] = {
++            "endpoint": self.endpoint,
++            "path_params": path_params,
++        }
++        if self.methods and scope["method"] not in self.methods:
++            return Match.PARTIAL, child_scope
++        return Match.FULL, child_scope
++
+     async def handle(self, scope: Scope, receive: Receive, send: Send) -> None:
+         effective_context = _get_scope_effective_route_context(scope)
+         if effective_context is not None and effective_context.original_route is self:
+@@ -1300,6 +1368,9 @@ class _RouterIncludeContext:
+     strict_content_type: bool | DefaultPlaceholder = field(
+         default_factory=lambda: Default(True)
+     )
++    strict_slashes: bool | DefaultPlaceholder = field(
++        default_factory=lambda: Default(True)
++    )
+     dependency_overrides_provider: Any | None = None
+ 
+     @classmethod
+@@ -1337,6 +1408,7 @@ class _RouterIncludeContext:
+                 generate_unique_id_function, parent_router.generate_unique_id_function
+             ),
+             strict_content_type=parent_router.strict_content_type,
++            strict_slashes=parent_router.strict_slashes,
+             dependency_overrides_provider=parent_router.dependency_overrides_provider,
+         )
+ 
+@@ -1363,6 +1435,9 @@ class _RouterIncludeContext:
+             strict_content_type=get_value_or_default(
+                 child_context.strict_content_type, self.strict_content_type
+             ),
++            strict_slashes=get_value_or_default(
++                child_context.strict_slashes, self.strict_slashes
++            ),
+             dependency_overrides_provider=self.dependency_overrides_provider,
+         )
+ 
+@@ -1402,6 +1477,8 @@ class _EffectiveRouteContext:
+     strict_content_type: bool | DefaultPlaceholder = field(
+         default_factory=lambda: Default(True)
+     )
++    strict_slashes: bool = True
++    alt_path_regex: re.Pattern[str] | None = None
+     tags: list[str | Enum] = field(default_factory=list)
+     responses: dict[int | str, dict[str, Any]] = field(default_factory=dict)
+     name: str = ""
+@@ -1473,6 +1550,11 @@ class _EffectiveRouteContext:
+                 include_context.included_router.strict_content_type,
+                 include_context.strict_content_type,
+             ),
++            strict_slashes=get_value_or_default(
++                route.strict_slashes,
++                include_context.included_router.strict_slashes,
++                include_context.strict_slashes,
++            ),
+             stream_item_type=route.stream_item_type,
+         )
+         return context
+@@ -1512,14 +1594,26 @@ class _EffectiveRouteContext:
+             return Match.NONE, {}
+         route_path = get_route_path(scope)
+         match = self.path_regex.match(route_path)
+-        if not match:
+-            return Match.NONE, {}
++        if match:
++            return self._build_match_result(scope, match)
++        if self.alt_path_regex is not None:
++            alt_match = self.alt_path_regex.match(route_path)
++            if alt_match:
++                return self._build_match_result(scope, alt_match)
++        return Match.NONE, {}
++
++    def _build_match_result(
++        self, scope: Scope, match: re.Match[str]
++    ) -> tuple[Match, Scope]:
+         matched_params = match.groupdict()
+         for key, value in matched_params.items():
+             matched_params[key] = self.param_convertors[key].convert(value)
+         path_params = dict(scope.get("path_params", {}))
+         path_params.update(matched_params)
+-        child_scope = {"endpoint": self.endpoint, "path_params": path_params}
++        child_scope: dict[str, Any] = {
++            "endpoint": self.endpoint,
++            "path_params": path_params,
++        }
+         methods = self.methods
+         if methods and scope["method"] not in methods:
+             return Match.PARTIAL, child_scope
+@@ -2516,6 +2610,24 @@ class APIRouter(routing.Router):
+                 """
+             ),
+         ] = Default(True),
++        strict_slashes: Annotated[
++            bool,
++            Doc(
++                """
++                Whether trailing slashes in route paths should be matched strictly.
++
++                When `True` (the default), a route registered as `/items` only
++                matches `/items` and a route registered as `/items/` only matches
++                `/items/`. Mismatched slashes are handled by the surrounding
++                router's `redirect_slashes` (a 307 redirect by default).
++
++                When `False`, routes registered on this router will match the
++                request both with and without a trailing slash, without
++                redirecting. For example, a route registered as `/items` will
++                respond to both `/items` and `/items/`.
++                """
++            ),
++        ] = Default(True),
+     ) -> None:
+         # Determine the lifespan context to use
+         if lifespan is None:
+@@ -2563,6 +2675,7 @@ class APIRouter(routing.Router):
+         self.default_response_class = default_response_class
+         self.generate_unique_id_function = generate_unique_id_function
+         self.strict_content_type = strict_content_type
++        self.strict_slashes = strict_slashes
+         self._routes_version = 0
+         self._low_priority_routes: list[BaseRoute] = []
+         self._frontend_routes: _FrontendRouteGroup | None = None
+@@ -2917,6 +3030,7 @@ class APIRouter(routing.Router):
+         generate_unique_id_function: Callable[[APIRoute], str]
+         | DefaultPlaceholder = Default(generate_unique_id),
+         strict_content_type: bool | DefaultPlaceholder = Default(True),
++        strict_slashes: bool | DefaultPlaceholder = Default(True),
+     ) -> None:
+         route_class = route_class_override or self.route_class
+         responses = responses or {}
+@@ -2966,6 +3080,9 @@ class APIRouter(routing.Router):
+             strict_content_type=get_value_or_default(
+                 strict_content_type, self.strict_content_type
+             ),
++            strict_slashes=get_value_or_default(
++                strict_slashes, self.strict_slashes
++            ),
+         )
+         self.routes.append(route)
+         self._mark_routes_changed()
