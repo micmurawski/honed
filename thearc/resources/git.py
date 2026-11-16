@@ -20,7 +20,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.changes import detect_changes
 from thearc.resources.journal import Entry, Journal, Moved
 from thearc.resources.targets import ResourceTarget
@@ -125,15 +125,15 @@ def workspace_commits(repo: str | Path, *, path: str = "", rev: str = "HEAD") ->
     return commits
 
 
-def agent_at(repo: str | Path, commit: str, *, path: str = "") -> MetaAgent | None:
-    """The MetaAgent configuration stored in ``commit`` (journal excluded), or ``None`` if it has no workspace."""
+def agent_at(repo: str | Path, commit: str, *, path: str = "") -> AgentConfig | None:
+    """The AgentConfig configuration stored in ``commit`` (journal excluded), or ``None`` if it has no workspace."""
     snapshot = snapshot_at(repo, commit, path=path)
     return snapshot[0] if snapshot else None
 
 
 def snapshot_at(
     repo: str | Path, commit: str, *, path: str = ""
-) -> tuple[MetaAgent, dict[ResourceTarget, str]] | None:
+) -> tuple[AgentConfig, dict[ResourceTarget, str]] | None:
     """The configuration stored in ``commit`` and the lineage IDs its markers give; ``None`` without a workspace."""
     prefix = _prefix(path)
     listing = _git(repo, "ls-tree", "-r", "-z", "--full-tree", commit, "--", prefix or ".")
@@ -183,9 +183,9 @@ def record_commits(
     if since is not None:
         seen.add(_git(repo, "rev-parse", "--verify", f"{since}^{{commit}}").decode().strip())
     start = max((index + 1 for index, commit in enumerate(commits) if commit.sha in seen), default=0)
-    loaded: dict[str, tuple[MetaAgent, dict[ResourceTarget, str]] | None] = {}
+    loaded: dict[str, tuple[AgentConfig, dict[ResourceTarget, str]] | None] = {}
 
-    def load(sha: str | None) -> tuple[MetaAgent, dict[ResourceTarget, str]] | None:
+    def load(sha: str | None) -> tuple[AgentConfig, dict[ResourceTarget, str]] | None:
         if sha is None:
             return None
         if sha not in loaded:
@@ -219,7 +219,7 @@ def record_commits(
 
 
 def commit_configuration(
-    agent: MetaAgent, message: str, *, author: str = "thearc", email: str = "thearc@localhost", **extra: Any
+    agent: AgentConfig, message: str, *, author: str = "thearc", email: str = "thearc@localhost", **extra: Any
 ) -> list[Entry]:
     """Write ``agent``'s configuration over its workspace, commit it as one change with ``message`` as its reason,
     and record that commit in the journal (committed too); returns the entries. Nothing changed, nothing recorded.

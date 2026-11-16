@@ -56,60 +56,60 @@ flowchart LR
     %% style A fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
-## MetaAgent
+## AgentConfig
 
-### MetaAgent
+### AgentConfig
 
-A **MetaAgent** is the portable, harness-independent definition of everything that
+An **AgentConfig** is the portable, harness-independent definition of everything that
 shapes an agent's behavior apart from the model itself: its skills, context
 documents, hooks, MCP connections, and other harness resources. It is the unit
 the learning cycle improves — reflection assesses it and installation deploys
 it.
 
-A MetaAgent is *configuration*, not execution:
+An AgentConfig is *configuration*, not execution:
 
-- An **Agent** is the running system; a MetaAgent is what gets installed into
-  its harness before it runs. The same MetaAgent can be installed into different
+- An **Agent** is the running system; an AgentConfig is what gets installed into
+  its harness before it runs. The same AgentConfig can be installed into different
   harnesses (Claude Code, Codex, Antigravity, Pi).
-- A MetaAgent does not record what an agent actually loaded during a historical
+- An AgentConfig does not record what an agent actually loaded during a historical
   session. Linking a session to the configuration it ran with requires the
   installed identity (name and version), not the current definition.
 
 ```mermaid
 classDiagram
     direction LR
-    class MetaAgent {
+    class AgentConfig {
         name
         version
     }
-    MetaAgent *-- "0..*" Skill : skills
-    MetaAgent *-- "0..*" ContextDocument : context
-    MetaAgent *-- "0..*" Hook : hooks
-    MetaAgent *-- "0..*" MCP : mcps
-    MetaAgent *-- "0..*" AgentResource : resources
-    MetaAgent *-- "1" Journal : journal
+    AgentConfig *-- "0..*" Skill : skills
+    AgentConfig *-- "0..*" ContextDocument : context
+    AgentConfig *-- "0..*" Hook : hooks
+    AgentConfig *-- "0..*" MCP : mcps
+    AgentConfig *-- "0..*" AgentResource : resources
+    AgentConfig *-- "1" Journal : journal
     Skill *-- "0..*" SkillFile : files
 ```
 
 ### Identity
 
-A MetaAgent is identified by a **name** and an optional **version**. The name is
+An AgentConfig is identified by a **name** and an optional **version**. The name is
 a single safe filename component, so it can name directories and version markers
 on disk. The version is a free-form, single-line label; it carries no ordering
 semantics. Installation records both, together with the revision, in the project's
 **install record** so an installed configuration can be traced back to the exact
-MetaAgent configuration it came from, and stamps the version into the files it writes.
+AgentConfig configuration it came from, and stamps the version into the files it writes.
 
 ### Installation
 
-**Installation** deploys a MetaAgent into one harness's native project layout:
+**Installation** deploys an AgentConfig into one harness's native project layout:
 skills as `SKILL.md` with YAML frontmatter, rules/workflows/commands into their
 directories, context documents at the project root, and hooks and MCP servers
 merged into the harness's own configuration files. Supported harnesses are
 `claude`, `codex`, `antigravity`, `pi`, and `opencode`.
 
 An installation **owns** what it wrote. The **install record**
-(`.thearc/installed.json`, one per project) lists, per installed MetaAgent, the
+(`.thearc/installed.json`, one per project) lists, per installed AgentConfig, the
 context sections it owns and, per harness, its version, revision, files, hooks, and
 MCP servers. Context documents belong to the agent, not to a harness: several
 harnesses read the same `AGENTS.md`, so uninstalling the agent from one harness
@@ -117,20 +117,20 @@ keeps its sections while another still has it. Reinstalling replaces exactly wha
 the agent owns and leaves everything else in the project alone; installing another
 agent over a file, entry, or section takes its ownership over. **Uninstalling**
 removes what the agent installed for that harness. Importing an installation reads
-the harness layout back into a MetaAgent.
+the harness layout back into an AgentConfig.
 
 - **Rebuilt files** — skills, rules, workflows, commands, and hook scripts are
-  written whole. Overwriting a file the MetaAgent does not own is a conflict
+  written whole. Overwriting a file the AgentConfig does not own is a conflict
   unless forced.
 - **Merged context documents** — `AGENTS.md`, `CLAUDE.md`, and the like usually
-  hold the project's own instructions. If one already exists, the MetaAgent's
+  hold the project's own instructions. If one already exists, the AgentConfig's
   top-level sections are merged by heading title: a section with the same title
   is replaced in place, a new one is appended, and the rest of the document is
-  kept. Sections the MetaAgent no longer has are removed on reinstall. A
+  kept. Sections the AgentConfig no longer has are removed on reinstall. A
   document thearc created is owned whole.
 - **Merged configuration** — hooks and MCP servers go into the harness's own
   files (`.claude/settings.json`, `.mcp.json`, `.codex/hooks.json`,
-  `.codex/config.toml`, ...) next to entries the MetaAgent does not own.
+  `.codex/config.toml`, ...) next to entries the AgentConfig does not own.
   Resources a harness cannot express (Pi has no hooks or MCP servers) are
   skipped and reported.
 - **Hooks per harness** — a hook can be limited to some harnesses (its
@@ -138,18 +138,18 @@ the harness layout back into a MetaAgent.
   Graphify guards `Bash|Grep` and `Read|Glob` in Claude but checks `Bash` in
   Codex. Hooks found in a harness's files that thearc did not install are
   imported limited to that harness, so imports from several harnesses combine
-  into one MetaAgent.
+  into one AgentConfig.
 - **Owned hooks** — (stored in the agent file `owned_hooks.json`, so they are
-  part of the revision and a curator can edit them) a hook in a harness's file belongs to the MetaAgent if a
+  part of the revision and a curator can edit them) a hook in a harness's file belongs to the AgentConfig if a
   previous install recorded it in the marker, or if its command matches one of
-  the MetaAgent's `owns_hooks` glob patterns (e.g. `graphify *`). Every install
-  first removes all hooks the MetaAgent owns, then adds its current ones, so
+  the AgentConfig's `owns_hooks` glob patterns (e.g. `graphify *`). Every install
+  first removes all hooks the AgentConfig owns, then adds its current ones, so
   hooks installed by hand or by an older version are replaced rather than
   duplicated, and everyone else's hooks are kept.
 
 ### Resource
 
-A **resource** is one independently addressable part of a MetaAgent. Each kind
+A **resource** is one independently addressable part of an AgentConfig. Each kind
 is keyed by its own identity, which is unique within its collection.
 
 | Resource | Keyed by | Meaning |
@@ -162,7 +162,7 @@ is keyed by its own identity, which is unique within its collection.
 | `AgentResource` | `<location>/<path>` | A harness-specific file: a rule, workflow, or command. |
 | `Extension` | `<harness>/<path>` | A file only one harness understands, installed only into it — e.g. a Pi extension (`.pi/extensions/guard.ts`) adding behaviour Pi has no hooks for. Other harnesses skip it. |
 
-Resources are data. Defining, loading, comparing, or saving a MetaAgent never
+Resources are data. Defining, loading, comparing, or saving an AgentConfig never
 executes a hook, script, or MCP server.
 
 ### Resource target
@@ -191,7 +191,7 @@ evidence *about* the configuration, not part of its instructions.
 
 Every rating is traceable. It records:
 
-- the **target** and the **revision** of the MetaAgent it judged, so a rating
+- the **target** and the **revision** of the AgentConfig it judged, so a rating
   given to old content stays distinguishable from one given to the current
   content;
 - any **extra** fields the caller attaches when recording it, e.g. the
@@ -286,7 +286,7 @@ reference to a missing file, or beyond the end of a file, does not resolve.
 
 A **rating scale** defines which values a rating may take and how many ratings
 combine into one summary. `thearc` does not fix a scale; a user chooses or
-defines one, and several scales can be used on the same MetaAgent side by side.
+defines one, and several scales can be used on the same AgentConfig side by side.
 
 | Kind | Values | Summary | Example |
 | --- | --- | --- | --- |
@@ -318,11 +318,11 @@ A **rating summary** is the aggregate of all ratings on one target for one
 scale, derived from the journal; it is never edited directly. Summaries are *mergeable*: combining the summaries of two disjoint sets
 of ratings equals summarising their union. This is why numeric scales keep
 count and sum rather than a mean, and it lets summaries from separate runs or
-candidate MetaAgents be combined. A target with no ratings has no summary,
+candidate AgentConfigs be combined. A target with no ratings has no summary,
 which differs from a summary of zero counts.
 
 The journal keeps every rating; which of them a summary counts is decided by a
-**rating policy** chosen by the operator of a pipeline, not by the MetaAgent.
+**rating policy** chosen by the operator of a pipeline, not by the AgentConfig.
 Examples: count all ratings, drop ratings given before the target's last
 modification, or decay older ratings. Policies only read the journal, so
 switching policy never loses history.
@@ -339,13 +339,13 @@ heading suffix `(harmful: 1, neutral: 0, helpful: 3)`). Rendering is a
 - **Outline** — every resource and section with its file reference and
   summary, including whole resources such as hooks, which have no heading.
 
-A view is never parsed back: the rating-free MetaAgent is what reflectors read,
+A view is never parsed back: the rating-free AgentConfig is what reflectors read,
 revisions hash, and comparisons use.
 
 ### Journal
 
-The **journal** is a MetaAgent's append-only history. It is part of the
-MetaAgent but not of its configuration: it travels with the MetaAgent, yet it
+The **journal** is an AgentConfig's append-only history. It is part of the
+AgentConfig but not of its configuration: it travels with the AgentConfig, yet it
 does not change its revision. Each entry is about one resource target and
 records the revision it applies to, when it happened, and any **extra** fields
 the caller attaches (for example who or what caused it). Each entry is one of:
@@ -372,10 +372,10 @@ address, and the Moved entry links the old ID to the new one.
 Patterns over target addresses (`kind:name[#section]`, with `*` wildcards; a pattern names its targets' subsections
 too, and `skill:<name>` its files), kept in `agent.json`. Neither is configuration, so neither changes the revision.
 
-- **Frozen** (`MetaAgent.frozen`): part of the configuration, versioned and installed with it, that evolution
+- **Frozen** (`AgentConfig.frozen`): part of the configuration, versioned and installed with it, that evolution
   leaves as it is: a reflection may not rate it, a curator's or merger's edits to it are undone. A person may still
   change it.
-- **Ignored** (`MetaAgent.ignore`): left out of the configuration. Importing an installation leaves it out
+- **Ignored** (`AgentConfig.ignore`): left out of the configuration. Importing an installation leaves it out
   (`from_installation(…, ignore=)`), installing neither writes nor deletes it, and `agent.ignore_targets(patterns)`
   removes it from a workspace as a recorded change.
 
@@ -387,7 +387,7 @@ next install keeps it.
 
 ### Version control
 
-A MetaAgent's workspace is tracked with git. Git and the journal complement
+An AgentConfig's workspace is tracked with git. Git and the journal complement
 each other:
 
 - **Git** stores the full content of every revision and answers *what the
@@ -396,9 +396,9 @@ each other:
   what evidence* — at the level of skills and sections rather than lines.
 
 `agent.init_workspace(path, branch="main", reason="…")` requires a versioned
-MetaAgent (so every journal entry's revision reads `version@rev_…`), creates the
+AgentConfig (so every journal entry's revision reads `version@rev_…`), creates the
 workspace, seeds an empty journal with Added entries, and makes the initial git commit.
-It returns the workspace's MetaAgent without changing the original object.
+It returns the workspace's AgentConfig without changing the original object.
 If the workspace already exists, its identity and configuration must match;
 the returned agent carries its saved journal. Reopening a committed workspace
 does not commit pending edits. `agent.to_workspace(path)` only writes files.
@@ -438,16 +438,16 @@ combines them into one (see Merging).
 
 ### Representations
 
-The same MetaAgent has several representations. Conversions between them must be
+The same AgentConfig has several representations. Conversions between them must be
 lossless for configuration content.
 
 | Representation | Purpose |
 | --- | --- |
-| Model | The in-memory Python object (`MetaAgent`). |
+| Model | The in-memory Python object (`AgentConfig`). |
 | Workspace | A canonical, editable, git-tracked directory: the agent files **with markers** (`hooks`, `mcp` and `owned_hooks` as `.jsonc`), an `agent.json` manifest (name, version), and `journal.jsonl` with one entry per line (union-merged by git); harness-independent. |
-| Installation | The harness-native layout (e.g. `.claude/`, `.codex/`) produced by `install()` and read back by `MetaAgent.from_installation()`. |
+| Installation | The harness-native layout (e.g. `.claude/`, `.codex/`) produced by `install()` and read back by `AgentConfig.from_installation()`. |
 | Agent files | The configuration as files, in the same layout as the workspace but **without markers**: `skills/<name>/SKILL.md`, `context/…`, `rules/…`, `hooks.json`, `mcp.json`, `owned_hooks.json`. What a reflector reads and cites, what installation writes from, and what the revision hashes. |
-| Revision | `version@rev_…` — the MetaAgent's version (when it has one) and a content hash of the agent files only (no name, journal, ratings, or markers), pinning which configuration a journal entry refers to. Without a version it is just `rev_…`. |
+| Revision | `version@rev_…` — the AgentConfig's version (when it has one) and a content hash of the agent files only (no name, journal, ratings, or markers), pinning which configuration a journal entry refers to. Without a version it is just `rev_…`. |
 | Evolution report | One HTML file (`thearc report`) showing a workspace's history across branches: the evolution graph, each section's versions across a run, every change with its reason, ratings per section and revision, and the files at any revision. Built from the evolution dataset (`resources.evolution`). |
 | Evolution graph | The report's view of a workspace's history as the agent's evolution: each change commit a node, candidates as branches from their base, merges joined to the candidates they drew on (from the journal — dashed where git has no edge), releases as tags; bookkeeping commits hidden. Not a plain git commit graph. |
 
@@ -462,7 +462,7 @@ echo hi  # res_0eeb…            code file, first line
   "guard": {  // res_8c1f…      hooks.jsonc / mcp.jsonc entry
 ```
 
-Reading a workspace strips markers, so the MetaAgent, its revision, its
+Reading a workspace strips markers, so the AgentConfig, its revision, its
 installations, and every reflector's workspace are free of IDs, and a marker
 never changes a line number. **Ratings are not in the files**: they are derived
 from the journal and shown by the **outline view** (`agent_outline(agent, scales,
@@ -480,7 +480,7 @@ section's first commit already carries its ID and a later rename is a move.
 ## Sessions
 
 What an agent did, as recorded by its harness. Sessions are the evidence that
-reflection judges a MetaAgent by. They are read from the harness's own
+reflection judges an AgentConfig by. They are read from the harness's own
 transcripts and never modified.
 
 ```mermaid
@@ -589,7 +589,7 @@ command; Antigravity cannot load transcripts at all.
 
 ### Harness
 
-The agent environment that records sessions and runs a MetaAgent: `claude`,
+The agent environment that records sessions and runs an AgentConfig: `claude`,
 `codex`, `antigravity`, `pi`, or `opencode`. Sessions can be read from all of
 them; installation supports `claude`, `codex`, `antigravity`, and `pi`. A
 harness's **layout** is where installed configuration goes in a project.
@@ -614,7 +614,7 @@ harness's **layout** is where installed configuration goes in a project.
 
 ## Reflection
 
-Judging a MetaAgent's configuration against evidence of how an agent behaved —
+Judging an AgentConfig's configuration against evidence of how an agent behaved —
 like a code review of the agent's files, where the evidence is what the agent did.
 
 ```text
@@ -624,7 +624,7 @@ output = Reflector(reflection prompt + evidence, configuration, reflection schem
 ### Reflection
 
 One reflector run that judges one **evaluated configuration** — a single
-revision of a MetaAgent, presented as its rating-free agent files — against
+revision of an AgentConfig, presented as its rating-free agent files — against
 **evidence**. Its result is the reflector's **output**, shaped by the reflection
 schema, and the **ratings** found in it — each a file reference to the judged
 lines and a value on a scale. A reflection only judges; it never changes the
@@ -648,7 +648,7 @@ cannot be connected for one run.
 ### Reflection prompt
 
 The instructions that turn the reflector into a reviewer. They ask it to read the
-evidence, inspect the MetaAgent's workspace files, and answer in the shape of the
+evidence, inspect the AgentConfig's workspace files, and answer in the shape of the
 reflection schema — its analysis fields (for example a root cause or a key
 insight) and its ratings, each a `Ref` to lines and a value on a scale.
 
@@ -707,7 +707,7 @@ For an agent with a workspace it also **appends** the new entries to its
 only ever touched through `Journal.load(path)`, `Journal.append(path, entries)`
 and `journal.dump(path)`: reading collapses repeated lines (a replayed append, a
 union merge) and skips an unfinished last line, and `dump` rewrites the file at
-once. `MetaAgent.from_workspace(path, journal=False)` reads the configuration
+once. `AgentConfig.from_workspace(path, journal=False)` reads the configuration
 only, for appending to a journal of any size.
 
 ### Modes and identity
@@ -744,7 +744,7 @@ that is all three".
 
 ## Curation
 
-Changing a MetaAgent's configuration in response to what reflections found —
+Changing an AgentConfig's configuration in response to what reflections found —
 like acting on a code review. One curation is one curator run on a workspace,
 starting from a **base commit** `B`: the curator edits the files directly and
 commits each change with its reason; the commits after `B` are the candidate,
@@ -759,7 +759,7 @@ journal  += entries recorded from the commits after B   (Kept entries if there a
 ### Curator
 
 The agent that curates: a harness, a model, and its settings — a role, like the
-reflector. Unlike the reflector it **edits**: every resource of the MetaAgent
+reflector. Unlike the reflector it **edits**: every resource of the AgentConfig
 (skills and their files, context documents, rules, workflows, commands, hooks,
 MCP servers, extensions, owned hooks), but not `journal.jsonl`, which it may
 only read, nor the agent's identity (`agent.json`), which versioning owns. It
@@ -795,7 +795,7 @@ submit tool:
 
 ### Candidate
 
-The workspace at the curator's last commit: a new revision of the same MetaAgent
+The workspace at the curator's last commit: a new revision of the same AgentConfig
 (same name and version until the pipeline versions it), equal to the base if
 nothing changed. It lands in the workspace as branch `curation/<id>` — the
 curator's commits plus one commit recording them in the journal — and the
@@ -908,9 +908,9 @@ Evolving a project's configuration for one harness from that harness's sessions 
 
 - **Evolve skill**: the skill `thearc skills install self-evolve --harness H` installs into H's skills folder:
   `SKILL.md`, the **recipe** `evolve.py` (`propose(evolution)`; `HARNESS` and `RUNTIME` set at install), and its
-  prompts in `prompts/`. It is not part of the MetaAgent, which ignores it (`skill:evolve`); it is recorded as agent
+  prompts in `prompts/`. It is not part of the AgentConfig, which ignores it (`skill:evolve`); it is recorded as agent
   `thearc-evolve` and never evolved.
-- **Workspace submodule**: the MetaAgent's workspace is a repository of its own, a git submodule of the project at
+- **Workspace submodule**: the AgentConfig's workspace is a repository of its own, a git submodule of the project at
   `.thearc/workspace` (`main`, `candidate/…`, `merge/…`, `release/…`, `proposal/…`), so each project commit pins the
   workspace commit its installed files came from. A project evolves one harness. (A workspace kept inside another
   repository instead uses a **branch prefix**, git config `thearc.<agent>.prefix`, before every branch thearc makes.)

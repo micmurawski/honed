@@ -29,7 +29,7 @@ from cookbook.live_reflect import PROMPT, SCHEMA, USEFULNESS
 from thearc.curation import Curator, Merger
 from thearc.harnesses import Harness
 from thearc.reflection import Reflection, Reflector
-from thearc.resources import MetaAgent
+from thearc.resources import AgentConfig
 from thearc.resources.report import write_report
 from thearc.sessions import Sessions
 
@@ -60,11 +60,11 @@ def seed() -> None:
     """Epoch 0: Graphify as the harnesses ran it: the skill and context they loaded, each harness's own hooks."""
     snapshot = OUT / "base"
     git(PROJECT, "worktree", "add", "--detach", snapshot, BASE)
-    installed = {h: MetaAgent.from_installation(h, snapshot, name="graphify")
+    installed = {h: AgentConfig.from_installation(h, snapshot, name="graphify")
                  for h in ("antigravity", "claude", "codex")}
     git(PROJECT, "worktree", "remove", "--force", snapshot)
     shared = installed["antigravity"]  # .agents/skills and AGENTS.md / CLAUDE.md: what Claude, Codex and Pi loaded
-    agent = MetaAgent(
+    agent = AgentConfig(
         name="graphify",
         version=shared.skills["graphify"].files[".graphify_version"].strip(),
         skills=shared.skills,
@@ -78,7 +78,7 @@ def seed() -> None:
 
 def epoch(n: int, push: bool) -> None:
     out = OUT / "epochs" / str(n)
-    agent = MetaAgent.from_workspace(WORKSPACE)  # main: the current release
+    agent = AgentConfig.from_workspace(WORKSPACE)  # main: the current release
     if not shutil.which("graphify", path=SESSION_ENV["PATH"]):  # Else sessions fail on a missing CLI, not on
         raise SystemExit("sessions need Graphify's CLI on PATH")  # the instructions being evolved.
 
@@ -109,7 +109,7 @@ def epoch(n: int, push: bool) -> None:
     if len(candidates) == 1:
         merged = candidates[0]
     elif (out / "merged").exists():
-        merged = MetaAgent.from_workspace(out / "merged")
+        merged = AgentConfig.from_workspace(out / "merged")
     else:
         merged = Merger("codex").merge(MERGE_PROMPT, candidates, into=out / "merged", epoch=n).agent
     report(out / "report-merged.html")
@@ -141,7 +141,7 @@ def write_prompts(n: int, folder: Path) -> list[Path]:
     return sorted(folder.glob("*.md"))
 
 
-def run_sessions(harness: Harness, prompts: list[Path], base: str, out: Path, agent: MetaAgent) -> list[str]:
+def run_sessions(harness: Harness, prompts: list[Path], base: str, out: Path, agent: AgentConfig) -> list[str]:
     """Run the prompts with one harness; return the sessions that ran this release (its version stamp is in their
     transcript; OpenCode records no context, so its completed sessions count)."""
     batch = out / "sessions" / harness
@@ -155,11 +155,11 @@ def run_sessions(harness: Harness, prompts: list[Path], base: str, out: Path, ag
             and (harness == "opencode" or stamp in Path(run["transcript"]).read_text())]
 
 
-def curate(agent: MetaAgent, harness: Harness, session_ids: list[str], out: Path) -> MetaAgent:
+def curate(agent: AgentConfig, harness: Harness, session_ids: list[str], out: Path) -> AgentConfig:
     """Reflect on each session against this harness's candidate, then curate the candidate."""
     folder = out / "candidates" / harness
     if folder.exists():
-        candidate = MetaAgent.from_workspace(folder)
+        candidate = AgentConfig.from_workspace(folder)
         if "Record curation" in git(folder, "log", "-1", "--format=%s"):
             return candidate  # Curated by an earlier, stopped run.
     else:
@@ -180,7 +180,7 @@ def curate(agent: MetaAgent, harness: Harness, session_ids: list[str], out: Path
             candidate.add_reflection(reflection)
             reflections.append(reflection)
     Curator("codex").curate(CURATION_PROMPT, reflections, candidate, scales=[USEFULNESS], pipeline=harness)
-    return MetaAgent.from_workspace(folder)
+    return AgentConfig.from_workspace(folder)
 
 
 def report(path: Path) -> None:

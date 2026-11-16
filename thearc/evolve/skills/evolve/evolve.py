@@ -20,7 +20,7 @@ from thearc.curation import Curator
 from thearc.evolve import FAILURE_MODES, SCHEMA, USEFULNESS, Evolution
 from thearc.flow import BatchNode, Flow, Node
 from thearc.reflection import Prompt, ReflectionError, Reflector
-from thearc.resources import MetaAgent
+from thearc.resources import AgentConfig
 from thearc.sessions.analysis.aeg import focus, session_failures
 
 PROMPTS = Path(__file__).parent / "prompts"
@@ -232,7 +232,7 @@ def _tail_focus(tail):
             "happened in those last events; earlier ones are context.")
 
 
-def propose(evolution: Evolution) -> MetaAgent | None:
+def propose(evolution: Evolution) -> AgentConfig | None:
     find, too_few, stop, partition, source, reflect, curate = (
         FindSessions(metadata={"harness": HARNESS, "window": f"{WINDOW.days} days", "min": MIN_SESSIONS}),
         TooFew(),

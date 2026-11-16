@@ -13,7 +13,7 @@ import pytest
 from thearc import evolve
 from thearc.curation import Curator
 from thearc.reflection import Reflector
-from thearc.resources import MetaAgent, install
+from thearc.resources import AgentConfig, install
 
 from .test_curation import ScriptedCurator, edit
 from .test_reflection import GOOD, SCHEMA, Scripted, answer
@@ -139,14 +139,14 @@ def test_a_round_proposes_amends_and_applies(project):
     branches = git(workspace, "for-each-ref", "--format=%(refname:short)", "refs/heads").split()
     assert "release/1.0.1" in branches and not any("proposal" in b for b in branches)
     assert git(project, "status", "--porcelain", WORKSPACE).endswith("M .thearc/workspace")  # The submodule moved.
-    assert MetaAgent.from_workspace(workspace).version == "1.0.1"
+    assert AgentConfig.from_workspace(workspace).version == "1.0.1"
 
     installed = project / ".claude/skills/retry/SKILL.md"  # A hand edit before the next round…
     installed.write_text(installed.read_text().replace("ex1", "ex1, by hand"))
     nothing = evolve.run(project, recipe=scripted_recipe([], seen))
     assert nothing.version is None and nothing.reason == "nothing to change"
     assert nothing.drift == ("modified skill:retry#Retry > Examples",)  # …is committed, not overwritten.
-    assert "ex1, by hand" in MetaAgent.from_workspace(workspace).skills["retry"].instructions
+    assert "ex1, by hand" in AgentConfig.from_workspace(workspace).skills["retry"].instructions
 
 
 def test_discard_drops_the_proposal_and_its_edits(project):
@@ -526,7 +526,7 @@ def test_a_round_sources_existing_reflections_and_reflects_only_on_the_rest(proj
     monkeypatch.setattr(thearc.reflection, "Reflector", ScriptedReflector)
     monkeypatch.setattr(thearc.curation, "Curator", curator)
     evolve.install_evolve_skill(project, "claude")
-    release = MetaAgent.from_workspace(project / WORKSPACE)
+    release = AgentConfig.from_workspace(project / WORKSPACE)
     prompt = Prompt.load(project / ".claude/skills/evolve/prompts/reflect.md")
     with Sessions() as index:  # The session index, where /reflect keeps in-session reflections.
         index.add(store, harness="claude")

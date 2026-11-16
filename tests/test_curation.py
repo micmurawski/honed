@@ -11,7 +11,7 @@ from thearc.curation import CurationError, Curator
 from thearc.reflection import Conversation, Reflector, Runtime
 from thearc.reflection import runtimes as runtime_module
 from thearc.reflection.runtimes import ToolEndpoint
-from thearc.resources import MetaAgent
+from thearc.resources import AgentConfig
 
 from .test_reflection import GOOD, SCHEMA, Scripted, answer, usefulness
 
@@ -89,10 +89,10 @@ def test_a_curation_commits_each_change_on_its_own_branch_and_records_it(reviewe
     assert entry.kind == "modified" and entry.reason.startswith("Stop retrying") and entry.touched == [limits]
     assert entry.extra["curation"] == curation.id and entry.extra["author"] == "curator (codex)"
     assert "never for permanent errors" in curation.candidate().skills["retry"].instructions
-    on_branch = MetaAgent.from_workspace(root).journal  # The main branch's journal has no curation entries…
+    on_branch = AgentConfig.from_workspace(root).journal  # The main branch's journal has no curation entries…
     assert not on_branch.changes()[-1].extra.get("curation")
     subprocess.run(["git", "-C", str(root), "checkout", "-q", curation.branch], check=True)
-    assert MetaAgent.from_workspace(root).journal.changes()[-1] == entry  # …the candidate's does.
+    assert AgentConfig.from_workspace(root).journal.changes()[-1] == entry  # …the candidate's does.
 
 
 def test_the_prompt_lists_items_and_ratings_by_lineage_id(reviewed):
@@ -126,10 +126,10 @@ def test_a_new_section_gets_its_marker_so_a_later_rename_is_a_move(agent, tmp_pa
             change(root / "skills/retry/SKILL.md")
             replies.append(tool("commit_change", message=message)["text"])
             tool("finish", summary="Done.")
-        return Curator(runtime=ScriptedCurator(script)).curate("Fix it.", [], MetaAgent.from_workspace(folder))
+        return Curator(runtime=ScriptedCurator(script)).curate("Fix it.", [], AgentConfig.from_workspace(folder))
 
     curate(lambda file: file.write_text(file.read_text() + "\n## Backoff\n\nwait 2s\n"), "Add a backoff")
-    added = {t.section: i for t, i in MetaAgent.from_workspace(folder).journal.ids().items()}
+    added = {t.section: i for t, i in AgentConfig.from_workspace(folder).journal.ids().items()}
     backoff = added["Retry > Backoff"]
     assert f"## Backoff <!-- {backoff} -->" in skill.read_text()  # Committed with the section.
     assert f"Marked skill:retry#Retry > Backoff as {backoff}" in replies[0]
@@ -139,7 +139,7 @@ def test_a_new_section_gets_its_marker_so_a_later_rename_is_a_move(agent, tmp_pa
                       "Rename the backoff")
     (moved,) = curation.entries
     assert moved.kind == "moved" and moved.target.section == "Retry > Waiting"
-    ids = {t.section: i for t, i in MetaAgent.from_workspace(folder).journal.ids().items()}
+    ids = {t.section: i for t, i in AgentConfig.from_workspace(folder).journal.ids().items()}
     assert ids["Retry > Waiting"] == backoff and "Retry > Backoff" not in ids  # One history, across the rename.
     assert "Marked" not in replies[1]
 

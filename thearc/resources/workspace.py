@@ -1,4 +1,4 @@
-"""Workspace: the canonical, editable, git-trackable directory of a MetaAgent.
+"""Workspace: the canonical, editable, git-trackable directory of an AgentConfig.
 
 The configuration uses the agent-files layout (see ``thearc.resources.files``), so
 file references, workspace paths, and git diffs agree. Next to it:
@@ -16,7 +16,7 @@ inside a configuration folder is an error. Resources are never executed. ``init_
 initializes git and commits the initial configuration and journal.
 
 Configuration files carry **markers** (see ``thearc.resources.markers``): each
-target's lineage ID. Reading a workspace strips them, so the MetaAgent — and its
+target's lineage ID. Reading a workspace strips them, so the AgentConfig — and its
 revision, its installations, and the files reflectors read — never contains them.
 Ratings are not in the files; ``agent_outline`` renders them (``RATINGS.md`` on release).
 """
@@ -33,11 +33,11 @@ from thearc.resources import markers
 from thearc.resources.agent import (
     MCP,
     SKILL_FILE,
+    AgentConfig,
     AgentResource,
     ContextDocument,
     Extension,
     Hook,
-    MetaAgent,
 )
 from thearc.resources.files import HOOKS_FILE, MCP_FILE, OWNED_HOOKS_FILE
 from thearc.resources.journal import Entry, Journal, Reflected, dump_journal, load_journal_records
@@ -62,7 +62,7 @@ def _root(path: str | Path) -> Path:
     return root
 
 
-def lineage_ids(agent: MetaAgent) -> dict[ResourceTarget, str]:
+def lineage_ids(agent: AgentConfig) -> dict[ResourceTarget, str]:
     """Each target's lineage ID: the journal's, else its marker's, else a new one from its address."""
     ids = {**agent.identities, **agent.journal.ids()}
     return {target: ids.get(target, target.id) for target in agent.files().targets}
@@ -90,7 +90,7 @@ def mark_new_targets(path: str | Path) -> dict[ResourceTarget, str]:
     return marked
 
 
-def workspace_files(agent: MetaAgent, *, journal: bool = True) -> dict[str, str]:
+def workspace_files(agent: AgentConfig, *, journal: bool = True) -> dict[str, str]:
     """Every workspace file as text, with a marker holding each target's lineage ID."""
     manifest: dict[str, Any] = {"schema_version": SCHEMA_VERSION, "name": agent.name, "version": agent.version}
     manifest.update({key: patterns for key in ("frozen", "ignore") if (patterns := getattr(agent, key))})
@@ -105,9 +105,9 @@ def workspace_files(agent: MetaAgent, *, journal: bool = True) -> dict[str, str]
 
 
 def init_workspace(
-    agent: MetaAgent, path: str | Path, *, branch: str = "main", reason: str = "Initialize MetaAgent workspace",
+    agent: AgentConfig, path: str | Path, *, branch: str = "main", reason: str = "Initialize AgentConfig workspace",
     repository: str | Path | None = None, prefix: str = "",
-) -> MetaAgent:
+) -> AgentConfig:
     """Initialize or resume a workspace without mutating the supplied agent.
 
     The agent must have a version, so the workspace's revision is ``version@rev_…``.
@@ -124,7 +124,7 @@ def init_workspace(
     from thearc.resources.git import GitError, _git, commit, prefix_key
 
     if agent.version is None:
-        raise ValueError(f"A workspace needs a versioned MetaAgent; give {agent.name!r} a version first")
+        raise ValueError(f"A workspace needs a versioned AgentConfig; give {agent.name!r} a version first")
     root = _root(path)
     if repository is not None and not (root / ".git").exists():
         if root.exists() and any(root.iterdir()):
@@ -136,7 +136,7 @@ def init_workspace(
         saved = read_workspace(root)
         identity = ("name", "version", "owns_hooks", "revision")
         if any(getattr(saved, field) != getattr(agent, field) for field in identity):
-            raise ValueError(f"Workspace identity or configuration differs from the MetaAgent: {root}")
+            raise ValueError(f"Workspace identity or configuration differs from the AgentConfig: {root}")
     else:
         saved = agent.model_copy(deep=True)
         saved._workspace = root
@@ -168,7 +168,7 @@ def is_managed(relative: str) -> bool:
 
 
 def write_workspace(
-    agent: MetaAgent,
+    agent: AgentConfig,
     path: str | Path,
     *,
     journal: bool = True,
@@ -224,7 +224,7 @@ def _ensure_union_merge(path: Path) -> None:
 
 def read_workspace(
     path: str | Path, *, journal: bool = True, max_bytes: int = 10_000_000, max_files: int = 10_000
-) -> MetaAgent:
+) -> AgentConfig:
     """Read a workspace written by ``write_workspace`` or edited by hand; the agent remembers it as its workspace,
     and the lineage IDs its markers gave (``agent.identities``).
 
@@ -240,7 +240,7 @@ def read_workspace(
 
 def _read(
     path: str | Path, *, journal: bool = True, max_bytes: int = 10_000_000, max_files: int = 10_000
-) -> tuple[MetaAgent, dict[ResourceTarget, str]]:
+) -> tuple[AgentConfig, dict[ResourceTarget, str]]:
     """The agent in a workspace and the lineage IDs its markers give."""
     if max_bytes < 1 or max_files < 1:
         raise ValueError("workspace limits must be positive")
@@ -286,8 +286,8 @@ def _object(text: str, path: str) -> dict[str, Any]:
     return data
 
 
-def parse_workspace(texts: dict[str, str]) -> tuple[MetaAgent, dict[ResourceTarget, str]]:
-    """Build a MetaAgent from workspace files given as ``{relative path: text}`` (dot-files excluded), with the
+def parse_workspace(texts: dict[str, str]) -> tuple[AgentConfig, dict[ResourceTarget, str]]:
+    """Build an AgentConfig from workspace files given as ``{relative path: text}`` (dot-files excluded), with the
     lineage IDs its markers give."""
     texts = dict(texts)
     if MANIFEST not in texts:
@@ -345,7 +345,7 @@ def parse_workspace(texts: dict[str, str]) -> tuple[MetaAgent, dict[ResourceTarg
     for name, skill in skills.items():
         if not skill.pop("has_instructions", False):
             raise ValueError(f"skills/{name} has no {SKILL_FILE}")
-    agent = MetaAgent.model_validate(
+    agent = AgentConfig.model_validate(
         {
             "name": manifest["name"],
             "version": manifest["version"],

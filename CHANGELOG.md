@@ -3,6 +3,13 @@
 Notable changes, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- `MetaAgent` is renamed `AgentConfig`: it is an agent's configuration, not an agent. `MetaAgent` still imports, as a
+  deprecated alias that warns, until the next minor release.
+
 ## 0.2.0
 
 ### Added

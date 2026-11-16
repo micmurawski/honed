@@ -2,7 +2,7 @@
 
 import json
 
-from thearc.resources import ContextDocument, MetaAgent, install
+from thearc.resources import ContextDocument, AgentConfig, install
 
 CLAUDE = "# Project\n\nUse uv.\n\n# Private notes\n\nMy token lives in 1Password.\n\n## Keys\n\nNone here.\n"
 
@@ -22,7 +22,7 @@ def test_without_ignored_drops_resources_files_and_sections(agent):
 def test_an_installation_is_imported_without_what_is_ignored(agent, tmp_path):
     (tmp_path / "CLAUDE.md").write_text(CLAUDE)
     install(agent, "claude", tmp_path)
-    imported = MetaAgent.from_installation("claude", tmp_path, ignore=["skill:retry", "hook:guard"])
+    imported = AgentConfig.from_installation("claude", tmp_path, ignore=["skill:retry", "hook:guard"])
     assert not imported.skills and set(imported.hooks) == {"lint"} and imported.ignore == ["hook:guard", "skill:retry"]
 
 

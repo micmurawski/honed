@@ -35,7 +35,7 @@ from thearc.resources.markdown import outline, render_frontmatter, split_frontma
 from thearc.resources.targets import Kind, ResourceTarget
 
 if TYPE_CHECKING:
-    from thearc.resources.agent import MetaAgent
+    from thearc.resources.agent import AgentConfig
 
 HOOKS_FILE = "hooks.json"
 MCP_FILE = "mcp.json"
@@ -120,7 +120,7 @@ class AgentFiles:
         self._by_target = {span.target: span for span in self.spans}
 
     @classmethod
-    def from_agent(cls, agent: MetaAgent) -> AgentFiles:
+    def from_agent(cls, agent: AgentConfig) -> AgentFiles:
         files: dict[str, str] = {}
         spans: list[Span] = []
 

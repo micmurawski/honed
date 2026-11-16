@@ -9,7 +9,7 @@ import shlex
 from pathlib import Path
 from typing import Any
 
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.harness import HARNESSES
 from thearc.sessions.models import Event
 
@@ -147,11 +147,11 @@ class SkillUsage(BehavioralPattern):
     name = "skill_usage"
     description = "Recorded evidence of access to a selected skill."
 
-    def __init__(self, *, agent: MetaAgent | None = None, path: str | Path | None = None):
+    def __init__(self, *, agent: AgentConfig | None = None, path: str | Path | None = None):
         if agent is None and path is None:
             raise ValueError("provide agent or path")
-        if agent is not None and not isinstance(agent, MetaAgent):
-            raise TypeError("agent must be a MetaAgent")
+        if agent is not None and not isinstance(agent, AgentConfig):
+            raise TypeError("agent must be an AgentConfig")
         if path is not None and (not isinstance(path, (str, Path)) or not str(path).strip()):
             raise ValueError("path must be a non-blank path")
         self.path = _normalize(str(path)) if path is not None else None

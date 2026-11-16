@@ -1,6 +1,6 @@
-"""Ignored targets: parts of a project's configuration that are left out of its MetaAgent.
+"""Ignored targets: parts of a project's configuration that are left out of its AgentConfig.
 
-``MetaAgent.ignore`` holds patterns over target addresses (``ResourceTarget.matches``). An ignored
+``AgentConfig.ignore`` holds patterns over target addresses (``ResourceTarget.matches``). An ignored
 target is not imported (``without_ignored``), and installing neither writes nor deletes it
 (``ignored_install_path``): it stays as the user wrote it, owned by nobody. In a context document,
 thearc owns top-level sections, so an ignored subsection of an owned section is not protected on
@@ -15,11 +15,11 @@ from thearc.resources.markdown import outline, split_frontmatter
 from thearc.resources.targets import Kind, ResourceTarget
 
 if TYPE_CHECKING:
-    from thearc.resources.agent import MetaAgent
+    from thearc.resources.agent import AgentConfig
     from thearc.resources.harness import HarnessLayout
 
 
-def drop_sections(text: str, resource: ResourceTarget, ignored: MetaAgent) -> str:
+def drop_sections(text: str, resource: ResourceTarget, ignored: AgentConfig) -> str:
     """``text`` (a resource's Markdown) without the sections ``ignored`` ignores, subsections included."""
     _, body, offset = split_frontmatter(text)
     lines = text.splitlines(keepends=True)
@@ -31,7 +31,7 @@ def drop_sections(text: str, resource: ResourceTarget, ignored: MetaAgent) -> st
     return "".join(line for number, line in enumerate(lines, start=1) if number not in removed)
 
 
-def without_ignored(agent: MetaAgent) -> MetaAgent:
+def without_ignored(agent: AgentConfig) -> AgentConfig:
     """A copy of ``agent`` without the targets its ``ignore`` patterns name: whole resources and skill files are
     dropped, ignored sections cut out of their Markdown."""
     if not agent.ignore:
@@ -68,7 +68,7 @@ def without_ignored(agent: MetaAgent) -> MetaAgent:
     })
 
 
-def ignored_install_path(agent: MetaAgent, harness: HarnessLayout, relative: str) -> bool:
+def ignored_install_path(agent: AgentConfig, harness: HarnessLayout, relative: str) -> bool:
     """Whether ``relative``, a file an install of ``agent`` writes for ``harness``, belongs to an ignored target."""
     skills = f"{harness.location('skills')}/"
     if relative.startswith(skills):

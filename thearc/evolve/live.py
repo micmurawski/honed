@@ -22,7 +22,7 @@ from thearc.harnesses import Harness
 from thearc.reflection import Prompt, Reflection, Submission
 from thearc.reflection.prompts import schema_hash
 from thearc.reflection.reflector import fingerprint
-from thearc.resources import MetaAgent
+from thearc.resources import AgentConfig
 from thearc.resources.files import AgentFiles, FileReference
 from thearc.resources.git import agent_at, branch_name
 from thearc.resources.harness import installed_agents
@@ -73,7 +73,7 @@ class Begun:
         ])
 
 
-def _release(root: Path, version: str | None = None) -> MetaAgent:
+def _release(root: Path, version: str | None = None) -> AgentConfig:
     """The installed release (the workspace's ``main``), or the release ``version`` when main has moved on."""
     workspace = root / WORKSPACE
     if not (workspace / ".git").exists():
@@ -93,7 +93,7 @@ def _release(root: Path, version: str | None = None) -> MetaAgent:
 class Judged:
     """What an in-session reflection judges and asks: the configuration, the question, and the schema."""
 
-    agent: MetaAgent
+    agent: AgentConfig
     prompt: Prompt
     schema: ReflectionSchema
     evolved: bool  # The release of the project's evolution, not the installation as it is.
@@ -106,7 +106,7 @@ def judged(root: Path, harness: Harness, version: str | None = None) -> Judged:
     if (root / WORKSPACE / ".git").exists() and project_harness(root) == harness:
         prompt, schema = _recipe(root, harness)
         return Judged(_release(root, version), prompt, schema, True)
-    agent = MetaAgent.from_installation(harness, root, name=root.name,
+    agent = AgentConfig.from_installation(harness, root, name=root.name,
                                         ignore=["skill:reflect", "skill:evolve"])
     return Judged(agent, default_prompt(), SCHEMA, False)
 
@@ -152,7 +152,7 @@ def _recipe(root: Path, harness: Harness) -> tuple[Prompt, ReflectionSchema]:
     return prompt, schema if isinstance(schema, ReflectionSchema) else SCHEMA
 
 
-def _files_folder(root: Path, release: MetaAgent) -> Path:
+def _files_folder(root: Path, release: AgentConfig) -> Path:
     folder = root / FILES / release.revision.replace("@", "-")
     if not folder.is_dir():
         try:

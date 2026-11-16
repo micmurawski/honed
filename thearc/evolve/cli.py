@@ -61,7 +61,7 @@ def install() -> None:
 @_errors
 def install_evolve_skill_command(project: Path, harness: str, runtime: str | None, ignore: tuple[str, ...],
                                  remote: str | None, no_reflect: bool) -> None:
-    """Set PROJECT up for /evolve in HARNESS: adopt its configuration for that harness as a MetaAgent in a workspace
+    """Set PROJECT up for /evolve in HARNESS: adopt its configuration for that harness as an AgentConfig in a workspace
     repository, added to the project as the git submodule .thearc/workspace, and install the evolve skill and the
     reflect skill beside it."""
     from .setup import WORKSPACE, install_evolve_skill

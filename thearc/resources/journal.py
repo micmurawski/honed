@@ -1,4 +1,4 @@
-"""The journal: a MetaAgent's append-only history of targets and ratings."""
+"""The journal: an AgentConfig's append-only history of targets and ratings."""
 
 from __future__ import annotations
 

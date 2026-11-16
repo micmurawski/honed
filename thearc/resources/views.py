@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.ratings import RatingPolicy, RatingScale, Summary, count_all
 from thearc.resources.targets import ResourceTarget
 
@@ -24,7 +24,7 @@ def _scales(scales: Scales) -> tuple[RatingScale, ...]:
 
 
 def _labels(
-    agent: MetaAgent, scales: tuple[RatingScale, ...], policy: RatingPolicy, ids: bool
+    agent: AgentConfig, scales: tuple[RatingScale, ...], policy: RatingPolicy, ids: bool
 ) -> dict[ResourceTarget, str]:
     """Suffix per target: ``[res_…]`` (lineage ID) when ``ids``, then each scale's summary (named when there are
     several)."""
@@ -47,7 +47,9 @@ def _labels(
     return labels
 
 
-def agent_outline(agent: MetaAgent, scales: Scales = (), *, ids: bool = False, policy: RatingPolicy = count_all) -> str:
+def agent_outline(
+    agent: AgentConfig, scales: Scales = (), *, ids: bool = False, policy: RatingPolicy = count_all
+) -> str:
     """Markdown outline of every resource and section with its file reference, and optionally IDs and summaries."""
     files = agent.files()
     labels = _labels(agent, _scales(scales), policy, ids)

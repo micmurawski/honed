@@ -10,7 +10,7 @@ from thearc.resources import (
     ContextDocument,
     Hook,
     InstallConflict,
-    MetaAgent,
+    AgentConfig,
     install,
     installed_agents,
     uninstall,
@@ -23,7 +23,7 @@ FASTAPI = Path(__file__).resolve().parent / "fastapi"
 @pytest.mark.parametrize("harness", sorted(HARNESSES))
 def test_install_then_import_round_trips(agent, harness, tmp_path):
     result = install(agent, harness, tmp_path)
-    imported = MetaAgent.from_installation(harness, tmp_path)
+    imported = AgentConfig.from_installation(harness, tmp_path)
     if harness in {"pi", "opencode"}:  # Neither takes hooks or MCP servers from thearc.
         assert result.skipped == ("hook:guard", "hook:lint", "mcp:docs")
         agent = agent.model_copy(update={"hooks": {}, "mcps": {}})
@@ -73,7 +73,7 @@ def test_reinstall_replaces_only_what_it_owns(agent, tmp_path):
 
 def test_hook_names_survive_through_the_marker(agent, tmp_path):
     install(agent, "codex", tmp_path)
-    assert set(MetaAgent.from_installation("codex", tmp_path).hooks) == {"guard", "lint"}
+    assert set(AgentConfig.from_installation("codex", tmp_path).hooks) == {"guard", "lint"}
 
 
 def test_unowned_files_are_conflicts_unless_forced(agent, tmp_path):
@@ -103,7 +103,7 @@ Run pytest.
 
 def test_context_sections_are_merged_into_existing_documents(tmp_path):
     (tmp_path / "AGENTS.md").write_text(USER_AGENTS)
-    agent = MetaAgent(
+    agent = AgentConfig(
         name="g",
         context=[
             ContextDocument(
@@ -132,19 +132,19 @@ Run pytest.
 Be brief.
 """
     )
-    imported = MetaAgent.from_installation("codex", tmp_path)
+    imported = AgentConfig.from_installation("codex", tmp_path)
     assert imported.context["AGENTS.md"].content == agent.context["AGENTS.md"].content
 
 
 def test_reinstall_removes_dropped_sections_and_keeps_user_content(tmp_path):
     (tmp_path / "CLAUDE.md").write_text(USER_AGENTS)
-    two = MetaAgent(name="g", context=[ContextDocument(filename="CLAUDE.md", content="## A\n\na\n\n## B\n\nb\n")])
+    two = AgentConfig(name="g", context=[ContextDocument(filename="CLAUDE.md", content="## A\n\na\n\n## B\n\nb\n")])
     install(two, "claude", tmp_path)
-    one = MetaAgent(name="g", context=[ContextDocument(filename="CLAUDE.md", content="## A\n\na2\n")])
+    one = AgentConfig(name="g", context=[ContextDocument(filename="CLAUDE.md", content="## A\n\na2\n")])
     install(one, "claude", tmp_path)
     text = (tmp_path / "CLAUDE.md").read_text()
     assert "## B" not in text and "a2" in text and "Use uv." in text and "Run pytest." in text
-    install(MetaAgent(name="g"), "claude", tmp_path)
+    install(AgentConfig(name="g"), "claude", tmp_path)
     assert (tmp_path / "CLAUDE.md").read_text().rstrip() == USER_AGENTS.rstrip()
 
 
@@ -159,7 +159,7 @@ def test_codex_mcp_servers_are_toml_tables(tmp_path):
     config = tmp_path / ".codex/config.toml"
     config.parent.mkdir()
     config.write_text('model = "gpt-5"\n\n[mcp_servers.theirs]\ncommand = "x"\n')
-    agent = MetaAgent(
+    agent = AgentConfig(
         name="a",
         mcps=[
             MCP(name="docs", command="npx", args=["-y", "docs"], env={"TOKEN": "t"}),
@@ -171,9 +171,9 @@ def test_codex_mcp_servers_are_toml_tables(tmp_path):
     assert data["model"] == "gpt-5" and data["mcp_servers"]["theirs"] == {"command": "x"}
     assert data["mcp_servers"]["docs"] == {"command": "npx", "args": ["-y", "docs"], "env": {"TOKEN": "t"}}
     assert data["mcp_servers"]["web"] == {"url": "https://example.test/mcp", "enabled": False}
-    assert MetaAgent.from_installation("codex", tmp_path).mcps["web"] == agent.mcps["web"]
+    assert AgentConfig.from_installation("codex", tmp_path).mcps["web"] == agent.mcps["web"]
 
-    install(MetaAgent(name="a"), "codex", tmp_path)
+    install(AgentConfig(name="a"), "codex", tmp_path)
     assert tomllib.loads(config.read_text()) == {"model": "gpt-5", "mcp_servers": {"theirs": {"command": "x"}}}
 
 
@@ -181,7 +181,7 @@ def test_codex_unowned_mcp_server_is_a_conflict(tmp_path):
     config = tmp_path / ".codex/config.toml"
     config.parent.mkdir()
     config.write_text('[mcp_servers.docs]\ncommand = "theirs"\n')
-    agent = MetaAgent(name="a", mcps=[MCP(name="docs", command="ours")])
+    agent = AgentConfig(name="a", mcps=[MCP(name="docs", command="ours")])
     with pytest.raises(InstallConflict, match="docs"):
         install(agent, "codex", tmp_path)
     install(agent, "codex", tmp_path, force=True)
@@ -195,7 +195,7 @@ def test_uninstalling_everything_removes_owned_config(agent, tmp_path):
 
 
 def test_script_hooks_are_installed_as_executable_files(tmp_path):
-    agent = MetaAgent(name="a", hooks=[Hook(name="check", script="#!/bin/sh\nexit 0\n")])
+    agent = AgentConfig(name="a", hooks=[Hook(name="check", script="#!/bin/sh\nexit 0\n")])
     install(agent, "claude", tmp_path)
     script = tmp_path / ".claude/hooks/check.sh"
     assert script.stat().st_mode & 0o111
@@ -205,13 +205,13 @@ def test_script_hooks_are_installed_as_executable_files(tmp_path):
 
 def test_unknown_harness():
     with pytest.raises(ValueError, match="supported"):
-        install(MetaAgent(name="a"), "claudecode", ".")
+        install(AgentConfig(name="a"), "claudecode", ".")
 
 
 @pytest.mark.skipif(not (FASTAPI / ".agents").is_dir(), reason="tests/fastapi submodule not checked out")
 def test_imports_the_graphify_reference_project(tmp_path):
-    antigravity = MetaAgent.from_installation("antigravity", FASTAPI, name="graphify")
-    codex = MetaAgent.from_installation("codex", FASTAPI, name="graphify")
+    antigravity = AgentConfig.from_installation("antigravity", FASTAPI, name="graphify")
+    codex = AgentConfig.from_installation("codex", FASTAPI, name="graphify")
     assert antigravity.skills["graphify"].files[".graphify_version"]
     assert set(antigravity.resources) == {"rules/graphify.md", "workflows/graphify.md"}
     hook = next(iter(codex.hooks.values()))
@@ -235,7 +235,7 @@ GUARD_SEARCH = Hook(name="guard-search", matcher="Bash|Grep", command="graphify 
 GUARD_READ = Hook(name="guard-read", matcher="Read|Glob", command="graphify hook-guard read",
                   harnesses=["claude"], extra={"timeout": 10})
 CHECK = Hook(name="check", matcher="Bash", command="graphify hook-check", harnesses=["codex"])
-GRAPHIFY = MetaAgent(name="graphify", version="0.9.68", owns_hooks=["graphify *"],
+GRAPHIFY = AgentConfig(name="graphify", version="0.9.68", owns_hooks=["graphify *"],
                      hooks=[GUARD_SEARCH, GUARD_READ, CHECK])
 
 
@@ -250,7 +250,7 @@ def test_hooks_install_only_into_their_harnesses(tmp_path):
     assert claude.hooks == ("guard-read", "guard-search") and codex.hooks == ("check",)
     assert native_hooks(tmp_path / ".codex/hooks.json") == [("PreToolUse", "Bash", "graphify hook-check")]
     assert install(GRAPHIFY, "pi", tmp_path / "pi").skipped == ()  # Nothing here was meant for Pi.
-    assert install(MetaAgent(name="a", hooks=[Hook(name="all", command="x")]), "pi", tmp_path / "pi2").skipped == (
+    assert install(AgentConfig(name="a", hooks=[Hook(name="all", command="x")]), "pi", tmp_path / "pi2").skipped == (
         "hook:all",)
 
 
@@ -276,25 +276,25 @@ def test_owned_hooks_in_a_flat_hooks_file_are_replaced(tmp_path):
     hooks_file.parent.mkdir()
     hooks_file.write_text(json.dumps({"old": {"command": "graphify hook-old"}, "mine": {"command": "mine"}}))
     check = Hook(name="check", command="graphify hook-check")
-    install(MetaAgent(name="graphify", owns_hooks=["graphify *"], hooks=[check]), "antigravity", tmp_path)
+    install(AgentConfig(name="graphify", owns_hooks=["graphify *"], hooks=[check]), "antigravity", tmp_path)
     assert json.loads(hooks_file.read_text()) == {"mine": {"command": "mine"},
                                                   "check": {"command": "graphify hook-check"}}
-    imported = MetaAgent.from_installation("antigravity", tmp_path)
+    imported = AgentConfig.from_installation("antigravity", tmp_path)
     assert imported.hooks["check"].harnesses == [] and imported.hooks["mine"].harnesses == ["antigravity"]
     assert imported.owns_hooks == ["graphify *"]
 
 
 def test_scopes_and_ownership_survive_install_and_import(tmp_path):
     install(GRAPHIFY, "claude", tmp_path)
-    imported = MetaAgent.from_installation("claude", tmp_path, name="graphify", version="0.9.68")
+    imported = AgentConfig.from_installation("claude", tmp_path, name="graphify", version="0.9.68")
     assert imported.hooks == {"guard-search": GUARD_SEARCH, "guard-read": GUARD_READ}
     assert imported.owns_hooks == ["graphify *"]
 
 
 @pytest.mark.skipif(not (FASTAPI / ".claude").is_dir(), reason="tests/fastapi submodule not checked out")
 def test_graphify_hooks_of_each_harness_combine_into_one_agent(tmp_path):
-    claude = MetaAgent.from_installation("claude", FASTAPI, name="graphify")
-    codex = MetaAgent.from_installation("codex", FASTAPI, name="graphify")
+    claude = AgentConfig.from_installation("claude", FASTAPI, name="graphify")
+    codex = AgentConfig.from_installation("codex", FASTAPI, name="graphify")
     assert {hook.harnesses[0] for hook in claude.hooks.values()} == {"claude"} and len(claude.hooks) == 2
     combined = codex.model_copy(update={"hooks": {**claude.hooks, **codex.hooks}, "owns_hooks": ["graphify *"]})
     for harness, native in [("claude", ".claude/settings.json"), ("codex", ".codex/hooks.json")]:
@@ -307,11 +307,11 @@ def test_graphify_hooks_of_each_harness_combine_into_one_agent(tmp_path):
 
 
 def test_harnesses_share_an_agents_context(tmp_path):
-    graphify = MetaAgent(name="graphify", version="1",
+    graphify = AgentConfig(name="graphify", version="1",
                          context=[ContextDocument(filename="AGENTS.md", content="## graphify\n\nUse the graph.\n")])
     install(graphify, "codex", tmp_path)
     install(graphify, "pi", tmp_path)
-    install(MetaAgent(name="other", version="1"), "pi", tmp_path)  # Another agent leaves graphify's context alone.
+    install(AgentConfig(name="other", version="1"), "pi", tmp_path)  # Another agent leaves graphify's context alone.
     uninstall("pi", tmp_path, name="graphify")  # Codex still reads it.
     assert "Use the graph." in (tmp_path / "AGENTS.md").read_text()
     assert installed_agents(tmp_path) == {"graphify": {"codex": "1"}, "other": {"pi": "1"}}
@@ -320,11 +320,11 @@ def test_harnesses_share_an_agents_context(tmp_path):
 
 
 def test_installing_over_another_agent_takes_ownership(tmp_path):
-    first = MetaAgent(name="first",
+    first = AgentConfig(name="first",
                       context=[ContextDocument(filename="AGENTS.md", content="## a\n\nA.\n\n## b\n\nB.\n")])
-    second = MetaAgent(name="second", context=[ContextDocument(filename="AGENTS.md", content="## b\n\nNew B.\n")])
+    second = AgentConfig(name="second", context=[ContextDocument(filename="AGENTS.md", content="## b\n\nNew B.\n")])
     install(first, "codex", tmp_path)
     install(second, "codex", tmp_path)
-    assert MetaAgent.from_installation("codex", tmp_path, name="first").context["AGENTS.md"].content == "## a\n\nA.\n"
+    assert AgentConfig.from_installation("codex", tmp_path, name="first").context["AGENTS.md"].content == "## a\n\nA.\n"
     uninstall("codex", tmp_path, name="first")
     assert (tmp_path / "AGENTS.md").read_text() == "## b\n\nNew B.\n"

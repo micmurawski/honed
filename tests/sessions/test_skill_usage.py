@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from thearc.resources import MetaAgent, Skill
+from thearc.resources import AgentConfig, Skill
 from thearc.sessions import Session
 from thearc.sessions.scanner import AllOf, PatternScanner, ShellCommand, SkillUsage
 
@@ -14,7 +14,7 @@ from .conftest import event
 
 @pytest.fixture
 def config():
-    return MetaAgent(name="test", skills=[Skill(name="graphify", instructions="Query first.", files={
+    return AgentConfig(name="test", skills=[Skill(name="graphify", instructions="Query first.", files={
         "references/query.md": "Query help", "scripts/check.sh": "echo check",
     }), Skill(name="other", instructions="Other skill.")])
 
@@ -48,7 +48,7 @@ def test_agent_only_selects_its_defined_resources(config):
               call(3, args={"path": ".agents/skills/other/SKILL.md"})]
     assert [m.start_index for m in SkillUsage(agent=config).find_matches(events)] == [0, 3]
     assert len(SkillUsage(agent=config, path="skills/graphify").find_matches(events)) == 1
-    assert SkillUsage(agent=MetaAgent(name="empty")).find_matches(events) == []
+    assert SkillUsage(agent=AgentConfig(name="empty")).find_matches(events) == []
     assert len(SkillUsage(path="skills/graphify").find_matches(events)) == 2
 
 
@@ -160,5 +160,5 @@ def test_invalid_selectors(options):
 def test_unknown_agent_skill_is_rejected(config):
     with pytest.raises(ValueError, match="no skill"):
         SkillUsage(agent=config, path="skills/missing")
-    with pytest.raises(TypeError, match="MetaAgent"):
+    with pytest.raises(TypeError, match="AgentConfig"):
         SkillUsage(agent="graphify")

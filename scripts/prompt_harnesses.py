@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from uuid import UUID
 
-from thearc.resources import MetaAgent
+from thearc.resources import AgentConfig
 from thearc.resources.harness import HARNESSES, installed_agents
 
 # The canonical skills: the Agent Skills copy the project ships (.agents/skills), which Claude and Codex
@@ -29,8 +29,8 @@ def install_skills(args, worktree: Path) -> list[str]:
     if args.harness not in INSTALLS_SKILLS:
         return []
     if any(args.harness in harnesses for harnesses in installed_agents(worktree).values()):  # Stamped, in place.
-        return sorted(MetaAgent.from_installation(args.harness, worktree).skills)
-    source = MetaAgent.from_installation(SKILL_SOURCE, worktree)
+        return sorted(AgentConfig.from_installation(args.harness, worktree).skills)
+    source = AgentConfig.from_installation(SKILL_SOURCE, worktree)
     skills = source.skills
     if not skills:
         return []
@@ -40,7 +40,7 @@ def install_skills(args, worktree: Path) -> list[str]:
     for misplaced in MISPLACED.get(args.harness, []):
         shutil.rmtree(worktree / misplaced, ignore_errors=True)
     # The source's name and version, so the copies carry the same version stamps.
-    MetaAgent(name=source.name if source.version else f"{args.harness}-skills", version=source.version,
+    AgentConfig(name=source.name if source.version else f"{args.harness}-skills", version=source.version,
               skills=skills).install(args.harness, worktree, force=True)
     return sorted(skills)
 
@@ -54,11 +54,11 @@ def _text(content: object) -> str:
     return ""
 
 
-def snapshot_agent(args, worktree: Path) -> MetaAgent:
+def snapshot_agent(args, worktree: Path) -> AgentConfig:
     """The configuration installed for ``args.harness`` in ``worktree``, as that harness finds it."""
     if args.agent_snapshot:
-        return MetaAgent.model_validate_json(args.agent_snapshot.expanduser().read_text())
-    return MetaAgent.from_installation(args.harness, worktree, name=f"{args.harness}-project")
+        return AgentConfig.model_validate_json(args.agent_snapshot.expanduser().read_text())
+    return AgentConfig.from_installation(args.harness, worktree, name=f"{args.harness}-project")
 
 
 def skills_advertised(harness: str, transcript: Path) -> list[str] | None:

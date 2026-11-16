@@ -1,13 +1,13 @@
 import json
 
-from thearc.resources import ContextDocument, Hook, MetaAgent, Skill, install
+from thearc.resources import ContextDocument, Hook, AgentConfig, Skill, install
 from thearc.resources.markers import stamp_file, stamp_markdown, unstamp_file, unstamp_markdown
 
 USER_CLAUDE = "# Project\n\nUse uv.\n\n## graphify\n\nOld instructions.\n"
 
 
-def graphify(version: str | None, **update) -> MetaAgent:
-    return MetaAgent(
+def graphify(version: str | None, **update) -> AgentConfig:
+    return AgentConfig(
         name="graphify", version=version, owns_hooks=["graphify *"],
         context=[ContextDocument(filename="CLAUDE.md", content="## graphify\n\nQuery the graph first.\n")],
         skills=[Skill(name="graphify", description="Build graphs", instructions="# /graphify\n\nRun it.\n",
@@ -46,7 +46,7 @@ def test_importing_removes_the_stamps(tmp_path):
     agent = graphify("0.9.69")
     for harness in ("claude", "codex", "pi"):
         install(agent, harness, tmp_path / harness)
-        imported = MetaAgent.from_installation(harness, tmp_path / harness)
+        imported = AgentConfig.from_installation(harness, tmp_path / harness)
         assert imported.skills == agent.skills
         assert imported.context == agent.context
         assert "0.9.69" not in json.dumps(imported.model_dump(mode="json", exclude={"version"}))
@@ -57,7 +57,7 @@ def test_a_skill_keeps_its_own_version(tmp_path):
     agent.skills["graphify"].metadata = {"version": "2.0"}
     install(agent, "pi", tmp_path)
     assert "\nversion: '2.0'\n" in (tmp_path / ".pi/skills/graphify/SKILL.md").read_text()
-    assert MetaAgent.from_installation("pi", tmp_path).skills["graphify"].metadata == {"version": "2.0"}
+    assert AgentConfig.from_installation("pi", tmp_path).skills["graphify"].metadata == {"version": "2.0"}
 
 
 def test_hooks_are_not_stamped(tmp_path):

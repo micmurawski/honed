@@ -35,7 +35,7 @@ HARNESS_NAMES = ("claude", "codex", "pi", "opencode", "antigravity")
 
 @main.group(cls=AliasedGroup, aliases=["a"])
 def agent() -> None:
-    """Install a MetaAgent from its workspace repository into a harness, or remove it."""
+    """Install an AgentConfig from its workspace repository into a harness, or remove it."""
 
 
 def _target(harness: str, project: Path | None, global_: bool):  # type: ignore[no-untyped-def]
@@ -62,7 +62,7 @@ def _target(harness: str, project: Path | None, global_: bool):  # type: ignore[
 @click.option("--force", is_flag=True, help="Overwrite files the agent's earlier installs did not write.")
 def install_agent(source: str, version: str | None, harness: str, project: Path | None, global_: bool,
                   force: bool) -> None:
-    """Install the MetaAgent released in a workspace repository into HARNESS.
+    """Install the AgentConfig released in a workspace repository into HARNESS.
 
     \b
     thearc agent install --repo https://github.com/me/graphify --version 1.0.2 --harness claude

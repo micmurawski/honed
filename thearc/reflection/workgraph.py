@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.reflection import ReflectionSchema
 from thearc.sessions.analysis import WorkGraph
 from thearc.sessions.session import EventSequence, Trajectory
@@ -27,7 +27,7 @@ class WorkGraphReflector:
         self,
         prompt: str,
         history: EventSequence,
-        agent: MetaAgent,
+        agent: AgentConfig,
         schema: ReflectionSchema,
         *,
         provenance: str | None = None,

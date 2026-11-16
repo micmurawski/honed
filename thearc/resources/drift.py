@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from thearc.harnesses import Harness
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.journal import Entry
 
 COLLECTIONS = ("skills", "context", "resources", "extensions", "hooks", "mcps")
@@ -31,14 +31,14 @@ class Drift:
 
     entries: tuple[Entry, ...]  # The journal entries recording the hand edits; empty when nothing drifted.
     conflicts: tuple[str, ...]  # Resources edited differently in two harnesses' copies, e.g. ``skills/retry``.
-    agent: MetaAgent  # The workspace's agent afterwards.
+    agent: AgentConfig  # The workspace's agent afterwards.
 
     @property
     def changed(self) -> bool:
         return bool(self.entries)
 
 
-def _expected(agent: MetaAgent, harness: str, collection: str, key: str) -> bool:
+def _expected(agent: AgentConfig, harness: str, collection: str, key: str) -> bool:
     """Whether ``harness``'s copy should hold ``agent``'s resource ``key``."""
     from thearc.resources.harness import get_harness
 
@@ -52,10 +52,10 @@ def _expected(agent: MetaAgent, harness: str, collection: str, key: str) -> bool
     return True
 
 
-def installed_changes(agent: MetaAgent, project: str | Path,
-                      harnesses: Sequence[Harness]) -> tuple[MetaAgent, list[str]]:
+def installed_changes(agent: AgentConfig, project: str | Path,
+                      harnesses: Sequence[Harness]) -> tuple[AgentConfig, list[str]]:
     """``agent`` with the edits found in its installation for ``harnesses`` in ``project``, and the conflicts."""
-    imported = {harness: MetaAgent.from_installation(harness, project, name=agent.name, ignore=agent.ignore)
+    imported = {harness: AgentConfig.from_installation(harness, project, name=agent.name, ignore=agent.ignore)
                 for harness in harnesses}
     updates: dict[str, Any] = {}
     conflicts: list[str] = []
@@ -85,7 +85,7 @@ def installed_changes(agent: MetaAgent, project: str | Path,
     return agent.model_copy(update=updates), sorted(set(conflicts))
 
 
-def sync_installation(agent: MetaAgent, project: str | Path, harnesses: Sequence[Harness], *,
+def sync_installation(agent: AgentConfig, project: str | Path, harnesses: Sequence[Harness], *,
                       author: str = "user", message: str | None = None) -> Drift:
     """Commit the edits made to ``agent``'s installation in ``project`` since it was installed (see the module)."""
     from thearc.resources.git import commit_configuration

@@ -11,14 +11,14 @@ call the real MCP tools. Live checks are the cookbook scripts.
 
 ## Where things are defined
 
-- [Concepts](../concepts.md) (`docs/concepts.md`) defines every concept — MetaAgent, journal, markers,
+- [Concepts](../concepts.md) (`docs/concepts.md`) defines every concept — AgentConfig, journal, markers,
   reflection, curation, merging — and is updated together with the code.
 
 ## Layout
 
 | Package | Holds |
 | --- | --- |
-| `thearc.resources` | MetaAgent, resources, workspace, journal, ratings, markers, git, installation |
+| `thearc.resources` | AgentConfig, resources, workspace, journal, ratings, markers, git, installation |
 | `thearc.sessions` | Transcript indexing and selection; `analysis/` contains graph and pattern views, `scanner/` behavioural matching, and `export/` harness conversions |
 | `thearc.reflection` | Reflector, harness runtimes, the MCP tool server, Markdown rendering |
 | `thearc.curation` | Curator and Merger |

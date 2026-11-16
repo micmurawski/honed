@@ -1,7 +1,7 @@
-"""Installation: deploying a MetaAgent into a harness's native project layout, and importing it back.
+"""Installation: deploying an AgentConfig into a harness's native project layout, and importing it back.
 
 An installation owns what it wrote. The project's install record (``.thearc/installed.json``)
-lists, per installed MetaAgent, the context sections it owns — context documents are shared by
+lists, per installed AgentConfig, the context sections it owns — context documents are shared by
 the harnesses that read them — and, per harness, its version, revision, files, hooks, and MCP
 servers. Reinstalling replaces exactly those and leaves everything else in the project alone;
 installing another agent over something takes its ownership over. Nothing is executed.
@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from thearc.harnesses import Harness
-from thearc.resources.agent import MCP, SKILL_FILE, AgentResource, ContextDocument, Extension, Hook, MetaAgent, Skill
+from thearc.resources.agent import MCP, SKILL_FILE, AgentConfig, AgentResource, ContextDocument, Extension, Hook, Skill
 from thearc.resources.files import skill_markdown, structured_entry
 from thearc.resources.ignore import ignored_install_path, without_ignored
 from thearc.resources.markdown import (
@@ -60,7 +60,7 @@ HookKey = tuple[str, str | None, str]  # (event, matcher, command)
 
 
 class InstallConflict(FileExistsError):
-    """Installing would overwrite something this MetaAgent does not own."""
+    """Installing would overwrite something this AgentConfig does not own."""
 
 
 @dataclass(frozen=True)
@@ -190,7 +190,8 @@ def _hook_command(harness: HarnessLayout, hook: Hook) -> str | None:
 
 
 class _Ownership:
-    """Which hooks in a harness file are the MetaAgent's: recorded by a previous install, or matching ``owns_hooks``."""
+    """Which hooks in a harness file are the AgentConfig's: recorded by a previous install, or matching
+    ``owns_hooks``."""
 
     def __init__(self, owned: set[HookKey], patterns: list[str]):
         self.owned, self.patterns = owned, patterns
@@ -456,7 +457,7 @@ def installed_agents(project_dir: str | Path) -> dict[str, dict[str, str | None]
             for name, agent in sorted(record["agents"].items())}
 
 
-def _planned_files(agent: MetaAgent, harness: HarnessLayout) -> dict[str, str]:
+def _planned_files(agent: AgentConfig, harness: HarnessLayout) -> dict[str, str]:
     """Whole files: skills, rules/workflows/commands, this harness's extensions, and hook scripts. Context
     documents are merged separately."""
     files: dict[str, str] = {}
@@ -514,7 +515,7 @@ class Installation:
 
 
 def install(
-    agent: MetaAgent, harness: Harness | HarnessLayout, project_dir: str | Path, *, force: bool = False,
+    agent: AgentConfig, harness: Harness | HarnessLayout, project_dir: str | Path, *, force: bool = False,
     _keep_context: bool = False,
 ) -> Installation:
     """Install ``agent`` into ``project_dir`` for ``harness``, replacing what a previous install owned."""
@@ -638,7 +639,7 @@ def uninstall(harness: Harness | HarnessLayout, project_dir: str | Path, *, name
     if owner is None:
         return
     shared = len(_read_record(root)["agents"][owner]["harnesses"]) > 1  # Other harnesses still read its context.
-    install(MetaAgent(name=owner), harness, root, _keep_context=shared)
+    install(AgentConfig(name=owner), harness, root, _keep_context=shared)
     record = _read_record(root)
     entry = record["agents"][owner]
     del entry["harnesses"][harness.name]
@@ -687,7 +688,7 @@ def _take_over(root: Path, agents: dict[str, Any], name: str, harness: str) -> N
 
 
 def _install_context(
-    root: Path, agent: MetaAgent, owned: dict[str, list[str] | None], stamp: str | None = None,
+    root: Path, agent: AgentConfig, owned: dict[str, list[str] | None], stamp: str | None = None,
     stamped_by: set[str] = frozenset(),  # type: ignore[assignment]
 ) -> dict[str, list[str] | None]:
     """Write or merge context documents; returns the new ownership (``None`` = whole file).
@@ -762,14 +763,14 @@ def _text_files(directory: Path) -> Iterable[tuple[str, str]]:
 def read_installation(
     harness: Harness | HarnessLayout, project_dir: str | Path, *, name: str | None = None, version: str | None = None,
     ignore: Iterable[str] = (),
-) -> MetaAgent:
+) -> AgentConfig:
     """Import the configuration installed for ``harness`` in ``project_dir`` (by thearc or by hand).
 
     For a context document thearc merged into, only the sections it owns are imported. When several
     agents are installed for ``harness``, ``name`` picks one; for a project thearc did not install
     into, ``name`` and ``version`` name the imported agent, and of the context documents only those the harness
     reads (``HarnessLayout.context_files``) are imported. Targets ``ignore`` names are left out, and the
-    agent keeps the patterns (``MetaAgent.ignore``).
+    agent keeps the patterns (``AgentConfig.ignore``).
     """
     harness = get_harness(harness)
     root = Path(project_dir).resolve()
@@ -846,7 +847,7 @@ def read_installation(
                 for hook_name, entry in data.items() if hook_name not in their_names
             ]
     mcps = [_decode_mcp(harness, server, data) for server, data in _read_mcp_servers(root, harness).items()]
-    return without_ignored(MetaAgent.model_validate(
+    return without_ignored(AgentConfig.model_validate(
         {
             "name": name or marker.get("name") or f"{harness.name}-project",
             "version": version if version is not None else marker.get("version"),

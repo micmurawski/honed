@@ -29,7 +29,7 @@ from cookbook.live_ace import CURATION_PROMPT
 from cookbook.live_reflect import PROMPT, REPOSITORY, SCHEMA, SOURCES, USEFULNESS, graphify_agent
 from thearc.curation import Curator, Merger
 from thearc.reflection import Reflection, Reflector
-from thearc.resources import GitError, MetaAgent, agent_at
+from thearc.resources import GitError, AgentConfig, agent_at
 from thearc.sessions import Sessions
 from thearc.sessions.scanner import ShellCommand
 
@@ -42,7 +42,7 @@ Where candidates change the same section, keep what each one's reasons support a
 contradictions in favour of the better-evidenced reason. Keep shared instructions harness-neutral."""
 
 
-def pipeline(name: str, candidate: MetaAgent, session_ids: list[str], sessions: Sessions, out: Path) -> None:
+def pipeline(name: str, candidate: AgentConfig, session_ids: list[str], sessions: Sessions, out: Path) -> None:
     """Reflect on each session against ``candidate``, then curate it: the worktree ends at its candidate."""
     reflector = Reflector("codex")
     reflections: list[Reflection] = []

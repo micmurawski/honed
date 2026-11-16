@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Annotated, Any, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, create_model
 
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.files import AgentFiles, FileReference
 from thearc.resources.journal import Rated, derived_entry_id
 from thearc.resources.ratings import RatingScale, RatingValue
@@ -274,7 +274,7 @@ class ReflectionSchema:
         return items[0]
 
     def record(
-        self, items: Iterable[Any], agent: MetaAgent, *, at: datetime | None = None, **extra: Any
+        self, items: Iterable[Any], agent: AgentConfig, *, at: datetime | None = None, **extra: Any
     ) -> ReflectionResult:
         """Validate an item list against ``agent`` (the revision that was judged) and build Rated entries.
 

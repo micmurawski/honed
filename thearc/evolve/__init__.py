@@ -1,7 +1,7 @@
 """``/evolve``: evolving a project's skills and instructions from the sessions run in it.
 
 ``thearc skills install self-evolve --harness H`` sets a project up (``setup.install_evolve_skill``): its configuration
-for H becomes a MetaAgent, and the evolve skill is installed beside it. ``thearc evolve`` runs a round
+for H becomes an AgentConfig, and the evolve skill is installed beside it. ``thearc evolve`` runs a round
 (``round.run``) with the recipe in the evolve skill, which is given an ``Evolution``.
 """
 

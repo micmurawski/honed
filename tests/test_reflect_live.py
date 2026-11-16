@@ -13,7 +13,7 @@ from thearc import evolve
 from thearc.cli import main
 from thearc.evolve import live
 from thearc.sessions import Sessions
-from thearc.resources import MetaAgent, install
+from thearc.resources import AgentConfig, install
 
 from .test_evolve import WORKSPACE, git, project  # noqa: F401 -- the fixture
 
@@ -34,7 +34,7 @@ def test_self_evolve_installs_the_reflect_skill(project):
     record = json.loads((project / ".thearc/installed.json").read_text())["agents"]["thearc-evolve"]["harnesses"]
     assert ".claude/skills/reflect/SKILL.md" in record["claude"]["files"]
     assert not (project / ".thearc/reflections").exists()  # Reflections live in the session index.
-    agent = MetaAgent.from_workspace(project / WORKSPACE)
+    agent = AgentConfig.from_workspace(project / WORKSPACE)
     drift = agent.sync_installation(project, ["claude"])
     assert not drift.entries and drift.agent.revision == agent.revision
     assert "reflect" not in agent.skills and not any("thearc" in (hook.command or "") for hook in agent.hooks.values())
@@ -59,7 +59,8 @@ def test_self_evolve_installs_the_reflect_skill_for_every_harness(agent, tmp_pat
 
 def test_a_projects_own_reflect_skill_is_refused_unless_left_out(agent, tmp_path):
     git(tmp_path, "init", "-q", "-b", "main")
-    mine = agent.model_copy(update={"skills": {"reflect": agent.skills["retry"].model_copy(update={"name": "reflect"})}})
+    theirs = agent.skills["retry"].model_copy(update={"name": "reflect"})
+    mine = agent.model_copy(update={"skills": {"reflect": theirs}})
     install(mine, "claude", tmp_path)
     git(tmp_path, "add", "-A")
     git(tmp_path, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "Project")
@@ -73,10 +74,10 @@ def test_reinstalling_upgrades_a_project_set_up_before_the_reflect_skill(project
     evolve.install_evolve_skill(project, "claude", reflect=False)
     workspace = project / WORKSPACE
     evolve.ignore(project, ["skill:reflect"], remove=True)  # As a project set up before it was.
-    assert "skill:reflect" not in MetaAgent.from_workspace(workspace).ignore
+    assert "skill:reflect" not in AgentConfig.from_workspace(workspace).ignore
     commits = int(git(workspace, "rev-list", "--count", "HEAD"))
     evolve.install_evolve_skill(project, "claude")
-    assert MetaAgent.from_workspace(workspace).ignore[-1] == "skill:reflect"
+    assert AgentConfig.from_workspace(workspace).ignore[-1] == "skill:reflect"
     assert int(git(workspace, "rev-list", "--count", "HEAD")) == commits + 1
     assert git(workspace, "log", "-1", "--format=%s").startswith("Ignore skill:reflect")
     assert (project / ".claude/skills/reflect/SKILL.md").is_file()
@@ -100,7 +101,7 @@ def test_begin_and_submit_an_in_session_reflection(project, session_index):
     accepted = live.submit(project, begun.marker, answer)
     reflection = accepted.reflection
     assert reflection.mode == "in-session" and reflection.trigger == "tests green" and reflection.attempts == 2
-    own = MetaAgent.from_workspace(project / WORKSPACE).files().files["skills/retry/SKILL.md"].splitlines()
+    own = AgentConfig.from_workspace(project / WORKSPACE).files().files["skills/retry/SKILL.md"].splitlines()
     first, second = (str(item.ref) for item in reflection)
     assert own[int(first.rpartition("#L")[2]) - 1] == "max 3"  # Mapped by its text to the release's line.
     assert second == "skills/retry/SKILL.md#L7"
@@ -196,7 +197,7 @@ def test_reflect_installs_on_its_own_for_every_harness_and_judges_what_is_instal
         live.begin(tmp_path)
 
     # The project's own agent is still what imports: thearc's tools never are.
-    assert MetaAgent.from_installation("claude", tmp_path).name == agent.name
+    assert AgentConfig.from_installation("claude", tmp_path).name == agent.name
 
     assert uninstall_reflect_skill(tmp_path, ["pi"]) == ["pi"]
     assert not (tmp_path / ".pi/skills/reflect").exists() and (tmp_path / ".codex/skills/reflect").exists()
@@ -216,4 +217,4 @@ def test_self_evolve_takes_over_a_reflect_skill_installed_on_its_own(project):
     assert "thearc-reflect" not in agents and "claude" in agents["thearc-evolve"]
     assert install_reflect_skill(project, ["claude"]) == []  # Has it with the evolve skill.
     begun = live.begin(project)  # The harness the project evolves: its release and the recipe's question.
-    assert begun.revision == MetaAgent.from_workspace(project / WORKSPACE).revision
+    assert begun.revision == AgentConfig.from_workspace(project / WORKSPACE).revision

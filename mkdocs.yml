@@ -39,7 +39,7 @@ nav:
       - Install: start/installation.md
       - Your first ACE run: start/first-ace.md
   - Guides:
-      - Manage configuration: guides/metaagent.md
+      - Manage configuration: guides/agent-config.md
       - Index and select sessions: guides/sessions.md
       - Generate reflections: guides/reflections.md
       - Curate changes: guides/curation.md

@@ -42,7 +42,10 @@ agent supports them (Pi has no hooks or MCP servers). Details per harness: [runt
 
 ## The framework
 
-`thearc` is an extensible meta-framework for collecting and exploring episodic sessions from AI agents. Rather than prescribing one agent design, it provides the abstractions needed to turn agent traces into evidence for evaluating and improving an agentic system’s context files, skills, hooks, prompts, and MCP integrations.
+`thearc` is a framework for context engineering: it turns your agents' sessions into evidence, and that evidence into
+versioned changes to their context files, skills, hooks, prompts, and MCP servers. It doesn't prescribe an agent
+design; it gives you the pieces — a session index and query language, reflectors, curators, mergers, and a
+git-tracked journal — to build your own improvement pipelines.
 
 Build agentic context-engineering pipelines on top of `thearc`: inspect sessions, extract reusable lessons and failures, curate versioned updates, evaluate their effect, and install the resulting capabilities into agent environments. The framework is designed to let these pipelines evolve as new artifacts and evaluation methods emerge, drawing direction from work on [agentic context engineering](https://arxiv.org/pdf/2510.04618), [meta-skill evolution](https://arxiv.org/pdf/2607.05297), [self-evolving agent skills](https://arxiv.org/pdf/2608.02636), [self-evolving agents](https://arxiv.org/html/2507.21046v4), and [meta context engineering](https://arxiv.org/pdf/2601.21557).
 
@@ -66,7 +69,7 @@ from typing import Annotated
 from pydantic import BaseModel
 from thearc.curation import Curator
 from thearc.reflection import Reflector
-from thearc.resources import CategoricalScale, MetaAgent, Ref, ReflectionSchema
+from thearc.resources import CategoricalScale, AgentConfig, Ref, ReflectionSchema
 from thearc.sessions import Sessions
 
 usefulness = CategoricalScale("usefulness", ["harmful", "neutral", "helpful"], ordered=True)
@@ -79,7 +82,7 @@ class Lesson(BaseModel):
     key_insight: str
     ratings: list[Rated]
 
-agent = MetaAgent.from_installation("codex", "path/to/project", name="my-agent", version="1.0")
+agent = AgentConfig.from_installation("codex", "path/to/project", name="my-agent", version="1.0")
 agent = agent.init_workspace("artifacts/my-agent")       # git-tracked, with a journal
 
 with Sessions("sessions.sqlite") as sessions:

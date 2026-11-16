@@ -30,7 +30,7 @@ thearc agent install --repo URL|PATH --harness H [--version VERSION] [--project 
 thearc agent uninstall --name NAME --harness H [--project DIR | --global]
 ```
 
-Installs a MetaAgent from its workspace repository (`--repo`, or its spellings `--url` and `--path`: a git URL is
+Installs an AgentConfig from its workspace repository (`--repo`, or its spellings `--url` and `--path`: a git URL is
 cloned to a temporary folder), at the release `--version` names (its `release/<version>` branch; default `main`).
 `--project` (the default, with the current folder) installs into the harness's project layout; `--global` into the
 harness's own folder for every project: `~/.claude` (or `$CLAUDE_CONFIG_DIR`), `~/.codex` (or `$CODEX_HOME`),
