@@ -146,7 +146,7 @@ stopped before resuming.
 
 ## Indexing Trajectories into ACE
 
-Output directories must be new unless `--resume` is used, and must be outside the target checkout. Each run saves the extracted prompt, pre-run `MetaAgent` snapshot, Git revision/status, JSON event stream, stderr, response text, and a manifest with the harness name. Batch `summary.json` records failures and prompts not started; `sessions/` contains only exact matched native transcripts (including failed ones for diagnosis). Raw artifacts can contain private source content; review before sharing.
+Output directories must be new unless `--resume` is used, and must be outside the target checkout. Each run saves the extracted prompt, pre-run `AgentConfig` snapshot, Git revision/status, JSON event stream, stderr, response text, and a manifest with the harness name. Batch `summary.json` records failures and prompts not started; `sessions/` contains only exact matched native transcripts (including failed ones for diagnosis). Raw artifacts can contain private source content; review before sharing.
 
 Each manifest records the worktree path, source checkout, and pinned base commit.
 `changes.patch` includes tracked changes relative to that baseline; untracked

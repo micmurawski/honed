@@ -1,15 +1,15 @@
 # Manage configuration
 
-A **MetaAgent** is a named, versioned agent configuration: skills (with their files), context
+An **AgentConfig** is a named, versioned agent configuration: skills (with their files), context
 documents such as `AGENTS.md`, rules, workflows, commands, hooks, MCP servers, and harness-only
 extensions. It also carries a **journal** — the history of every section.
 
 ## Import, edit, install
 
 ```python
-from thearc.resources import Hook, MetaAgent, Skill
+from thearc.resources import Hook, AgentConfig, Skill
 
-agent = MetaAgent.from_installation("claude", "path/to/project", name="graphify", version="1.0")
+agent = AgentConfig.from_installation("claude", "path/to/project", name="graphify", version="1.0")
 agent.skills["retry"] = Skill(name="retry", description="Retry failing commands", instructions="# Retry\n…")
 agent.install("codex", "path/to/other-project")
 ```
@@ -33,8 +33,8 @@ configurations.
 
 ```python
 agent = agent.init_workspace("artifacts/graphify")   # git init, initial commit, journal seeded
-agent = MetaAgent.from_workspace("artifacts/graphify")
-light = MetaAgent.from_workspace("artifacts/graphify", journal=False)   # configuration only
+agent = AgentConfig.from_workspace("artifacts/graphify")
+light = AgentConfig.from_workspace("artifacts/graphify", journal=False)   # configuration only
 ```
 
 An agent read from or initialized in a workspace remembers it (`agent.workspace`).

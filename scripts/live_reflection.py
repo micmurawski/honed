@@ -24,7 +24,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from thearc.reflection import RUNTIMES, ReflectionError, Reflector
-from thearc.resources import CategoricalScale, ContextDocument, MetaAgent, ReflectionSchema, Skill
+from thearc.resources import CategoricalScale, ContextDocument, AgentConfig, ReflectionSchema, Skill
 from thearc.sessions import Event, Session, SourceReference
 
 
@@ -33,7 +33,7 @@ class Insight(BaseModel):
 
 
 SCHEMA = ReflectionSchema(CategoricalScale("usefulness", ["harmful", "neutral", "helpful"]), Insight)
-AGENT = MetaAgent(
+AGENT = AgentConfig(
     name="demo",
     skills={
         "retry": Skill(

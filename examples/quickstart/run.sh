@@ -16,7 +16,7 @@ cd "$PROJECT"
 git init -q && git add -A && git commit -qm "shelf"
 echo "Project: $PROJECT"
 
-# 2. Its configuration becomes a versioned MetaAgent, with the /evolve skill installed beside it.
+# 2. Its configuration becomes a versioned AgentConfig, with the /evolve skill installed beside it.
 thearc skills install self-evolve --project . --harness claude
 git add -A && git commit -qm "Evolve with thearc"
 

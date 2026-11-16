@@ -22,11 +22,11 @@ sessions ─▶ reflection ─▶ ratings in the journal ─▶ curation ─▶ 
 - **Merging**: candidates curated in parallel are combined section by section by a merger agent.
 
 ```python
-from thearc.resources import MetaAgent
+from thearc.resources import AgentConfig
 from thearc.reflection import Reflector
 from thearc.curation import Curator
 
-agent = MetaAgent.from_installation("codex", "path/to/project", name="graphify", version="1.0")
+agent = AgentConfig.from_installation("codex", "path/to/project", name="graphify", version="1.0")
 agent = agent.init_workspace("artifacts/graphify")      # git-tracked, with a journal
 
 reflection = Reflector("codex").handoff(PROMPT, session, agent, SCHEMA)

@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 
-from thearc.resources import Hook, MetaAgent, Skill, record_commits, write_workspace
+from thearc.resources import Hook, AgentConfig, Skill, record_commits, write_workspace
 from thearc.resources.markers import annotate, strip
 
 from .test_reflection import GOOD, SCHEMA, Scripted, answer
@@ -42,7 +42,7 @@ def test_workspace_files_carry_ids_but_the_configuration_does_not(workspace):
     hooks = (root / "hooks.jsonc").read_text()
     assert re.search(r'"guard": \{  // res_[0-9a-f]{24}', hooks) and not (root / "hooks.json").exists()
     assert json.loads((root / "owned_hooks.jsonc").read_text()) == ["./guard*"]
-    reread = MetaAgent.from_workspace(root)
+    reread = AgentConfig.from_workspace(root)
     assert reread == workspace and reread.revision == workspace.revision
     assert not any(MARKER.search(text) for text in reread.files().files.values())
     assert all(len(text.splitlines()) == len(strip(path, text)[0].splitlines())
@@ -54,7 +54,7 @@ def test_the_reflectors_workspace_has_no_ids_or_ratings(workspace):
 
     workspace.add_reflection(Reflector(runtime=Scripted(answer(GOOD))).reflect("Review.", workspace, SCHEMA))
     runtime = Scripted(answer(GOOD))
-    Reflector(runtime=runtime).reflect("Review.", MetaAgent.from_workspace(workspace.workspace), SCHEMA)
+    Reflector(runtime=runtime).reflect("Review.", AgentConfig.from_workspace(workspace.workspace), SCHEMA)
     assert runtime.texts and not any(MARKER.search(text) or "harmful:" in text for text in runtime.texts.values())
 
 
@@ -67,7 +67,7 @@ def test_a_kept_marker_makes_a_rename_certain_even_when_the_text_changed(workspa
     path.write_text(text.replace("## Limits <!--", "## Retry budget <!--").replace("max 3", "max 1"))
     base = head(root)
     commit(root, "Rename the limits and lower them")
-    journal = MetaAgent.from_workspace(root).journal
+    journal = AgentConfig.from_workspace(root).journal
     entries = record_commits(root, journal, since=base)
     moved = [e for e in entries if e.kind == "moved"]
     assert [(m.previous.section, m.target.section) for m in moved] == [("Retry > Limits", "Retry > Retry budget")]
@@ -82,14 +82,14 @@ def test_a_heading_without_a_marker_is_new_and_a_copied_marker_is_an_error(works
     path.write_text(path.read_text() + "\n## Backoff\n\nWait between attempts.\n")
     base = head(root)
     commit(root, "Add backoff")
-    journal = MetaAgent.from_workspace(root).journal
+    journal = AgentConfig.from_workspace(root).journal
     (added,) = record_commits(root, journal, since=base)
     assert added.kind == "added" and added.target.section == "Retry > Backoff"
     assert added.touched == [added.target.id]
     marker = re.search(r"## Limits (<!-- res_[0-9a-f]{24} -->)", path.read_text())[1]
     path.write_text(path.read_text().replace("## Backoff", f"## Backoff {marker}"))
     with pytest.raises(ValueError, match="appears on both"):
-        MetaAgent.from_workspace(root)
+        AgentConfig.from_workspace(root)
 
 
 def test_a_commit_touching_two_sections_lists_both(workspace):
@@ -98,16 +98,16 @@ def test_a_commit_touching_two_sections_lists_both(workspace):
     path.write_text(path.read_text().replace("ex1", "ex2").replace("max 3", "max 2"))
     base = head(root)
     commit(root, "Tighten examples and limits")
-    entries = record_commits(root, MetaAgent.from_workspace(root).journal, since=base)
+    entries = record_commits(root, AgentConfig.from_workspace(root).journal, since=base)
     assert len(entries) == 2 and entries[0].touched == entries[1].touched and len(entries[0].touched) == 2
 
 
 def test_a_plain_json_file_in_a_workspace_is_refused(tmp_path):
     root = tmp_path / "ws"
-    write_workspace(MetaAgent(name="a", version="1", hooks=[Hook(name="h", command="x")]), root)
+    write_workspace(AgentConfig(name="a", version="1", hooks=[Hook(name="h", command="x")]), root)
     (root / "hooks.jsonc").rename(root / "hooks.json")
     with pytest.raises(ValueError, match="hooks.json: a workspace keeps it as hooks.jsonc"):
-        MetaAgent.from_workspace(root)
+        AgentConfig.from_workspace(root)
 
 
 def test_markers_written_with_ratings_still_read():
@@ -116,7 +116,7 @@ def test_markers_written_with_ratings_still_read():
 
 
 def test_a_continued_first_line_gets_no_marker():
-    agent = MetaAgent(name="a", skills=[Skill(name="s", instructions="# S\n",
+    agent = AgentConfig(name="a", skills=[Skill(name="s", instructions="# S\n",
                                               files={"run.sh": "#!/bin/sh\nexec x \\\n  --y\n"})])
     files = annotate(agent.files(), {target: target.id for target in agent.files().targets})
     assert files["skills/s/run.sh"] == "#!/bin/sh\nexec x \\\n  --y\n"

@@ -1,9 +1,9 @@
 """Setting a project up for evolution.
 
 ``thearc skills install self-evolve --project . --harness claude`` adopts the project's configuration *for Claude* as a
-MetaAgent, keeps it in a workspace repository at ``.thearc/workspace`` (a git submodule of the project), and installs
+AgentConfig, keeps it in a workspace repository at ``.thearc/workspace`` (a git submodule of the project), and installs
 the evolve and reflect skills into Claude's skills folder. A project evolves one harness's configuration, from that
-harness's sessions. Neither skill is part of the MetaAgent (``ignore: ["skill:evolve", "skill:reflect"]``): they are
+harness's sessions. Neither skill is part of the AgentConfig (``ignore: ["skill:evolve", "skill:reflect"]``): they are
 installed beside it, recorded as agent ``thearc-evolve``, and never evolved.
 """
 
@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import cast
 
 from thearc.harnesses import Harness
-from thearc.resources import MetaAgent, Skill
+from thearc.resources import AgentConfig, Skill
 from thearc.resources.git import GitError, _git
 from thearc.resources.markdown import split_frontmatter
 
@@ -81,14 +81,14 @@ def project_root(path: str | Path) -> Path:
 
 
 def project_harness(project: str | Path) -> Harness:
-    """The harness whose configuration ``project`` evolves (where its MetaAgent is installed)."""
+    """The harness whose configuration ``project`` evolves (where its AgentConfig is installed)."""
     from thearc.resources.harness import installed_agents
 
     root = project_root(project)
     if not (root / WORKSPACE / ".git").exists():
         raise ValueError("this project is not set up for evolution: run "
                          "`thearc skills install self-evolve --project . --harness <harness>`")
-    name = MetaAgent.from_workspace(root / WORKSPACE, journal=False).name
+    name = AgentConfig.from_workspace(root / WORKSPACE, journal=False).name
     harnesses = list(installed_agents(root).get(name, {}))
     if len(harnesses) != 1:
         raise ValueError(f"{name} should be installed for one harness, not {harnesses or 'none'}; reinstall it")
@@ -102,18 +102,18 @@ def recipe_folder(project: str | Path, harness: Harness) -> Path:
     return project_root(project) / get_harness(harness).location("skills") / SKILL
 
 
-def adopt(project: str | Path, harness: Harness, *, name: str | None = None, ignore: Sequence[str] = ()) -> MetaAgent:
-    """The project's configuration for ``harness`` as a MetaAgent at its first version, without the evolve skill
+def adopt(project: str | Path, harness: Harness, *, name: str | None = None, ignore: Sequence[str] = ()) -> AgentConfig:
+    """The project's configuration for ``harness`` as an AgentConfig at its first version, without the evolve skill
     (``ignore`` holds ``skill:evolve``) and without what ``ignore`` names."""
     root = Path(project).resolve()
     patterns = list(dict.fromkeys([SKILL_PATTERN, REFLECT_PATTERN, *ignore]))
-    imported = MetaAgent.from_installation(harness, root, name=name or root.name, ignore=patterns)
+    imported = AgentConfig.from_installation(harness, root, name=name or root.name, ignore=patterns)
     return imported.model_copy(update={"version": FIRST_VERSION})
 
 
 @dataclass(frozen=True)
 class Setup:
-    agent: MetaAgent  # The project's MetaAgent, on its workspace.
+    agent: AgentConfig  # The project's AgentConfig, on its workspace.
     harness: Harness
     runtime: Harness
 
@@ -153,7 +153,7 @@ def install_evolve_skill(project: str | Path, harness: Harness, *, runtime: Harn
         if (evolved := project_harness(root)) != harness:
             raise ValueError(f"this project already evolves its {evolved} configuration; a project evolves one "
                              "harness")
-        agent = MetaAgent.from_workspace(folder)
+        agent = AgentConfig.from_workspace(folder)
         if REFLECT_PATTERN not in agent.ignore:  # Set up before the reflect skill: never evolve it either.
             from .round import _proposal_version
 
@@ -176,7 +176,7 @@ def install_evolve_skill(project: str | Path, harness: Harness, *, runtime: Harn
     if reflect and harness in installed_agents(root).get(REFLECT_AGENT, {}):  # Installed on its own: taken over.
         uninstall(harness, root, name=REFLECT_AGENT)
     skills = {SKILL: evolve_skill(harness, runtime), **({REFLECT: reflect_skill(harness)} if reflect else {})}
-    tool = MetaAgent(name=EVOLVE_AGENT, version=thearc_version(), skills=skills)
+    tool = AgentConfig(name=EVOLVE_AGENT, version=thearc_version(), skills=skills)
     try:
         install(tool, harness, root)
     except InstallConflict as error:
@@ -205,7 +205,7 @@ def install_reflect_skill(project: str | Path, harnesses: Sequence[Harness]) -> 
         if mine.is_file() and mine.relative_to(root).as_posix() not in _installed_files(root, REFLECT_AGENT, harness):
             raise ValueError(f"{mine.relative_to(root)} is a skill of the project's own named {REFLECT!r}; rename it "
                              "to install the reflect skill")
-        tool = MetaAgent(name=REFLECT_AGENT, version=thearc_version(), skills={REFLECT: reflect_skill(harness)})
+        tool = AgentConfig(name=REFLECT_AGENT, version=thearc_version(), skills={REFLECT: reflect_skill(harness)})
         try:
             install(tool, harness, root)
         except InstallConflict as error:
@@ -264,7 +264,7 @@ def uninstall_evolve_skill(project: str | Path) -> Harness:
     return harness
 
 
-def init_from_remote(project: str | Path) -> MetaAgent:
+def init_from_remote(project: str | Path) -> AgentConfig:
     """Check out the project's workspace submodule on ``main``: for a teammate who cloned a project another set up for
     evolution without ``--recurse-submodules``."""
     root = project_root(project)
@@ -274,7 +274,7 @@ def init_from_remote(project: str | Path) -> MetaAgent:
         _git(folder, "checkout", "-q", "main")  # A submodule is checked out detached; rounds work on main.
     except GitError:
         _git(folder, "checkout", "-q", "-B", "main", "origin/main")
-    return MetaAgent.from_workspace(folder)
+    return AgentConfig.from_workspace(folder)
 
 
 def _ignore_in_git(root: Path, line: str) -> None:

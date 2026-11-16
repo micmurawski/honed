@@ -6,7 +6,7 @@
     amend    commit the edits made in the workspace to the proposal, as the user's
     apply    release the proposal, move the workspace's ``main`` to it, install it, and push it (``--push``)
     discard  drop the proposal
-    ignore   leave targets out of the configuration (or stop) — see ``MetaAgent.ignore_targets``
+    ignore   leave targets out of the configuration (or stop) — see ``AgentConfig.ignore_targets``
     rollback install an earlier release again, as a new version
 
 A project evolves one harness's configuration (``project_harness``). Its workspace is a repository of its own, a git
@@ -37,7 +37,7 @@ from thearc.harnesses import Harness
 from thearc.reflection import Prompt, Reflection
 from thearc.reflection.prompts import schema_hash
 from thearc.reflection.reflector import events_digest, fingerprint
-from thearc.resources import MetaAgent, bump_version
+from thearc.resources import AgentConfig, bump_version
 from thearc.resources.git import GitError, _git, agent_at, branch_name, commit, commit_journal, record_commits
 from thearc.resources.journal import Journal, Reflected, load_journal
 from thearc.resources.reflection import ReflectionSchema
@@ -95,7 +95,7 @@ class Evolution:
     """What a recipe's ``propose(evolution)`` is given: the project's sessions, a candidate per harness, and where a
     stopped round left off. Made by ``run``."""
 
-    def __init__(self, project: Path, release: MetaAgent, round_id: str, folder: Path, sessions: Sessions,
+    def __init__(self, project: Path, release: AgentConfig, round_id: str, folder: Path, sessions: Sessions,
                  harnesses: Sequence[str], since: datetime | None, *, progress: Path | None = None,
                  estimate_only: bool = False):
         self.project, self.release, self.round, self.folder_path = project, release, round_id, folder
@@ -215,7 +215,7 @@ class Evolution:
             (partial if tail >= tail_min else covered).append(part)
         return Partition(tuple(covered), tuple(partial), tuple(unreflected))
 
-    def source(self, candidate: MetaAgent, reflections: Sequence[Reflection]) -> int:
+    def source(self, candidate: AgentConfig, reflections: Sequence[Reflection]) -> int:
         """Record existing ``reflections`` in ``candidate`` (no model call); those its journal holds already, or that
         judged another revision, are skipped. Returns how many were recorded."""
         journal = candidate.reload().journal
@@ -259,7 +259,7 @@ class Evolution:
              fingerprint(prompt, schema))).fetchone()
         return None if row is None else Reflected.model_validate(json.loads(row["data"]))
 
-    def recall(self, session: Session | Thread, candidate: MetaAgent, prompt: str | Prompt,
+    def recall(self, session: Session | Thread, candidate: AgentConfig, prompt: str | Prompt,
                schema: ReflectionSchema = SCHEMA) -> Reflection | None:
         """Record in ``candidate`` the reflection on ``session`` that an earlier round made (see ``remembered``), and
         return it; None when there is none, and the session has to be reflected on."""
@@ -271,17 +271,17 @@ class Evolution:
             candidate.add_reflection(reflection)
         return reflection
 
-    def candidate(self, name: str = "candidate") -> MetaAgent:
+    def candidate(self, name: str = "candidate") -> AgentConfig:
         """A candidate: a worktree of the release on ``thearc/candidate/<round>/<name>``; the one a stopped round made,
         if there is one. A recipe that curates several in parallel names each, and merges them."""
         folder = self.folder("candidates") / name
         if folder.exists():
-            return MetaAgent.from_workspace(folder)
+            return AgentConfig.from_workspace(folder)
         root = self.release.workspace
         assert root is not None
         return self.release.to_worktree(folder, branch=branch_name(root, "candidate", f"{self.round}/{name}"))
 
-    def reflected(self, session: Session | Thread, candidate: MetaAgent) -> bool:
+    def reflected(self, session: Session | Thread, candidate: AgentConfig) -> bool:
         """Whether ``candidate``'s journal already holds a reflection on ``session`` that reaches its last event (a
         stopped round's; a sourced one on only part of the session does not count)."""
         ids = [event["id"] for event in records(session.selected_events)]
@@ -290,21 +290,21 @@ class Evolution:
                    and kept.evidence.get("to_event", last) == last
                    for kept in candidate.reload().journal.reflections)
 
-    def reflections(self, candidate: MetaAgent, schema: ReflectionSchema = SCHEMA) -> list[Reflection]:
+    def reflections(self, candidate: AgentConfig, schema: ReflectionSchema = SCHEMA) -> list[Reflection]:
         """The reflections on sessions that ``candidate``'s journal holds for its revision, read with ``schema``."""
         journal = candidate.reload().journal
         return [Reflection.from_dict(kept.model_dump(mode="json"), schema) for kept in journal.reflections
                 if kept.revision == candidate.revision and kept.session is not None]
 
-    def curated(self, candidate: MetaAgent) -> bool:
+    def curated(self, candidate: AgentConfig) -> bool:
         """Whether a stopped round already curated ``candidate``."""
         root = candidate.workspace
         return root is not None and _git(root, "log", "-1", "--format=%s").decode().startswith("Record curation")
 
-    def merged(self) -> MetaAgent | None:
+    def merged(self) -> AgentConfig | None:
         """The merged candidate a stopped round made, if there is one."""
         folder = self.folder("merged")
-        return MetaAgent.from_workspace(folder) if (folder / ".git").exists() else None
+        return AgentConfig.from_workspace(folder) if (folder / ".git").exists() else None
 
     def provenance(self, session: Session) -> str:
         """What the reflector should know about how ``session`` ran: which configuration was installed for it."""
@@ -435,7 +435,7 @@ def _behind_remote(workspace: Path) -> bool:
     return False
 
 
-def _installed_at(workspace: Path, release: MetaAgent) -> datetime | None:
+def _installed_at(workspace: Path, release: AgentConfig) -> datetime | None:
     """When ``release`` was released (its branch's commit), or None for the adopted first version."""
     try:
         at = _git(workspace, "log", "-1", "--format=%cI", branch_name(workspace, "release", release.version or "")
@@ -521,7 +521,7 @@ def _changes(workspace: Path, base: str, head: str) -> tuple[Change, ...]:
 # --- commands -----------------------------------------------------------------------------------------------------
 
 
-Recipe = Callable[[Evolution], MetaAgent | None]
+Recipe = Callable[[Evolution], AgentConfig | None]
 
 
 def progress_page(project: str | Path) -> Path:
@@ -558,7 +558,7 @@ def run(project: str | Path = ".", *, recipe: str | Path | Recipe | None = None,
             raise ValueError(f"the workspace has uncommitted edits: {_pending(workspace)}")
         if _behind_remote(workspace):
             raise ValueError(f"{_main(workspace)} is behind origin; fetch and fast-forward it first")
-        drift = MetaAgent.from_workspace(workspace).sync_installation(root, [place.harness])
+        drift = AgentConfig.from_workspace(workspace).sync_installation(root, [place.harness])
         release = drift.agent
         base = _git(workspace, "rev-parse", "HEAD").decode().strip()
 
@@ -617,7 +617,7 @@ def run(project: str | Path = ".", *, recipe: str | Path | Recipe | None = None,
         report = folder / "report.html"
         _write_report(workspace, report, list(scales) or [getattr(module, name, None)
                                                           for name in ("USEFULNESS", "FAILURE_MODES")])
-        proposed = MetaAgent.from_workspace(workspace)
+        proposed = AgentConfig.from_workspace(workspace)
         diff = release.diff(proposed)
         (folder / "diff.patch").write_text(diff, encoding="utf-8")
         return Proposal(version, release.version, None, _changes(workspace, base, head), diff, str(report),
@@ -650,7 +650,7 @@ def diff(project: str | Path = ".") -> Proposal:
     main = _main(workspace)
     release = agent_at(workspace, main)
     assert release is not None
-    current = MetaAgent.from_workspace(workspace)
+    current = AgentConfig.from_workspace(workspace)
     base = _git(workspace, "merge-base", main, "HEAD").decode().strip()
     head = _git(workspace, "rev-parse", "HEAD").decode().strip()
     return Proposal(version, release.version, None, _changes(workspace, base, head), release.diff(current))
@@ -692,7 +692,7 @@ def apply(project: str | Path = ".", *, push: bool = False) -> Applied:
         if push and remote is None:
             raise ValueError("the workspace has no remote to push to: run `thearc evolve remote URL` first")
         proposal_branch = _current_branch(workspace)
-        MetaAgent.from_workspace(workspace).release(version, include_scales=True)
+        AgentConfig.from_workspace(workspace).release(version, include_scales=True)
         main = _main(workspace)
         _git(workspace, "checkout", "-q", main)
         try:
@@ -701,7 +701,7 @@ def apply(project: str | Path = ".", *, push: bool = False) -> Applied:
             _git(workspace, "checkout", "-q", proposal_branch)
             raise ValueError(f"{main} moved since the proposal was made; discard it and run again") from None
         _git(workspace, "branch", "-D", proposal_branch)
-        released = MetaAgent.from_workspace(workspace)
+        released = AgentConfig.from_workspace(workspace)
         installed = released.install(place.harness, place.root, force=True).files
         if push:
             _git(workspace, "push", "-q", "origin", "main", branch_name(workspace, "release", version))
@@ -723,12 +723,12 @@ def discard(project: str | Path = ".") -> str:
         return version
 
 
-def ignore(project: str | Path, patterns: Sequence[str], *, remove: bool = False) -> MetaAgent:
+def ignore(project: str | Path, patterns: Sequence[str], *, remove: bool = False) -> AgentConfig:
     """Ignore ``patterns`` (or stop) in the installed release, and install it so their files are left alone."""
     place = _place(project)
     with _locked(place.cache):
         _no_proposal(place.workspace)
-        agent = MetaAgent.from_workspace(place.workspace).ignore_targets(patterns, remove=remove)
+        agent = AgentConfig.from_workspace(place.workspace).ignore_targets(patterns, remove=remove)
         if remove:
             agent = agent.sync_installation(place.root, [place.harness],
                                             message="Adopt what is no longer ignored").agent
@@ -745,14 +745,14 @@ def rollback(project: str | Path, version: str) -> Applied:
         old = agent_at(workspace, branch_name(workspace, "release", version))
         if old is None:
             raise ValueError(f"no release {version}")
-        current = MetaAgent.from_workspace(workspace)
+        current = AgentConfig.from_workspace(workspace)
         restored = current.model_copy(update={key: getattr(old, key) for key in (
             "skills", "context", "resources", "extensions", "hooks", "mcps", "owns_hooks")})
         restored._workspace = workspace
         from thearc.resources.git import commit_configuration
 
         commit_configuration(restored, f"Roll back to {version}", author="user")
-        released = MetaAgent.from_workspace(workspace).release(include_scales=True)
+        released = AgentConfig.from_workspace(workspace).release(include_scales=True)
         released.install(place.harness, place.root, force=True)
         return Applied(released.version or "", (place.harness,))
 
@@ -760,7 +760,7 @@ def rollback(project: str | Path, version: str) -> Applied:
 def status(project: str | Path = ".") -> dict[str, Any]:
     """Where the project's evolution stands."""
     place = _place(project)
-    agent = MetaAgent.from_workspace(place.workspace)
+    agent = AgentConfig.from_workspace(place.workspace)
     main = agent_at(place.workspace, _main(place.workspace))
     recipe = recipe_folder(place.root, place.harness) / "evolve.py"
     runtime = re.search(r'^RUNTIME = "([^"]*)"', recipe.read_text(encoding="utf-8"), re.MULTILINE) if (
@@ -773,7 +773,7 @@ def status(project: str | Path = ".") -> dict[str, Any]:
             **_reflection_status(place, main)}
 
 
-def _reflection_status(place: Place, release: MetaAgent | None) -> dict[str, Any]:
+def _reflection_status(place: Place, release: AgentConfig | None) -> dict[str, Any]:
     """The reflect skill, and the reflections kept in the session index for the project: how many, how many not yet
     joined to their session, and how many of its indexed sessions have one on the installed release."""
     from thearc.resources.harness import installed_agents

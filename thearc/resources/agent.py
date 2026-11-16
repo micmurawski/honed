@@ -1,4 +1,4 @@
-"""MetaAgent: the portable, harness-independent configuration of an agent, and its journal."""
+"""AgentConfig: the portable, harness-independent configuration of an agent, and its journal."""
 
 from __future__ import annotations
 
@@ -163,15 +163,15 @@ class Extension(BaseModel):
 Resource = Skill | Hook | MCP | ContextDocument | AgentResource | Extension
 
 
-class MetaAgent(BaseModel):
+class AgentConfig(BaseModel):
     """A named, optionally versioned agent configuration and its journal.
 
-    The journal travels with the MetaAgent but is not configuration: it never
+    The journal travels with the AgentConfig but is not configuration: it never
     changes the ``revision``. Nothing here installs or executes a resource.
 
     ``owns_hooks`` are glob patterns of hook commands (e.g. ``"graphify *"``) that belong
-    to this MetaAgent wherever they appear: installing removes every matching hook from
-    the harness's configuration before adding the MetaAgent's own, so hooks installed by
+    to this AgentConfig wherever they appear: installing removes every matching hook from
+    the harness's configuration before adding the AgentConfig's own, so hooks installed by
     hand or by an older tool are replaced rather than duplicated.
     """
 
@@ -287,20 +287,20 @@ class MetaAgent(BaseModel):
         content = self.files().revision
         return f"{self.version}@{content}" if self.version else content
 
-    def diff(self, other: MetaAgent, *, context_lines: int = 3) -> str:
+    def diff(self, other: AgentConfig, *, context_lines: int = 3) -> str:
         """Unified diff of the configuration files from this agent to ``other``; empty means equal."""
         from thearc.resources.files import diff_files
 
         return diff_files(self.files().files, other.files().files, context_lines=context_lines)
 
     @classmethod
-    def from_workspace(cls, path: str | Path, *, journal: bool = True, **limits: int) -> MetaAgent:
+    def from_workspace(cls, path: str | Path, *, journal: bool = True, **limits: int) -> AgentConfig:
         """The agent saved in a workspace, which it remembers; ``journal=False`` reads only its configuration."""
         from thearc.resources.workspace import read_workspace
 
         return read_workspace(path, journal=journal, **limits)
 
-    def reload(self) -> MetaAgent:
+    def reload(self) -> AgentConfig:
         """This agent's workspace as it is now (e.g. after a curator moved its worktree forward)."""
         if self._workspace is None:
             raise ValueError("reload needs an agent read from or initialized in a workspace")
@@ -308,7 +308,7 @@ class MetaAgent(BaseModel):
 
     def __eq__(self, other: object) -> bool:
         """Equal configuration, identity and journal; where an agent was read from does not count."""
-        if not isinstance(other, MetaAgent):
+        if not isinstance(other, AgentConfig):
             return NotImplemented
         return all(getattr(self, name) == getattr(other, name) for name in type(self).model_fields)
 
@@ -368,7 +368,7 @@ class MetaAgent(BaseModel):
         include_scales: bool = False,
         policy: RatingPolicy | None = None,
         push: str | None = None,
-    ) -> MetaAgent:
+    ) -> AgentConfig:
         """Version this agent's workspace: set ``version`` (default: bump ``part`` of the current one), commit
         it, and point a new branch (default ``release/<version>``, after the workspace's branch prefix) at that
         commit.
@@ -410,9 +410,9 @@ class MetaAgent(BaseModel):
         _git(root, "branch", branch, sha)
         if push is not None:
             _git(root, "push", "--quiet", push, f"refs/heads/{branch}:refs/heads/{branch}")
-        return MetaAgent.from_workspace(root)
+        return AgentConfig.from_workspace(root)
 
-    def to_worktree(self, path: str | Path, *, branch: str | None = None) -> MetaAgent:
+    def to_worktree(self, path: str | Path, *, branch: str | None = None) -> AgentConfig:
         """A new git worktree of this agent's workspace at ``path``, on ``branch`` from its current commit
         (default ``candidate/<folder name>``, after the workspace's branch prefix).
 
@@ -430,7 +430,7 @@ class MetaAgent(BaseModel):
         target = _root(path)
         branch = branch or branch_name(root, "candidate", target.name)
         _git(root, "worktree", "add", "-q", "-b", branch, str(target), "HEAD")
-        return MetaAgent.from_workspace(target)
+        return AgentConfig.from_workspace(target)
 
     def to_workspace(self, path: str | Path, *, journal: bool = True, overwrite: bool = False) -> Path:
         from thearc.resources.workspace import write_workspace
@@ -438,9 +438,9 @@ class MetaAgent(BaseModel):
         return write_workspace(self, path, journal=journal, overwrite=overwrite)
 
     def init_workspace(
-        self, path: str | Path, *, branch: str = "main", reason: str = "Initialize MetaAgent workspace",
+        self, path: str | Path, *, branch: str = "main", reason: str = "Initialize AgentConfig workspace",
         repository: str | Path | None = None, prefix: str = "",
-    ) -> MetaAgent:
+    ) -> AgentConfig:
         """Create a git workspace, or resume a matching one, returning its agent and journal.
 
         The receiver is unchanged and must have a version. New workspaces seed an empty journal with Added
@@ -469,18 +469,18 @@ class MetaAgent(BaseModel):
         name: str | None = None,
         version: str | None = None,
         ignore: Iterable[str] = (),
-    ) -> MetaAgent:
+    ) -> AgentConfig:
         """Import the configuration installed for ``harness`` in ``project_dir`` (by thearc or by hand), as an agent
         not bound to a workspace. For a context document thearc merged into, only the sections it owns are
         imported. When several agents are installed for ``harness``, ``name`` picks one; for a project thearc did
         not install into, ``name`` and ``version`` name the imported agent. Targets ``ignore`` names (patterns, see
-        ``MetaAgent.ignore``) are left out."""
+        ``AgentConfig.ignore``) are left out."""
         from thearc.resources.harness import read_installation
 
         return read_installation(harness, project_dir, name=name, version=version, ignore=ignore)
 
     def ignore_targets(self, patterns: Iterable[str], *, remove: bool = False, reason: str | None = None,
-                       author: str = "user") -> MetaAgent:
+                       author: str = "user") -> AgentConfig:
         """Leave the targets ``patterns`` name out of this workspace's configuration from now on (or, with ``remove``,
         stop ignoring them), as one commit recorded in the journal; returns the agent as committed.
 
@@ -510,7 +510,7 @@ class MetaAgent(BaseModel):
 
         return sync_installation(self, project_dir, harnesses, author=author, message=message)
 
-    def without_ignored(self) -> MetaAgent:
+    def without_ignored(self) -> AgentConfig:
         """A copy without the targets ``ignore`` names: dropped whole, or cut out of their Markdown."""
         from thearc.resources.ignore import without_ignored
 
@@ -531,3 +531,12 @@ def bump_version(version: str | None, part: Literal["major", "minor", "patch"] =
         return f"{major}.{minor + 1}.0"
     return f"{major}.{minor}.{patch + 1}"
 
+
+def __getattr__(name: str) -> Any:
+    """``MetaAgent``: the old name of ``AgentConfig``, deprecated."""
+    if name == "MetaAgent":
+        import warnings
+
+        warnings.warn("MetaAgent is renamed AgentConfig; MetaAgent will be removed", DeprecationWarning, stacklevel=2)
+        return AgentConfig
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

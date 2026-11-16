@@ -1,4 +1,4 @@
-"""Reconcile two revisions of a MetaAgent into Added / Modified / Moved / Removed journal entries.
+"""Reconcile two revisions of an AgentConfig into Added / Modified / Moved / Removed journal entries.
 
 A move is recorded only when it is unambiguous: a target whose workspace marker
 (its lineage ID) is now on another address — certain, whatever else changed —
@@ -16,7 +16,7 @@ from collections.abc import Callable, Hashable, Iterable, Mapping
 from datetime import UTC, datetime
 from typing import Any
 
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.files import AgentFiles
 from thearc.resources.journal import Added, Entry, Modified, Moved, Removed
 from thearc.resources.targets import ResourceTarget
@@ -44,8 +44,8 @@ def _renamed(target: ResourceTarget, old: ResourceTarget, new: ResourceTarget) -
 
 
 def detect_changes(
-    before: MetaAgent | None,
-    after: MetaAgent,
+    before: AgentConfig | None,
+    after: AgentConfig,
     *,
     reason: str | None = None,
     at: datetime | None = None,
@@ -91,7 +91,7 @@ def detect_changes(
         take([(by_id[identifier], new) for new, identifier in new_ids.items() if identifier in by_id])
         marked = list(moves)
 
-        def fingerprint(agent: MetaAgent, target: ResourceTarget) -> Hashable | None:
+        def fingerprint(agent: AgentConfig, target: ResourceTarget) -> Hashable | None:
             if target.section is not None or target.kind == "skill_file":
                 return None
             resource = agent.resource(target)
@@ -172,7 +172,7 @@ def detect_changes(
     return entries
 
 
-def frozen_changes(before: MetaAgent, after: MetaAgent) -> list[Entry]:
-    """The changes from ``before`` to ``after`` that touch a target ``before`` freezes (``MetaAgent.frozen``)."""
+def frozen_changes(before: AgentConfig, after: AgentConfig) -> list[Entry]:
+    """The changes from ``before`` to ``after`` that touch a target ``before`` freezes (``AgentConfig.frozen``)."""
     return [entry for entry in detect_changes(before, after)
             if before.is_frozen(entry.target) or isinstance(entry, Moved) and before.is_frozen(entry.previous)]

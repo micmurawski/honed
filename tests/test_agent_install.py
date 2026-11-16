@@ -1,4 +1,4 @@
-"""``thearc agent install``: a MetaAgent from its workspace repository, at a release, into a project or a harness's
+"""``thearc agent install``: an AgentConfig from its workspace repository, at a release, into a project or a harness's
 own folder."""
 
 import json
@@ -85,3 +85,15 @@ def test_global_layouts(tmp_path):
 def test_project_and_global_exclude_each_other(repository, tmp_path):
     result = run("install", "--path", str(repository), "--harness", "claude", "--project", str(tmp_path), "--global")
     assert result.exit_code != 0 and "not both" in result.output
+
+
+def test_metaagent_is_a_deprecated_alias_of_agentconfig():
+    import warnings
+
+    from thearc.resources import AgentConfig
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        from thearc.resources import MetaAgent
+    assert MetaAgent is AgentConfig
+    assert any(issubclass(w.category, DeprecationWarning) and "AgentConfig" in str(w.message) for w in caught)

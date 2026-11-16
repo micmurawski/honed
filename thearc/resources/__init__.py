@@ -1,6 +1,8 @@
-"""MetaAgent configuration, its journal, and ratings. See ``docs/concepts.md``."""
+"""AgentConfig configuration, its journal, and ratings. See ``docs/concepts.md``."""
 
-from .agent import MCP, AgentResource, ContextDocument, Extension, Hook, MetaAgent, Skill, bump_version
+from typing import Any
+
+from .agent import MCP, AgentConfig, AgentResource, ContextDocument, Extension, Hook, Skill, bump_version
 from .changes import detect_changes
 from .files import AgentFiles, FileReference, Span, diff_files
 from .git import Commit, GitError, agent_at, record_commits, workspace_commits
@@ -36,6 +38,7 @@ __all__ = [
     "HARNESSES",
     "MCP",
     "Added",
+    "AgentConfig",
     "AgentFiles",
     "AgentResource",
     "CategoricalScale",
@@ -55,7 +58,6 @@ __all__ = [
     "Kept",
     "LabelScale",
     "Lineage",
-    "MetaAgent",
     "Modified",
     "Moved",
     "NumericScale",
@@ -91,3 +93,13 @@ __all__ = [
     "workspace_files",
     "write_workspace",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    """``MetaAgent``: the old name of ``AgentConfig``, deprecated."""
+    if name == "MetaAgent":
+        import warnings
+
+        warnings.warn("MetaAgent is renamed AgentConfig; MetaAgent will be removed", DeprecationWarning, stacklevel=2)
+        return AgentConfig
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

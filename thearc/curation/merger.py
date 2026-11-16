@@ -22,7 +22,7 @@ from typing import Any
 
 from thearc.reflection.mcp import serve
 from thearc.reflection.runtimes import RUNTIMES, Runtime
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.files import AgentFiles
 from thearc.resources.git import _git, agent_at, branch_name, commit, commit_journal, record_commits
 from thearc.resources.journal import Change, Entry, Journal, Rated, load_journal
@@ -79,7 +79,7 @@ class Merge:
     merger: dict[str, Any]
     candidates: dict[str, str]  # Branch → head commit merged.
     proposals: tuple[Proposal, ...]
-    agent: MetaAgent  # The merged candidate, bound to its worktree.
+    agent: AgentConfig  # The merged candidate, bound to its worktree.
     at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -103,7 +103,7 @@ class Merger:
     def harness(self) -> str:
         return self.runtime.harness
 
-    def merge(self, prompt: str, candidates: Sequence[MetaAgent], *, into: str | Path | None = None,
+    def merge(self, prompt: str, candidates: Sequence[AgentConfig], *, into: str | Path | None = None,
               **extra: Any) -> Merge:
         """Merge candidates — agents on worktrees of one workspace, branched from the same commit.
 
@@ -128,7 +128,7 @@ class Merger:
                 if _git(roots[0], "merge-base", heads[index], heads[other]).decode().strip() != base:
                     raise ValueError("candidates do not share one base; branch them from the same commit")
         proposals, ratings = _proposals(roots[0], base, list(zip(names, roots, heads, strict=True)))
-        frozen = (agent_at(roots[0], base) or MetaAgent(name="base")).frozen
+        frozen = (agent_at(roots[0], base) or AgentConfig(name="base")).frozen
 
         identifier = "merge_" + uuid.uuid4().hex
         branch = branch_name(roots[0], "merge", identifier.removeprefix("merge_")[:12])
@@ -161,10 +161,10 @@ class Merger:
                   **({"usage": talk.usage.to_dict()} if talk.usage else {})}
         return Merge(identifier, base, branch, head, tuple(tools.commits), tuple(recorded), tools.summary, merger,
                      dict(zip(names, heads, strict=True)), tuple(proposals),
-                     MetaAgent.from_workspace(target.resolve()))
+                     AgentConfig.from_workspace(target.resolve()))
 
 
-def _root_of(candidate: MetaAgent) -> Path:
+def _root_of(candidate: AgentConfig) -> Path:
     if candidate.workspace is None:
         raise ValueError("candidates must be agents on workspaces (see agent.to_worktree)")
     return candidate.workspace  # Read as committed: curation moved the worktree past this agent.
@@ -193,7 +193,7 @@ def _proposals(repo: Path, base: str, candidates: list[tuple[str, Path, str]]) -
     for name, root, head in candidates:
         journal = Journal.load(root / JOURNAL_FILE)
         commits = set(_git(root, "rev-list", f"{base}..{head}").decode().split())
-        files = AgentFiles.from_agent(MetaAgent.from_workspace(root, journal=False))
+        files = AgentFiles.from_agent(AgentConfig.from_workspace(root, journal=False))
         lineage = {entry.id: line for line in journal.lineages() for entry in line.entries}
         changes: dict[str, list[Change]] = {}
         for change in journal.changes():

@@ -5,7 +5,7 @@ import pytest
 from thearc.resources import (
     CategoricalScale,
     Extension,
-    MetaAgent,
+    AgentConfig,
     ReflectionSchema,
     ResourceTarget,
     Skill,
@@ -21,8 +21,8 @@ GUARD = "export default function guard(pi) {\n  pi.on('tool_call', () => {});\n}
 
 
 @pytest.fixture
-def agent() -> MetaAgent:
-    return MetaAgent(
+def agent() -> AgentConfig:
+    return AgentConfig(
         name="a",
         extensions=[Extension(harness="pi", path="guard.ts", content=GUARD)],
         skills=[
@@ -33,7 +33,7 @@ def agent() -> MetaAgent:
     )
 
 
-def rate(agent: MetaAgent, ref: str, value: str) -> None:
+def rate(agent: AgentConfig, ref: str, value: str) -> None:
     agent.journal.record(*ReflectionSchema(usefulness).record([{"ref": ref, "rating": value}], agent).entries)
 
 
@@ -49,7 +49,7 @@ def test_extensions_install_only_into_their_harness(agent, tmp_path):
 
 def test_extensions_round_trip_through_installation_and_workspace(agent, tmp_path):
     install(agent, "pi", tmp_path / "project")
-    assert MetaAgent.from_installation("pi", tmp_path / "project").extensions == agent.extensions
+    assert AgentConfig.from_installation("pi", tmp_path / "project").extensions == agent.extensions
     write_workspace(agent, tmp_path / "ws")
     assert (tmp_path / "ws" / "extensions" / "pi" / "guard.ts").is_file()
     assert read_workspace(tmp_path / "ws") == agent

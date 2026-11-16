@@ -2,7 +2,7 @@
 
 from thearc.resources import (
     CategoricalScale,
-    MetaAgent,
+    AgentConfig,
     ReflectionSchema,
     ResourceTarget,
     count_all,
@@ -19,14 +19,14 @@ LIMITS = SKILL.model_copy(update={"section": "Retry > Limits"})
 REF = "skills/retry/SKILL.md"
 
 
-def rate(agent: MetaAgent, *items: tuple[str, str]) -> None:
+def rate(agent: AgentConfig, *items: tuple[str, str]) -> None:
     result = ReflectionSchema(usefulness).record(
         [{"ref": f"{REF}#{lines}", "rating": value} for lines, value in items], agent
     )
     agent.journal.record(*result.entries)
 
 
-def counts(agent: MetaAgent, target: ResourceTarget, policy=count_all) -> dict[str, float] | None:
+def counts(agent: AgentConfig, target: ResourceTarget, policy=count_all) -> dict[str, float] | None:
     summary = agent.journal.summaries(usefulness, policy).get(target)
     return dict(summary.counts) if summary else None
 

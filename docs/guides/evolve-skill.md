@@ -17,12 +17,12 @@ thearc skills install self-evolve --project . --harness claude
 This:
 
 1. **Adopts** the project's configuration for that harness (for Claude: `.claude/skills/*`, `CLAUDE.md`, its hooks
-   and MCP servers) as a MetaAgent named after the project, version `1.0.0`.
+   and MCP servers) as an AgentConfig named after the project, version `1.0.0`.
 2. Keeps it in a **workspace** at `.thearc/workspace`: a repository of its own (`main`, `release/…`), added to the
    project as a git submodule, so each project commit pins the workspace commit its installed files came from. With
    `--remote URL` the workspace's `origin` is set and `main` pushed, and the submodule records that URL.
 3. Installs the **evolve skill** into the harness's skills folder (`.claude/skills/evolve/`): `SKILL.md`, the recipe
-   `evolve.py` and its prompts in `prompts/`. It is not part of the MetaAgent (`agent.json` holds
+   `evolve.py` and its prompts in `prompts/`. It is not part of the AgentConfig (`agent.json` holds
    `"ignore": ["skill:evolve"]`), so nothing evolves it.
 
 A project evolves one harness: installing for another harness is refused. `--runtime` picks the harness that runs
@@ -111,7 +111,7 @@ BUDGET: float | None = None  # In USD: stop before reflecting when the round is 
 TIMEOUT = 900  # Seconds an agent's turn may take before it counts as stalled and fails.
 
 
-def propose(evolution: Evolution) -> MetaAgent | None:
+def propose(evolution: Evolution) -> AgentConfig | None:
     find, too_few, stop, reflect, curate = FindSessions(), TooFew(), Stop(), Reflect(), Curate()
     find - "too few" >> too_few
     find - "stop" >> stop

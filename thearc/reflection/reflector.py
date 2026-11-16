@@ -1,4 +1,4 @@
-"""Reflection: a reflector judges a MetaAgent's files against evidence and returns schema-shaped items.
+"""Reflection: a reflector judges an AgentConfig's files against evidence and returns schema-shaped items.
 
 ``reflect`` attaches the evidence to the prompt; ``handoff`` installs the session (or a part of
 it) into the reflector's harness and forks it, so the reflector starts from that history. Either
@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.reflection import ReflectionItem, ReflectionSchema
 from thearc.sessions.events import records
 from thearc.sessions.install import InstalledSession
@@ -228,7 +228,7 @@ class Reflector:
         return self.runtime.harness
 
     def reflect(
-        self, prompt: str | Prompt, agent: MetaAgent, schema: ReflectionSchema, *, evidence: str | None = None,
+        self, prompt: str | Prompt, agent: AgentConfig, schema: ReflectionSchema, *, evidence: str | None = None,
         **extra: Any
     ) -> Reflection:
         """Reflect on evidence given in the prompt (or as ``evidence`` text appended to it, redacted)."""
@@ -243,7 +243,7 @@ class Reflector:
     def reflect_with_tools(
         self,
         prompt: str | Prompt,
-        agent: MetaAgent,
+        agent: AgentConfig,
         schema: ReflectionSchema,
         *,
         mcp_tools: Sequence[ToolSpec],
@@ -264,7 +264,7 @@ class Reflector:
         self,
         prompt: str | Prompt,
         history: EventSequence,
-        agent: MetaAgent,
+        agent: AgentConfig,
         schema: ReflectionSchema,
         *,
         provenance: str | None = None,
@@ -303,7 +303,7 @@ class Reflector:
         prompt: str | Prompt,
         history: EventSequence,
         installed: InstalledSession,
-        agent: MetaAgent,
+        agent: AgentConfig,
         schema: ReflectionSchema,
         provenance: str | None,
         extra: dict[str, Any],
@@ -343,7 +343,7 @@ class Reflector:
     def _run(
         self,
         task: str,
-        agent: MetaAgent,
+        agent: AgentConfig,
         schema: ReflectionSchema,
         *,
         fork: Any,

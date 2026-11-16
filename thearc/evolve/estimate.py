@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from statistics import fmean
 
 from thearc.reflection.reflector import estimate_tokens
-from thearc.resources import MetaAgent
+from thearc.resources import AgentConfig
 from thearc.sessions import Session, Thread
 from thearc.sessions.export import export_events
 
@@ -36,7 +36,7 @@ class Estimate:
                 "basis": self.basis}
 
 
-def estimate(sessions: Sequence[Session | Thread], runtime: str, agent: MetaAgent, *, curations: int = 1,
+def estimate(sessions: Sequence[Session | Thread], runtime: str, agent: AgentConfig, *, curations: int = 1,
              reused: int = 0) -> Estimate:
     """The cost of reflecting on ``sessions`` with ``runtime`` and curating ``curations`` times, from ``agent``'s
     journal; ``reused`` more sessions are counted, at no cost."""

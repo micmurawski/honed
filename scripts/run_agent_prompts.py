@@ -317,7 +317,7 @@ def main(argv: list[str] | None = None, *, default_harness: str | None = None) -
         required=default_harness is None,
     )
     parser.add_argument("--bin", dest="agent_bin", help="Agent executable path")
-    parser.add_argument("--agent-snapshot", type=Path, help="Optional canonical MetaAgent JSON for this producer")
+    parser.add_argument("--agent-snapshot", type=Path, help="Optional canonical AgentConfig JSON for this producer")
     parser.add_argument(
         "--agent-arg",
         action="append",

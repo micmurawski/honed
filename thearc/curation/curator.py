@@ -1,4 +1,4 @@
-"""Curation: a curator edits a MetaAgent's workspace in response to reflection items, one commit per change.
+"""Curation: a curator edits an AgentConfig's workspace in response to reflection items, one commit per change.
 
 The curator works in a clone of the workspace at a base commit ``B``, whose markers give every
 section's lineage ID; with ``scales``, its prompt adds every section's ratings so far. It edits
@@ -23,7 +23,7 @@ from typing import Any
 from thearc.reflection import Reflection
 from thearc.reflection.mcp import ToolSpec, serve
 from thearc.reflection.runtimes import RUNTIMES, ReflectionError, Runtime
-from thearc.resources.agent import MetaAgent
+from thearc.resources.agent import AgentConfig
 from thearc.resources.changes import detect_changes, frozen_changes
 from thearc.resources.git import _git, agent_at, branch_name, commit, commit_journal, is_worktree, record_commits
 from thearc.resources.journal import Entry, Journal, Kept
@@ -96,7 +96,7 @@ class Curation:
     def changed(self) -> bool:
         return bool(self.commits)
 
-    def candidate(self) -> MetaAgent:
+    def candidate(self) -> AgentConfig:
         """The curated configuration, as committed on the candidate branch."""
         agent = agent_at(self.workspace, self.head)
         if agent is None:
@@ -221,7 +221,7 @@ class Curator:
         self,
         prompt: str,
         reflections: Sequence[Reflection],
-        agent: MetaAgent,
+        agent: AgentConfig,
         *,
         scales: RatingScale | Sequence[RatingScale] = (),
         policy: RatingPolicy | None = None,

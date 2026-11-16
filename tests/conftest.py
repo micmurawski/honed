@@ -1,6 +1,6 @@
 import pytest
 
-from thearc.resources import MCP, AgentResource, ContextDocument, Hook, MetaAgent, Skill
+from thearc.resources import MCP, AgentResource, ContextDocument, Hook, AgentConfig, Skill
 
 RETRY = """Intro line
 
@@ -19,8 +19,8 @@ max 3
 
 
 @pytest.fixture
-def agent() -> MetaAgent:
-    return MetaAgent(
+def agent() -> AgentConfig:
+    return AgentConfig(
         name="demo",
         version="1",
         skills=[

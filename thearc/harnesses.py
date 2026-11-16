@@ -1,4 +1,4 @@
-"""Harnesses: the agent environments thearc reads sessions from and installs MetaAgents into."""
+"""Harnesses: the agent environments thearc reads sessions from and installs AgentConfigs into."""
 
 from typing import Literal
 

@@ -1,6 +1,6 @@
 import pytest
 
-from thearc.resources import FileReference, MetaAgent, ResourceTarget, Skill
+from thearc.resources import FileReference, AgentConfig, ResourceTarget, Skill
 from thearc.resources.markdown import outline, split_frontmatter
 
 SKILL = "skills/retry/SKILL.md"
@@ -32,7 +32,7 @@ def test_layout(agent):
 
 def test_skill_markdown_round_trips_body_exactly(agent):
     skill = agent.skills["retry"].model_copy(update={"metadata": {"tags": ["x"]}, "instructions": "\n  body\n\n"})
-    frontmatter, body, lines = split_frontmatter(MetaAgent(name="a", skills=[skill]).files().files[SKILL])
+    frontmatter, body, lines = split_frontmatter(AgentConfig(name="a", skills=[skill]).files().files[SKILL])
     assert frontmatter == {"name": "retry", "description": "Retry things", "tags": ["x"]}
     assert body == skill.instructions
     assert lines == 6
@@ -73,7 +73,7 @@ def test_unresolvable_references(agent):
 
 
 def test_repeated_heading_paths_are_owned_by_the_parent():
-    agent = MetaAgent(name="a", skills=[Skill(name="s", instructions="# A\n\n## X\n\none\n\n## X\n\ntwo\n")])
+    agent = AgentConfig(name="a", skills=[Skill(name="s", instructions="# A\n\n## X\n\none\n\n## X\n\ntwo\n")])
     files = agent.files()
     assert section("A", resource="s") in files.targets
     assert all(t.section != "A > X" for t in files.targets)

@@ -1,6 +1,6 @@
 """Drift: hand edits to an installation are committed to the workspace before anything overwrites them."""
 
-from thearc.resources import Hook, MetaAgent
+from thearc.resources import Hook, AgentConfig
 
 
 def installed(agent, tmp_path, *harnesses):
@@ -42,4 +42,4 @@ def test_what_a_harness_cannot_install_is_not_a_removal(agent, tmp_path):
     workspace, project = installed(agent, tmp_path, "claude", "codex", "pi")
     drift = workspace.sync_installation(project, ["claude", "codex", "pi"])
     assert not drift.changed and set(drift.agent.hooks) == {"guard"} and set(drift.agent.mcps) == {"docs"}
-    assert MetaAgent.from_workspace(workspace.workspace).revision == workspace.revision
+    assert AgentConfig.from_workspace(workspace.workspace).revision == workspace.revision

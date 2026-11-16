@@ -6,9 +6,9 @@ configuration installed in a project.
 ## 1. Import the configuration into a workspace
 
 ```python
-from thearc.resources import MetaAgent
+from thearc.resources import AgentConfig
 
-agent = MetaAgent.from_installation("codex", "tests/fastapi", name="graphify", version="0.9.68")
+agent = AgentConfig.from_installation("codex", "tests/fastapi", name="graphify", version="0.9.68")
 agent = agent.init_workspace("artifacts/graphify", branch="reflections")
 ```
 

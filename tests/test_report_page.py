@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from thearc.curation import Merger
-from thearc.resources import CategoricalScale, MetaAgent
+from thearc.resources import CategoricalScale, AgentConfig
 from thearc.resources.evolution import evolution
 from thearc.resources.report import render_report, write_report
 
@@ -25,7 +25,7 @@ def test_the_page_renders_every_view(candidates, tmp_path):
         assert not tool("commit_change", message="Combine the limits")["error"]
         tool("finish", summary="Combined.")
 
-    idle = MetaAgent.from_workspace(candidates.workspace.workspace).to_worktree(tmp_path / "idle")  # Changed nothing.
+    idle = AgentConfig.from_workspace(candidates.workspace.workspace).to_worktree(tmp_path / "idle")  # Changed nothing.
     Merger(runtime=ScriptedCurator(merger)).merge("Merge.", [candidates.one, candidates.two, idle]).agent.release()
     page = write_report(candidates.workspace.workspace, tmp_path / "report.html")
     result = json.loads(subprocess.run([NODE, str(HARNESS), str(page)], check=True, capture_output=True,

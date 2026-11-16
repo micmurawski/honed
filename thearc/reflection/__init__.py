@@ -1,4 +1,4 @@
-"""Reflection: judging a MetaAgent's files against evidence. See ``docs/concepts.md``."""
+"""Reflection: judging an AgentConfig's files against evidence. See ``docs/concepts.md``."""
 
 from .prompts import Prompt, prompt_hash, schema_hash
 from .reflector import INSTRUCTIONS, Reflection, Reflector
