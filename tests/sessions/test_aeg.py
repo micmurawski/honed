@@ -279,7 +279,12 @@ def test_the_pipeline_builds_a_graph_and_mines_it(store, tmp_path):
     assert summary["cases"] == 12 and summary["outcomes"] == {"completed": 6, "abandoned": 6}
     assert any(row["pattern"] == ["TEST:fail", "DONE"] for row in view.mined.contrast["over"])
     assert view.validation["abstraction"] == "phase"
-    assert view.archetypes["clusters"] and view.archetypes["method"]
+    try:
+        import numpy  # noqa: F401 -- archetypes need it (the aeg extra)
+    except ImportError:
+        assert view.archetypes["clusters"] == [] and "thearc[aeg]" in view.archetypes["note"]
+    else:
+        assert view.archetypes["clusters"] and view.archetypes["method"]
     markdown = view.to_markdown()
     assert "## Loops" in markdown and "## Failure indicators" in markdown and "## Archetypes" in markdown
     assert view.to_mermaid().startswith("flowchart LR") and view.to_sankey().startswith("sankey-beta")
