@@ -1,0 +1,53 @@
+{
+  "id": "pr16418",
+  "commit": "1d4953d2e528b58cfb09bbc28fb25dcda227c6ea",
+  "parent": "3e33a03bdaa3a89f27d5e0c390c4ba9032f14b5e",
+  "title": "\ud83d\udc1b Allow startup when automatic OpenTelemetry configuration fails (#16418)",
+  "family": "opentelemetry",
+  "split": "train",
+  "tests": [
+    "tests/test_telemetry/test_runtime.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_telemetry.test_runtime::test_application_lifespan_errors_still_propagate[shutdown]",
+    "tests.test_telemetry.test_runtime::test_application_lifespan_errors_still_propagate[startup]",
+    "tests.test_telemetry.test_runtime::test_failed_registration_closes_new_exporter[AttributeError]",
+    "tests.test_telemetry.test_runtime::test_failed_registration_closes_new_exporter[ValueError]",
+    "tests.test_telemetry.test_runtime::test_invalid_configuration_warns_without_disabling_providers[env0-absolute HTTP]",
+    "tests.test_telemetry.test_runtime::test_invalid_configuration_warns_without_disabling_providers[env1-http/protobuf]",
+    "tests.test_telemetry.test_runtime::test_invalid_configuration_warns_without_disabling_providers[env2-otlp or none]",
+    "tests.test_telemetry.test_runtime::test_missing_sdk_warns_without_preventing_startup",
+    "tests.test_telemetry.test_runtime::test_unsupported_provider_warns_without_preventing_startup[logger]",
+    "tests.test_telemetry.test_runtime::test_unsupported_provider_warns_without_preventing_startup[meter]",
+    "tests.test_telemetry.test_runtime::test_unsupported_provider_warns_without_preventing_startup[tracer]"
+  ],
+  "pass_to_pass": [
+    "tests.test_telemetry.test_runtime::test_auto_configuration_opt_out",
+    "tests.test_telemetry.test_runtime::test_concurrent_provider_owner_wins[False]",
+    "tests.test_telemetry.test_runtime::test_concurrent_provider_owner_wins[True]",
+    "tests.test_telemetry.test_runtime::test_empty_environment_uses_defaults[env0]",
+    "tests.test_telemetry.test_runtime::test_empty_environment_uses_defaults[env1]",
+    "tests.test_telemetry.test_runtime::test_empty_signal_protocol_uses_general_protocol[grpc]",
+    "tests.test_telemetry.test_runtime::test_empty_signal_protocol_uses_general_protocol[http/protobuf]",
+    "tests.test_telemetry.test_runtime::test_environment_export_initializes_after_fork",
+    "tests.test_telemetry.test_runtime::test_external_globals_are_unchanged_when_auto_configuration_is_disabled",
+    "tests.test_telemetry.test_runtime::test_lifespan_flush_runs_off_event_loop[lifespan.shutdown.complete]",
+    "tests.test_telemetry.test_runtime::test_lifespan_flush_runs_off_event_loop[lifespan.shutdown.failed]",
+    "tests.test_telemetry.test_runtime::test_lifespan_flush_runs_off_event_loop[lifespan.startup.failed]",
+    "tests.test_telemetry.test_runtime::test_no_implicit_export[env0]",
+    "tests.test_telemetry.test_runtime::test_no_implicit_export[env1]",
+    "tests.test_telemetry.test_runtime::test_no_implicit_export[env2]",
+    "tests.test_telemetry.test_runtime::test_no_implicit_export[env3]",
+    "tests.test_telemetry.test_runtime::test_no_implicit_export[env4]",
+    "tests.test_telemetry.test_runtime::test_otlp_collector_does_not_resolve_hostname",
+    "tests.test_telemetry.test_runtime::test_owned_flush_failure_does_not_break_shutdown",
+    "tests.test_telemetry.test_runtime::test_real_otlp_exception_export_without_traces_or_metrics",
+    "tests.test_telemetry.test_runtime::test_real_otlp_export_and_repeated_lifespans[/collector/]",
+    "tests.test_telemetry.test_runtime::test_real_otlp_export_and_repeated_lifespans[]",
+    "tests.test_telemetry.test_runtime::test_registration_provider_prefers_public_metric_reader",
+    "tests.test_telemetry.test_runtime::test_signal_endpoint_overrides_general_endpoint[LOGS]",
+    "tests.test_telemetry.test_runtime::test_signal_endpoint_overrides_general_endpoint[METRICS]",
+    "tests.test_telemetry.test_runtime::test_signal_endpoint_overrides_general_endpoint[TRACES]"
+  ]
+}

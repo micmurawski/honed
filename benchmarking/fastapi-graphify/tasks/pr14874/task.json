@@ -1,0 +1,19 @@
+{
+  "id": "pr14874",
+  "commit": "65e42bd5eca657daf97c6762b9632e7c2cb3317a",
+  "parent": "9db320278c15315a95341d086bc594fc3bf2af4e",
+  "title": "\ud83d\udc1b Fix handling sequences with nested Annotated types (#14874)",
+  "family": "annotated-types",
+  "split": "test",
+  "tests": [
+    "tests/test_nested_annotated_in_sequence.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_nested_annotated_in_sequence::test_endpoint_none",
+    "tests.test_nested_annotated_in_sequence::test_endpoint_too_long",
+    "tests.test_nested_annotated_in_sequence::test_endpoint_valid",
+    "tests.test_nested_annotated_in_sequence::test_openapi"
+  ],
+  "pass_to_pass": []
+}

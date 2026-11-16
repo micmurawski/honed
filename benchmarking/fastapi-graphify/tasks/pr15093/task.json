@@ -1,0 +1,24 @@
+{
+  "id": "pr15093",
+  "commit": "d6537f774b0e80e376e2cf4e0fa998a38c6d0c09",
+  "parent": "0f3d3b2f9f09f04fe612d4b7db32485170c9f1dd",
+  "title": "\ud83d\udc1b Fix `response_model_*` params ignored for non-generator endpoints with `Iterable[..]` return type (#15093)",
+  "family": "streaming",
+  "split": "train",
+  "tests": [
+    "tests/test_skip_defaults.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_skip_defaults::test_return_iterable_exclude_defaults",
+    "tests.test_skip_defaults::test_return_iterable_exclude_none",
+    "tests.test_skip_defaults::test_return_iterable_exclude_unset"
+  ],
+  "pass_to_pass": [
+    "tests.test_skip_defaults::test_return_defaults",
+    "tests.test_skip_defaults::test_return_exclude_defaults",
+    "tests.test_skip_defaults::test_return_exclude_none",
+    "tests.test_skip_defaults::test_return_exclude_unset",
+    "tests.test_skip_defaults::test_return_exclude_unset_none"
+  ]
+}

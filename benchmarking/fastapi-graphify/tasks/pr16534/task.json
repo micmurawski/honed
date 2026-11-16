@@ -1,0 +1,44 @@
+{
+  "id": "pr16534",
+  "commit": "0890e2a32960bb5cc1cfb807dca3a5e10384ec9d",
+  "parent": "4001c90dad1924b6d10624c7523d7264f4bf9f97",
+  "title": "\ud83d\udc1b Treat unselected browser file inputs as missing (#16534)",
+  "family": "form-browser-inputs",
+  "split": "test",
+  "tests": [
+    "tests/test_request_params/test_file/test_nullable_and_defaults.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_file_list_ignores_unselected_inputs[/required-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_file_list_ignores_unselected_inputs[/required-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_files_use_bytes_defaults[no-selection]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_optional_nullable_files[no-selection-/optional-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_optional_nullable_files[no-selection-/optional-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_required_nullable_files[no-selection-/required-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_required_nullable_files[no-selection-/required-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_required_non_nullable_files",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_unselected_files_in_form_model_use_defaults_and_remain_unset"
+  ],
+  "pass_to_pass": [
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_file_without_a_name_is_supplied_when_it_has_content[/required-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_file_without_a_name_is_supplied_when_it_has_content[/required-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_files_use_bytes_defaults[omitted]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_optional_nullable_files[omitted-/optional-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_optional_nullable_files[omitted-/optional-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_required_nullable_files[omitted-/required-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_missing_required_nullable_files[omitted-/required-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_multipart_text_items_in_bytes_list_are_preserved",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_named_file_is_supplied_even_when_empty[-/optional-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_named_file_is_supplied_even_when_empty[-/optional-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_named_file_is_supplied_even_when_empty[-/required-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_named_file_is_supplied_even_when_empty[-/required-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_named_file_is_supplied_even_when_empty[hello-/optional-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_named_file_is_supplied_even_when_empty[hello-/optional-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_named_file_is_supplied_even_when_empty[hello-/required-bytes]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_named_file_is_supplied_even_when_empty[hello-/required-uploadfile]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_openapi_schema",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_supplied_files_override_bytes_defaults[-0]",
+    "tests.test_request_params.test_file.test_nullable_and_defaults::test_supplied_files_override_bytes_defaults[hello-5]"
+  ]
+}

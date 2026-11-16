@@ -1,0 +1,26 @@
+{
+  "id": "pr15937",
+  "commit": "e92a0dc3ce5ecbebb8655dbe5465cb61d48f9fc0",
+  "parent": "6215d8a6f3fed4eef63fe9d1ae600c12f62bd881",
+  "title": "\ud83d\udc1b Fix `status_code` being ignored for SSE and JSONL streaming endpoints (#15937)",
+  "family": "streaming",
+  "split": "train",
+  "tests": [
+    "tests/test_stream_status_code.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_stream_status_code::test_status_code[/jsonl-201]",
+    "tests.test_stream_status_code::test_status_code[/jsonl-dependency-202]",
+    "tests.test_stream_status_code::test_status_code[/jsonl-dependency-override-202]",
+    "tests.test_stream_status_code::test_status_code[/sse-201]",
+    "tests.test_stream_status_code::test_status_code[/sse-dependency-202]",
+    "tests.test_stream_status_code::test_status_code[/sse-dependency-override-202]"
+  ],
+  "pass_to_pass": [
+    "tests.test_stream_status_code::test_openapi",
+    "tests.test_stream_status_code::test_status_code[/raw-201]",
+    "tests.test_stream_status_code::test_status_code[/raw-dependency-202]",
+    "tests.test_stream_status_code::test_status_code[/raw-dependency-override-202]"
+  ]
+}

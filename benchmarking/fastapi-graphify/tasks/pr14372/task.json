@@ -1,0 +1,16 @@
+{
+  "id": "pr14372",
+  "commit": "85701631a0241c5f02b4940734a5428f66abe167",
+  "parent": "566e3157a5517784c741dbf36e39687af326fe90",
+  "title": "\u267b\ufe0f Make the result of `Depends()` and `Security()` hashable, as a workaround for other tools interacting with these internal parts (#14372)",
+  "family": "dependency-internals",
+  "split": "test",
+  "tests": [
+    "tests/test_depends_hashable.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_depends_hashable::test_depends_hashable"
+  ],
+  "pass_to_pass": []
+}

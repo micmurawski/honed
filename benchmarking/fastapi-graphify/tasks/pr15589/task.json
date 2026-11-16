@@ -1,0 +1,23 @@
+{
+  "id": "pr15589",
+  "commit": "063b5bf582d31fb155cc6bc6f88cf512329d0fd5",
+  "parent": "22b02e26f9e8c7e32bd8266e2b0ebe8bb3a0db2b",
+  "title": "\u267b\ufe0f Do not accept underscore headers when using `convert_underscores=True` (the default) (#15589)",
+  "family": "headers-underscore",
+  "split": "test",
+  "tests": [
+    "tests/test_query_cookie_header_model_extra_params.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_query_cookie_header_model_extra_params::test_header_model_prefers_hyphenated_header_with_convert_underscores",
+    "tests.test_query_cookie_header_model_extra_params::test_header_model_rejects_underscore_header_with_convert_underscores"
+  ],
+  "pass_to_pass": [
+    "tests.test_query_cookie_header_model_extra_params::test_cookie_pass_extra_list",
+    "tests.test_query_cookie_header_model_extra_params::test_header_pass_extra_list",
+    "tests.test_query_cookie_header_model_extra_params::test_header_pass_extra_single",
+    "tests.test_query_cookie_header_model_extra_params::test_query_pass_extra_list",
+    "tests.test_query_cookie_header_model_extra_params::test_query_pass_extra_single"
+  ]
+}

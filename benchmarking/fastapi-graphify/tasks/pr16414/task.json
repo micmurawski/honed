@@ -1,0 +1,21 @@
+{
+  "id": "pr16414",
+  "commit": "ac88f563db5f4d3300d43355eca728c93ed9ffe2",
+  "parent": "bd41128123fd08d693f5541e27c550eebe20f8b0",
+  "title": "\ud83d\udc1b Fix repeated endpoint wrapping in included routers (#16414)",
+  "family": "router-include",
+  "split": "test",
+  "tests": [
+    "tests/test_route_handler_wrapping.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_route_handler_wrapping::test_custom_handlers_are_cached_separately_for_nested_inclusions",
+    "tests.test_route_handler_wrapping::test_endpoint_wrapper_does_not_accumulate_across_requests[included]",
+    "tests.test_route_handler_wrapping::test_failed_handler_construction_restores_context_and_can_retry"
+  ],
+  "pass_to_pass": [
+    "tests.test_route_handler_wrapping::test_cached_handler_uses_live_dependency_overrides_and_route_additions",
+    "tests.test_route_handler_wrapping::test_endpoint_wrapper_does_not_accumulate_across_requests[direct]"
+  ]
+}

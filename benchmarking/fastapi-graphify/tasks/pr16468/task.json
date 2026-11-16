@@ -1,0 +1,21 @@
+{
+  "id": "pr16468",
+  "commit": "6eae2f3456c889ad791de38dd45c14e17de775d3",
+  "parent": "94918c1d40afb27065c64d523219ed2ad9822f76",
+  "title": "\ud83d\udc1b Cache OpenTelemetry tracers to preserve warning deduplication (#16468)",
+  "family": "opentelemetry",
+  "split": "train",
+  "tests": [
+    "tests/test_telemetry/test_tracer.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_telemetry.test_tracer::test_tracer_lookup_preserves_warning_deduplication[http-False]",
+    "tests.test_telemetry.test_tracer::test_tracer_lookup_preserves_warning_deduplication[http-True]",
+    "tests.test_telemetry.test_tracer::test_tracer_lookup_preserves_warning_deduplication[websocket-False]",
+    "tests.test_telemetry.test_tracer::test_tracer_lookup_preserves_warning_deduplication[websocket-True]"
+  ],
+  "pass_to_pass": [
+    "tests.test_telemetry.test_tracer::test_cached_tracer_follows_provider_changes"
+  ]
+}

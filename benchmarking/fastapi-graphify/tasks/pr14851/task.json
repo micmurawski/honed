@@ -1,0 +1,24 @@
+{
+  "id": "pr14851",
+  "commit": "f9f79926047d7f5d8e0127dd585e7683ee57e9f7",
+  "parent": "8e50c55fd90c4433ddc9096ff439da9498a8314a",
+  "title": "\u267b\ufe0f Re-implement `on_event` in FastAPI for compatibility with the next Starlette, while keeping backwards compatibility (#14851)",
+  "family": "lifespan-events",
+  "split": "test",
+  "tests": [
+    "tests/test_router_events.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_router_events::test_app_lifespan_state",
+    "tests.test_router_events::test_merged_mixed_state_lifespans",
+    "tests.test_router_events::test_merged_no_return_lifespans_return_none",
+    "tests.test_router_events::test_router_async_generator_lifespan",
+    "tests.test_router_events::test_router_async_shutdown_handler",
+    "tests.test_router_events::test_router_events",
+    "tests.test_router_events::test_router_nested_lifespan_state",
+    "tests.test_router_events::test_router_nested_lifespan_state_overriding_by_parent",
+    "tests.test_router_events::test_router_sync_generator_lifespan"
+  ],
+  "pass_to_pass": []
+}

@@ -1,0 +1,25 @@
+{
+  "id": "pr14962",
+  "commit": "590a5e535587cc07041ba12d308c748433ccb168",
+  "parent": "1e78a36b7310003f0ff634627d8a7bc53c6ccdee",
+  "title": "\u2728 Serialize JSON response with Pydantic (in Rust), when there's a Pydantic return type or response model (#14962)",
+  "family": "json-serialization",
+  "split": "test",
+  "tests": [
+    "tests/test_dump_json_fast_path.py",
+    "tests/test_tutorial/test_custom_response/test_tutorial001.py",
+    "tests/test_tutorial/test_custom_response/test_tutorial010.py"
+  ],
+  "support": [
+    "docs_src/custom_response/tutorial010_py310.py"
+  ],
+  "fail_to_pass": [
+    "tests.test_dump_json_fast_path::test_default_response_class_skips_json_dumps"
+  ],
+  "pass_to_pass": [
+    "tests.test_dump_json_fast_path::test_explicit_response_class_uses_json_dumps",
+    "tests.test_tutorial.test_custom_response.test_tutorial001::test_openapi_schema[tutorial001_py310]",
+    "tests.test_tutorial.test_custom_response.test_tutorial010::test_get_custom_response[tutorial010_py310]",
+    "tests.test_tutorial.test_custom_response.test_tutorial010::test_openapi_schema[tutorial010_py310]"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": "pr16598",
+  "commit": "f90d0369380a539c673b1bbbbd86535b8cdee746",
+  "parent": "80c8742d141e67beaf747343405c8facf999bc0c",
+  "title": "\ud83d\udc1b Fix OpenAPI schemas for standalone nullable form unions (#16598)",
+  "family": "form-openapi",
+  "split": "test",
+  "tests": [
+    "tests/test_forms_optional_unions.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_forms_optional_unions::test_nullable_union_without_default_is_required",
+    "tests.test_forms_optional_unions::test_openapi",
+    "tests.test_forms_optional_unions::test_unknown_fields[allow]",
+    "tests.test_forms_optional_unions::test_unknown_fields[forbid]",
+    "tests.test_forms_optional_unions::test_unknown_fields[ignore]"
+  ],
+  "pass_to_pass": [
+    "tests.test_forms_optional_unions::test_absent_union[/discriminated]",
+    "tests.test_forms_optional_unions::test_absent_union[/union]",
+    "tests.test_forms_optional_unions::test_aliases_activate_union[full_name]",
+    "tests.test_forms_optional_unions::test_aliases_activate_union[name]",
+    "tests.test_forms_optional_unions::test_aliases_and_forbidden_extras[full_name]",
+    "tests.test_forms_optional_unions::test_aliases_and_forbidden_extras[name]",
+    "tests.test_forms_optional_unions::test_branch_tags_and_before_validator",
+    "tests.test_forms_optional_unions::test_defaults_factories_and_validators",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data0-union_tag_not_found]",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data1-union_tag_not_found]",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data2-union_tag_not_found]",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data3-union_tag_invalid]",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data4-union_tag_invalid]",
+    "tests.test_forms_optional_unions::test_mixed_extra_configurations_activate_union",
+    "tests.test_forms_optional_unions::test_multipart_union[/discriminated]",
+    "tests.test_forms_optional_unions::test_multipart_union[/union]",
+    "tests.test_forms_optional_unions::test_optional_union_in_dependency",
+    "tests.test_forms_optional_unions::test_partial_and_empty_fields[data0-/discriminated-text]",
+    "tests.test_forms_optional_unions::test_partial_and_empty_fields[data0-/union-TextForm]",
+    "tests.test_forms_optional_unions::test_partial_and_empty_fields[data1-/discriminated-text]",
+    "tests.test_forms_optional_unions::test_partial_and_empty_fields[data1-/union-TextForm]",
+    "tests.test_forms_optional_unions::test_supplied_union[/discriminated]",
+    "tests.test_forms_optional_unions::test_supplied_union[/union]"
+  ]
+}

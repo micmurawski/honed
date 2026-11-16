@@ -1,0 +1,32 @@
+{
+  "id": "pr16549",
+  "commit": "0a8c3fae5495a2b4d62e5d83cb63d4087fb7e63e",
+  "parent": "51f1a6c10086bd39b1623581b5683b2165cfcf24",
+  "title": "\ud83d\udc1b Preserve Pydantic field metadata when request options are omitted (#16549)",
+  "family": "field-metadata",
+  "split": "test",
+  "tests": [
+    "tests/test_request_params/test_field_metadata.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_request_params.test_field_metadata::test_body_alias_overrides",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata0-Body]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata0-Cookie]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata0-Form]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata0-Header]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata0-Path]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata0-Query]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata1-Body]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata1-Cookie]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata1-Form]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata1-Header]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata1-Path]",
+    "tests.test_request_params.test_field_metadata::test_field_alias_is_preserved[metadata1-Query]",
+    "tests.test_request_params.test_field_metadata::test_field_discriminator_is_preserved",
+    "tests.test_request_params.test_field_metadata::test_file_field_alias_is_preserved",
+    "tests.test_request_params.test_field_metadata::test_openapi_schema",
+    "tests.test_request_params.test_field_metadata::test_query_alias_overrides"
+  ],
+  "pass_to_pass": []
+}

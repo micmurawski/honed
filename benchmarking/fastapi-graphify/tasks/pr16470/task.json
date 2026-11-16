@@ -1,0 +1,34 @@
+{
+  "id": "pr16470",
+  "commit": "4e31a07bafd08f247f39ab1e9144ba2a62395757",
+  "parent": "cb8dabcd4a7b44e180d7c258377ae4b0abf99bff",
+  "title": "\ud83d\udc1b Isolate FastAPI telemetry for excluded requests (#16470)",
+  "family": "opentelemetry",
+  "split": "train",
+  "tests": [
+    "tests/test_telemetry/test_data.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_telemetry.test_data::test_excluded_request_does_not_use_outer_telemetry[asyncio-False]",
+    "tests.test_telemetry.test_data::test_excluded_request_does_not_use_outer_telemetry[asyncio-True]",
+    "tests.test_telemetry.test_data::test_excluded_request_does_not_use_outer_telemetry[trio-False]",
+    "tests.test_telemetry.test_data::test_excluded_request_does_not_use_outer_telemetry[trio-True]",
+    "tests.test_telemetry.test_data::test_excluded_request_restores_context_after_error[asyncio-CancelledError]",
+    "tests.test_telemetry.test_data::test_excluded_request_restores_context_after_error[asyncio-ValueError]",
+    "tests.test_telemetry.test_data::test_excluded_request_restores_context_after_error[trio-CancelledError]",
+    "tests.test_telemetry.test_data::test_excluded_request_restores_context_after_error[trio-ValueError]"
+  ],
+  "pass_to_pass": [
+    "tests.test_telemetry.test_data::test_data_is_local_to_each_request_and_cleared_afterwards[asyncio]",
+    "tests.test_telemetry.test_data::test_data_is_local_to_each_request_and_cleared_afterwards[trio]",
+    "tests.test_telemetry.test_data::test_included_request_inside_excluded_request[asyncio]",
+    "tests.test_telemetry.test_data::test_included_request_inside_excluded_request[trio]",
+    "tests.test_telemetry.test_data::test_request_objects_are_not_exported",
+    "tests.test_telemetry.test_data::test_retained_context_does_not_keep_failed_request_alive",
+    "tests.test_telemetry.test_data::test_validation_data_without_tracing[False-False]",
+    "tests.test_telemetry.test_data::test_validation_data_without_tracing[False-True]",
+    "tests.test_telemetry.test_data::test_validation_data_without_tracing[True-False]",
+    "tests.test_telemetry.test_data::test_validation_data_without_tracing[True-True]"
+  ]
+}

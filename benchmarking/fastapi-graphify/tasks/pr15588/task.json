@@ -1,0 +1,40 @@
+{
+  "id": "pr15588",
+  "commit": "c7fb7851b3389f24c51701d705458989be53ccbb",
+  "parent": "cb83b83dcf78eab4ea17d504db5abcda705fbdc4",
+  "title": "\u267b\ufe0f Validate Server Sent Event fields to avoid applications from sending broken data (#15588)",
+  "family": "streaming",
+  "split": "train",
+  "tests": [
+    "tests/test_sse.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\nsecond-event]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\nsecond-id]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\r\\nsecond-event]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\r\\nsecond-id]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\rsecond-event]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\rsecond-id]"
+  ],
+  "pass_to_pass": [
+    "tests.test_sse::test_async_generator_no_annotation",
+    "tests.test_sse::test_async_generator_with_model",
+    "tests.test_sse::test_data_and_raw_data_mutually_exclusive",
+    "tests.test_sse::test_dict_items",
+    "tests.test_sse::test_keepalive_ping_async",
+    "tests.test_sse::test_keepalive_ping_sync",
+    "tests.test_sse::test_mixed_plain_and_sse_events",
+    "tests.test_sse::test_no_keepalive_when_fast",
+    "tests.test_sse::test_post_method_sse",
+    "tests.test_sse::test_raw_data_sent_without_json_encoding",
+    "tests.test_sse::test_server_sent_event_float_retry_rejected",
+    "tests.test_sse::test_server_sent_event_negative_retry_rejected",
+    "tests.test_sse::test_server_sent_event_null_id_rejected",
+    "tests.test_sse::test_sse_events_with_fields",
+    "tests.test_sse::test_sse_on_router_included_in_app",
+    "tests.test_sse::test_string_data_json_encoded",
+    "tests.test_sse::test_sync_generator_no_annotation",
+    "tests.test_sse::test_sync_generator_with_model"
+  ]
+}

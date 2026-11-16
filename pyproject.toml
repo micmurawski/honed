@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thearc"
+version = "0.2.0"
+description = "Agent-independent session indexing, reflection, and configuration adaptation"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.0.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0.0",
+    "jsonschema>=4.23,<5",
+]
+
+[project.scripts]
+thearc = "thearc.cli:main"
+
+[project.urls]
+Repository = "https://github.com/micmurawski/thearc"
+Documentation = "https://micmurawski.github.io/thearc/"
+Issues = "https://github.com/micmurawski/thearc/issues"
+
+[tool.setuptools.packages.find]
+include = ["thearc*"]
+
+[tool.setuptools.package-data]
+"thearc.flow" = ["viz.css", "viz.js"]
+"thearc.resources" = ["report.html"]
+"thearc.ui" = ["theme.css", "theme.js"]
+"thearc.evolve" = ["skills/evolve/SKILL.md", "skills/evolve/evolve.py", "skills/evolve/prompts/*.md",
+                   "skills/reflect/SKILL.md"]
+
+[project.optional-dependencies]
+mcp = ["mcp>=2.2,<3"]
+docs = ["mkdocs>=1.6,<2"]
+codex = ["openai-codex==0.157.1"]
+antigravity = ["google-antigravity==0.1.19"]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [".*", "build", "dist", "*.egg", "node_modules", "venv", "fastapi"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["tests/fastapi"]
+
+[tool.ruff.lint]
+extend-select = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["thearc"]
+# thearc.flow was copied from the old package as it was and is not typed yet.
+# thearc/evolve/skills/evolve/evolve.py is the recipe users edit, installed as a script, not library code.
+exclude = ["thearc/flow/", "thearc/evolve/skills/"]
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["thearc.flow", "thearc.flow.*"]  # Followed from thearc.evolve, but not typed yet.
+ignore_errors = true

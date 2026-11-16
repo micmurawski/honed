@@ -1,0 +1,107 @@
+/* The flow visualizer's own rules, after thearc.ui's shared ones (theme.css). */
+
+/* Header: run state and per-status stats */
+.meta .live { color: var(--run); font-weight: 700; }
+.meta .live::before { content: "● "; }
+.meta .done { color: var(--good); font-weight: 700; }
+.meta .done::before { content: "✓ "; }
+.stat.running b { color: var(--run); }
+.stat.success b { color: var(--good); }
+.stat.failed b { color: var(--bad); }
+.stat.skipped b { color: var(--muted); }
+.scalebar .success { background: var(--good); }
+.scalebar .failed { background: var(--bad); }
+.scalebar .running { background: var(--run); }
+.scalebar .skipped { background: var(--dead); }
+
+/* Legend swatches, one per node status */
+.swatch { background: var(--surface); }
+.swatch.running { border-color: var(--run); background: var(--run-soft); }
+.swatch.success { border-color: var(--good); background: var(--good-soft); }
+.swatch.failed { border-color: var(--bad); background: var(--bad-soft); }
+.swatch.skipped { border-style: dashed; border-color: var(--dead); background: var(--bg); }
+
+/* Graph */
+.graph-box { position: relative; height: clamp(300px, 55vh, 560px); border: 1px solid var(--line); background: var(--bg); overflow: hidden; }
+#flow-svg { width: 100%; height: 100%; display: block; cursor: grab; }
+#flow-svg.panning { cursor: grabbing !important; }
+.zoom-bar { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; z-index: 10; border: 1px solid var(--edge); box-shadow: 3px 3px 0 var(--shadow); }
+.zoom-btn { width: 32px; height: 32px; background: var(--surface); border: 0; border-bottom: 1px solid var(--line); color: var(--fg); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+.zoom-btn:last-child { border-bottom: 0; }
+.zoom-btn:hover { background: var(--accent); color: var(--accent-ink); }
+
+/* SVG marks: every colour comes from the theme tokens, so both themes work */
+.grid-dot { fill: var(--line); }
+.arrow { fill: var(--muted); }
+.arrow-bk { fill: var(--dead); }
+.edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.edge.back { stroke: var(--dead); stroke-dasharray: 5 3; }
+.edge-label { fill: var(--muted); font: 11px var(--font-ui); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+.edge-label.back { fill: var(--dead); }
+.node { cursor: grab; }
+.node.dragging { cursor: grabbing; }
+.node .n-shadow { fill: var(--shadow); }
+.node .n-card { fill: var(--surface); stroke: var(--edge); stroke-width: 1; }
+.node .n-stack { fill: var(--sunken); stroke: var(--line); stroke-width: 1; }
+.node .n-bar { fill: var(--line); }
+.node .n-kind { fill: var(--muted); font: 700 9px var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase; }
+.node .n-label { fill: var(--fg); font: 700 12px var(--font-ui); }
+.node .n-sub { fill: var(--muted); font: 10px var(--font-ui); }
+.node.running .n-card { fill: var(--run-soft); stroke: var(--run); stroke-width: 2; }
+.node.running .n-bar, .node.running .n-shadow { fill: var(--run); }
+.node.running .n-sub { fill: var(--run); }
+.node.success .n-card { fill: var(--good-soft); stroke: var(--good); }
+.node.success .n-bar { fill: var(--good); }
+.node.success .n-sub { fill: var(--good); }
+.node.failed .n-card { fill: var(--bad-soft); stroke: var(--bad); stroke-width: 2; }
+.node.failed .n-bar, .node.failed .n-shadow { fill: var(--bad); }
+.node.failed .n-sub { fill: var(--bad); }
+.node.skipped .n-card { fill: var(--bg); stroke: var(--dead); stroke-dasharray: 4 3; }
+.node.skipped .n-shadow { fill: none; }
+.node.skipped .n-bar { fill: var(--dead); }
+.node.skipped .n-label, .node.skipped .n-sub, .node.skipped .n-kind { fill: var(--dead); }
+.node:hover .n-card { stroke: var(--fg); }
+
+/* Status table */
+table.status { border-collapse: separate; border-spacing: 0; font-size: 0.78rem; width: 100%; min-width: 36rem; }
+table.status th { position: sticky; top: 0; background: var(--surface); font-weight: 500; color: var(--muted); padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--edge); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.08em; }
+table.status td { padding: 6px 10px; border-bottom: 1px solid var(--sunken); vertical-align: top; }
+table.status tr:last-child td { border-bottom: 0; }
+table.status tr:hover td { background: var(--sunken); }
+table.status td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.status td.name { font-weight: 700; white-space: nowrap; }
+table.status td.name .kind { font-size: 0.66rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; margin-left: 6px; }
+table.status tr.skipped td { color: var(--dead); }
+.chip.running { color: var(--run); background: var(--run-soft); border-color: var(--run); }
+.chip.success { color: var(--good); background: var(--good-soft); border-color: var(--good); }
+.chip.failed { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
+.chip.skipped { color: var(--dead); border-style: dashed; border-color: var(--dead); }
+.irow { display: flex; flex-wrap: wrap; gap: 3px; }
+.ib { min-width: 2rem; text-align: center; font-size: 0.66rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); padding: 0 4px; cursor: default; font-variant-numeric: tabular-nums; }
+.ib.running { color: var(--run); background: var(--run-soft); border-color: var(--run); }
+.ib.success { color: var(--good); background: var(--good-soft); border-color: var(--good); }
+.ib.failed { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
+.err { color: var(--bad); font-size: 0.74rem; margin-top: 4px; word-break: break-word; white-space: pre-wrap; }
+.err::before { content: "! "; font-weight: 700; }
+
+/* Log files: one tab each, the file's tail as lines */
+.log-box { background: var(--bg); border: 1px solid var(--line); padding: 6px 0; max-height: 70vh; overflow: auto; font-size: 0.76rem; }
+.log-empty { color: var(--muted); padding: 4px 12px; }
+.log-empty::before { content: "// "; color: var(--accent); }
+.log-line { padding: 0 12px; white-space: pre-wrap; word-break: break-word; border-left: 3px solid transparent; }
+.log-line:hover { background: var(--sunken); }
+.log-line.debug { color: var(--muted); }
+.log-line.warning { border-left-color: var(--warn); color: var(--warn); }
+.log-line.error { border-left-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+
+.viz-tooltip { display: none; position: fixed; z-index: 1000; max-width: 360px; max-height: 360px; overflow: auto; background: var(--surface); border: 1px solid var(--edge); box-shadow: 3px 3px 0 var(--shadow); padding: 8px 10px; font: 11px/1.45 var(--font-ui); color: var(--fg); white-space: pre-wrap; word-break: break-word; pointer-events: none; }
+
+
+@media (prefers-reduced-motion: no-preference) {
+  .zoom-btn { transition: background-color 0.08s, color 0.08s; }
+  .node.running .n-card { animation: pulse 1.2s steps(2, jump-none) infinite; }
+  @keyframes pulse { 50% { stroke-opacity: 0.35; } }
+}
+@media (max-width: 640px) {
+  .graph-box { height: 340px; }
+}

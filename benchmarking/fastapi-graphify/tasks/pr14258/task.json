@@ -1,0 +1,16 @@
+{
+  "id": "pr14258",
+  "commit": "df950111fe97c8040e49f4600d6f563456bbdba6",
+  "parent": "363aced75a26a5247855ea41b2bee53481be4d52",
+  "title": "\u2728 Show a clear error on attempt to include router into itself (#14258)",
+  "family": "router-include",
+  "split": "test",
+  "tests": [
+    "tests/test_router_circular_import.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_router_circular_import::test_router_circular_import"
+  ],
+  "pass_to_pass": []
+}

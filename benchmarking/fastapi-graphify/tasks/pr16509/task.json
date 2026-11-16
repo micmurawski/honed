@@ -1,0 +1,20 @@
+{
+  "id": "pr16509",
+  "commit": "d1fd422fd9c3b24b0e2bcf1cc89f1e7249b5fcd6",
+  "parent": "0b919816378eaa773df7ce4204414c712c9fdbea",
+  "title": "\ud83d\udc1b Fix non-finite float serialization in JSONL and SSE streams (#16509)",
+  "family": "streaming",
+  "split": "train",
+  "tests": [
+    "tests/test_stream_non_finite_floats.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_stream_non_finite_floats::test_untyped_stream_non_finite_floats[/jsonl]",
+    "tests.test_stream_non_finite_floats::test_untyped_stream_non_finite_floats[/sse-events]",
+    "tests.test_stream_non_finite_floats::test_untyped_stream_non_finite_floats[/sse]"
+  ],
+  "pass_to_pass": [
+    "tests.test_stream_non_finite_floats::test_stream_preserves_model_serialization_and_raw_data"
+  ]
+}

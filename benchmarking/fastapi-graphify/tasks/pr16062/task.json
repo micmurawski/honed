@@ -1,0 +1,26 @@
+{
+  "id": "pr16062",
+  "commit": "65ef53ae6ac110ae7d56f81a7723e58ab319f339",
+  "parent": "255b912928904e3ba5980425a54d6837c8bd1a1c",
+  "title": "\u267b\ufe0f Update the lru_cache limit for dependencies to account for large apps (#16062)",
+  "family": "dependency-internals",
+  "split": "test",
+  "tests": [
+    "tests/test_dependency_models.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_dependency_models::test_callable_classification_cache_supports_large_apps",
+    "tests.test_dependency_models::test_callable_classification_is_shared_by_call"
+  ],
+  "pass_to_pass": [
+    "tests.test_dependency_models::test_callable_classification",
+    "tests.test_dependency_models::test_callable_return_annotations_are_not_used",
+    "tests.test_dependency_models::test_derived_values_are_not_stored_on_dependant",
+    "tests.test_dependency_models::test_derived_values_follow_dependency_state",
+    "tests.test_dependency_models::test_equal_callable_instances_are_cached_by_identity",
+    "tests.test_dependency_models::test_explicit_and_generator_scopes",
+    "tests.test_dependency_models::test_security_scheme_helpers",
+    "tests.test_dependency_models::test_unhashable_callable_classification"
+  ]
+}

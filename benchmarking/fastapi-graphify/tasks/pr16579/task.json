@@ -1,0 +1,26 @@
+{
+  "id": "pr16579",
+  "commit": "c059fbf0f2884ef61252649538c58f9b92fc5f62",
+  "parent": "3c0103a832b5ae46286ccca88678b0e5a455ba92",
+  "title": "\ud83d\udc1b Preserve form media types in OpenAPI (#16579)",
+  "family": "form-openapi",
+  "split": "test",
+  "tests": [
+    "tests/test_request_body_parameters_media_type.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_request_body_parameters_media_type::test_form_model_media_type[False]",
+    "tests.test_request_body_parameters_media_type::test_form_model_media_type[True]",
+    "tests.test_request_body_parameters_media_type::test_form_parameter_media_types[application/x-www-form-urlencoded-multipart/form-data-multipart/form-data]",
+    "tests.test_request_body_parameters_media_type::test_form_parameter_media_types[application/x-www-form-urlencoded; charset=utf-8-application/x-www-form-urlencoded; charset=utf-8-application/x-www-form-urlencoded; charset=utf-8]",
+    "tests.test_request_body_parameters_media_type::test_form_parameter_media_types[multipart/form-data-application/x-www-form-urlencoded-multipart/form-data]",
+    "tests.test_request_body_parameters_media_type::test_form_parameter_media_types[multipart/form-data-multipart/form-data-multipart/form-data]"
+  ],
+  "pass_to_pass": [
+    "tests.test_request_body_parameters_media_type::test_file_media_type_takes_precedence_over_form_media_type",
+    "tests.test_request_body_parameters_media_type::test_form_parameter_media_types[application/x-www-form-urlencoded-application/x-www-form-urlencoded-application/x-www-form-urlencoded]",
+    "tests.test_request_body_parameters_media_type::test_form_parameter_media_types[application/x-www-form-urlencoded; charset=utf-8-application/x-www-form-urlencoded-application/x-www-form-urlencoded]",
+    "tests.test_request_body_parameters_media_type::test_openapi_schema"
+  ]
+}

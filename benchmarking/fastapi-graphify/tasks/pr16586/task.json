@@ -1,0 +1,62 @@
+{
+  "id": "pr16586",
+  "commit": "86274cc0acc9fc6d608e251c874105c94634bddf",
+  "parent": "68cc4cbb2e0600841b0d6bdd1cc29038b54a00e6",
+  "title": "\u2728 Add support for optional unions of form models (#16586)",
+  "family": "form-model-optional",
+  "split": "test",
+  "tests": [
+    "tests/test_forms_optional_unions.py",
+    "tests/test_tutorial/test_request_form_models/test_tutorial006.py"
+  ],
+  "support": [
+    "docs_src/request_form_models/tutorial006_an_py310.py",
+    "docs_src/request_form_models/tutorial006_py310.py"
+  ],
+  "fail_to_pass": [
+    "tests.test_forms_optional_unions::test_aliases_activate_union[full_name]",
+    "tests.test_forms_optional_unions::test_aliases_activate_union[name]",
+    "tests.test_forms_optional_unions::test_aliases_and_forbidden_extras[full_name]",
+    "tests.test_forms_optional_unions::test_aliases_and_forbidden_extras[name]",
+    "tests.test_forms_optional_unions::test_branch_tags_and_before_validator",
+    "tests.test_forms_optional_unions::test_defaults_factories_and_validators",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data0-union_tag_not_found]",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data1-union_tag_not_found]",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data2-union_tag_not_found]",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data3-union_tag_invalid]",
+    "tests.test_forms_optional_unions::test_discriminator_errors[data4-union_tag_invalid]",
+    "tests.test_forms_optional_unions::test_mixed_extra_configurations_activate_union",
+    "tests.test_forms_optional_unions::test_multipart_union[/discriminated]",
+    "tests.test_forms_optional_unions::test_multipart_union[/union]",
+    "tests.test_forms_optional_unions::test_nullable_union_without_default_is_required",
+    "tests.test_forms_optional_unions::test_openapi",
+    "tests.test_forms_optional_unions::test_optional_union_in_dependency",
+    "tests.test_forms_optional_unions::test_partial_and_empty_fields[data0-/discriminated-text]",
+    "tests.test_forms_optional_unions::test_partial_and_empty_fields[data0-/union-TextForm]",
+    "tests.test_forms_optional_unions::test_partial_and_empty_fields[data1-/discriminated-text]",
+    "tests.test_forms_optional_unions::test_partial_and_empty_fields[data1-/union-TextForm]",
+    "tests.test_forms_optional_unions::test_supplied_union[/discriminated]",
+    "tests.test_forms_optional_unions::test_supplied_union[/union]",
+    "tests.test_forms_optional_unions::test_unknown_fields[allow]",
+    "tests.test_forms_optional_unions::test_unknown_fields[forbid]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_contact[tutorial006_an_py310-form1-expected1]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_contact[tutorial006_an_py310-form2-expected2]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_contact[tutorial006_py310-form1-expected1]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_contact[tutorial006_py310-form2-expected2]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_incomplete_contact[tutorial006_an_py310-company-company_name]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_incomplete_contact[tutorial006_an_py310-person-name]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_incomplete_contact[tutorial006_py310-company-company_name]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_incomplete_contact[tutorial006_py310-person-name]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_invalid_contact_kind[tutorial006_an_py310-form0-union_tag_not_found]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_invalid_contact_kind[tutorial006_an_py310-form1-union_tag_invalid]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_invalid_contact_kind[tutorial006_py310-form0-union_tag_not_found]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_invalid_contact_kind[tutorial006_py310-form1-union_tag_invalid]"
+  ],
+  "pass_to_pass": [
+    "tests.test_forms_optional_unions::test_absent_union[/discriminated]",
+    "tests.test_forms_optional_unions::test_absent_union[/union]",
+    "tests.test_forms_optional_unions::test_unknown_fields[ignore]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_contact[tutorial006_an_py310-form0-None]",
+    "tests.test_tutorial.test_request_form_models.test_tutorial006::test_contact[tutorial006_py310-form0-None]"
+  ]
+}

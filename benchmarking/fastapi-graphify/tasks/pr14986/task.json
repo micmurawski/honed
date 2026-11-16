@@ -1,0 +1,24 @@
+{
+  "id": "pr14986",
+  "commit": "2686c7fbbf9abb17902a2981a9d9fca01f5117b8",
+  "parent": "2f9c914d440e99fe8b62646b51e4d24c5bcd858b",
+  "title": "\u267b\ufe0f Refactor logic to handle OpenAPI and Swagger UI escaping data (#14986)",
+  "family": "openapi-escaping",
+  "split": "test",
+  "tests": [
+    "tests/test_openapi_cache_root_path.py",
+    "tests/test_swagger_ui_escape.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_openapi_cache_root_path::test_configured_servers_not_mutated",
+    "tests.test_openapi_cache_root_path::test_multiple_different_root_paths_do_not_accumulate",
+    "tests.test_openapi_cache_root_path::test_root_path_does_not_persist_across_requests",
+    "tests.test_swagger_ui_escape::test_init_oauth_html_chars_are_escaped",
+    "tests.test_swagger_ui_escape::test_swagger_ui_parameters_html_chars_are_escaped"
+  ],
+  "pass_to_pass": [
+    "tests.test_openapi_cache_root_path::test_legitimate_root_path_still_appears",
+    "tests.test_swagger_ui_escape::test_normal_init_oauth_still_works"
+  ]
+}

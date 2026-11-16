@@ -1,0 +1,51 @@
+{
+  "id": "pr15077",
+  "commit": "ad03e117c0010a563067740c97cb7ab011cb5174",
+  "parent": "98b12fe56f97107e71a20fc1cf334ccfa590efb5",
+  "title": "\ud83d\udc1b Fix stream item type lost when using `include_router()` (#15077)",
+  "family": "streaming",
+  "split": "train",
+  "tests": [
+    "tests/test_sse.py",
+    "tests/test_stream_bare_type.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_sse::test_default_response_class_on_app_openapi_schema",
+    "tests.test_sse::test_default_response_class_on_parent_router_openapi_schema",
+    "tests.test_sse::test_sse_router_typed_openapi_schema",
+    "tests.test_stream_bare_type::test_jsonl_router_typed_openapi_schema",
+    "tests.test_stream_bare_type::test_jsonl_router_typed_stream"
+  ],
+  "pass_to_pass": [
+    "tests.test_sse::test_async_generator_no_annotation",
+    "tests.test_sse::test_async_generator_with_model",
+    "tests.test_sse::test_data_and_raw_data_mutually_exclusive",
+    "tests.test_sse::test_default_response_class_on_app_stream",
+    "tests.test_sse::test_default_response_class_on_parent_router_stream",
+    "tests.test_sse::test_dict_items",
+    "tests.test_sse::test_keepalive_ping_async",
+    "tests.test_sse::test_keepalive_ping_sync",
+    "tests.test_sse::test_mixed_plain_and_sse_events",
+    "tests.test_sse::test_no_keepalive_when_fast",
+    "tests.test_sse::test_post_method_sse",
+    "tests.test_sse::test_raw_data_sent_without_json_encoding",
+    "tests.test_sse::test_server_sent_event_float_retry_rejected",
+    "tests.test_sse::test_server_sent_event_negative_retry_rejected",
+    "tests.test_sse::test_server_sent_event_null_id_rejected",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\nsecond-event]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\nsecond-id]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\r\\nsecond-event]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\r\\nsecond-id]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\rsecond-event]",
+    "tests.test_sse::test_server_sent_event_single_line_fields_reject_newlines[first\\rsecond-id]",
+    "tests.test_sse::test_sse_events_with_fields",
+    "tests.test_sse::test_sse_on_router_included_in_app",
+    "tests.test_sse::test_sse_router_typed_stream",
+    "tests.test_sse::test_string_data_json_encoded",
+    "tests.test_sse::test_sync_generator_no_annotation",
+    "tests.test_sse::test_sync_generator_with_model",
+    "tests.test_stream_bare_type::test_stream_bare_async_iterable",
+    "tests.test_stream_bare_type::test_stream_bare_sync_iterable"
+  ]
+}

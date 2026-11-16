@@ -1,0 +1,30 @@
+name: Bug report
+description: Something in thearc doesn't work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what you got. Paste the error.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The smallest command or script that shows it. Don't paste real session transcripts; they can hold private data.
+    validations:
+      required: true
+  - type: dropdown
+    id: harness
+    attributes:
+      label: Harness
+      multiple: true
+      options: [Claude Code, Codex, Pi, OpenCode, Antigravity, Not harness-specific]
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: thearc, Python, OS, and the harness CLI (e.g. `claude --version`).
+      placeholder: thearc 0.1.0, Python 3.13, macOS 15, claude 2.1.0

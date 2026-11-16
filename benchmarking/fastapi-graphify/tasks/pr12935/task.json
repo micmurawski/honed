@@ -1,0 +1,36 @@
+{
+  "id": "pr12935",
+  "commit": "20f40b29c0241fc73d82857ab456ef6fda15659f",
+  "parent": "ee490906d88b323731a76df41fce7b27d4029e92",
+  "title": "\ud83d\udc1b Fix `TypeError` when encoding a decimal with a `NaN` or `Infinity` value (#12935)",
+  "family": "encoding",
+  "split": "test",
+  "tests": [
+    "tests/test_jsonable_encoder.py"
+  ],
+  "support": [],
+  "fail_to_pass": [
+    "tests.test_jsonable_encoder::test_decimal_encoder_infinity",
+    "tests.test_jsonable_encoder::test_decimal_encoder_nan"
+  ],
+  "pass_to_pass": [
+    "tests.test_jsonable_encoder::test_custom_enum_encoders",
+    "tests.test_jsonable_encoder::test_decimal_encoder_float",
+    "tests.test_jsonable_encoder::test_decimal_encoder_int",
+    "tests.test_jsonable_encoder::test_encode_class",
+    "tests.test_jsonable_encoder::test_encode_custom_json_encoders_model_pydanticv2",
+    "tests.test_jsonable_encoder::test_encode_dataclass",
+    "tests.test_jsonable_encoder::test_encode_deque_encodes_child_models",
+    "tests.test_jsonable_encoder::test_encode_dict",
+    "tests.test_jsonable_encoder::test_encode_dictable",
+    "tests.test_jsonable_encoder::test_encode_model_with_alias",
+    "tests.test_jsonable_encoder::test_encode_model_with_alias_raises",
+    "tests.test_jsonable_encoder::test_encode_model_with_config",
+    "tests.test_jsonable_encoder::test_encode_model_with_default",
+    "tests.test_jsonable_encoder::test_encode_model_with_pure_path",
+    "tests.test_jsonable_encoder::test_encode_model_with_pure_posix_path",
+    "tests.test_jsonable_encoder::test_encode_model_with_pure_windows_path",
+    "tests.test_jsonable_encoder::test_encode_pydantic_undefined",
+    "tests.test_jsonable_encoder::test_encode_unsupported"
+  ]
+}
