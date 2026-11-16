@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+site/
+
+# Virtual Environment
+.venv/
+env/
+venv/
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Local agent installs generated during testing
+.agents/
+.claude/
+.codex/
+
+# Downloaded public history corpora and generated indexes
+.history-bench/
+logs/codex-prompts/fastapi-worktrees-20260927-live/worktrees/
+
+# Training sessions: kept locally, not in git
+logs/
+
+# Local knowledge graph (graphify)
+graphify-out/
+
+# Local work: experiment outputs, archives, tool state
+artifacts/
+archive/
+.rtk/
+/.thearc/cache/
+RELEASE_PLAN.md
