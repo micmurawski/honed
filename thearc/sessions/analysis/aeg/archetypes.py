@@ -119,10 +119,8 @@ def archetypes(sequences: Sequence[CaseSequence], *, transitions: int = 60, seed
 
     ``name(prompt) -> answer`` names a cluster from a summary of it (an LLM); without it, rules name it.
     """
-    try:
-        import numpy as np
-    except ImportError:
-        return {"method": None, "note": "archetypes need numpy (pip install 'thearc[aeg]')", "clusters": []}
+    import numpy as np
+
     if len(sequences) < 10:
         return {"method": None, "note": f"too few cases to cluster ({len(sequences)}; 10 needed)", "clusters": []}
     rows, names = _features(sequences, transitions)
