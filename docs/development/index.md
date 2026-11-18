@@ -1,7 +1,7 @@
 # Contributing
 
 ```sh
-python -m pip install -e '.[mcp,codex,dev]'
+python -m pip install -e '.[mcp,dev]'
 ./lint.sh                 # ruff and mypy on thearc/
 python -m pytest -q       # tests/ ; the Graphify fixtures need the tests/fastapi submodule
 ```

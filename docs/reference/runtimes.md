@@ -7,7 +7,7 @@ where the harness allows it.
 
 | Harness | Reflect | Hand off a session | Curate / merge | How |
 | --- | --- | --- | --- | --- |
-| Codex | yes | yes | yes | `openai-codex` SDK; read-only sandbox to reflect, `workspace-write` to edit |
+| Codex | yes | yes | yes | `codex exec --json` (`exec fork` to hand off, `exec resume` for later turns); read-only sandbox to reflect, `workspace-write` to edit |
 | Claude Code | yes | yes | yes | `claude -p`; Read/Grep/Glob, plus Edit/Write to edit |
 | Pi | yes | yes | yes | `pi -p --mode json`; read/grep/find/ls, plus edit/write; tools through a run-only extension |
 | OpenCode | yes | yes | yes | `opencode run --format json`; isolated run config, restricted permissions, per-run MCP tools |

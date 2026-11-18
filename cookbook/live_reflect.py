@@ -11,9 +11,9 @@ be repeated to replace discovery with explicit sources.
 --unit trajectory reviews each prompt's response with its preceding context.
 
 Real runs install best-effort session copies into the active Codex home and fork
-them using Reflector.handoff. Codex must be installed and authenticated, and the
-Python environment needs thearc[codex]. No model calls or session installations
-occur with --dry-run; it only indexes and reports the selected evidence.
+them using Reflector.handoff. Codex must be installed, authenticated and on PATH.
+No model calls or session installations occur with --dry-run; it only indexes and
+reports the selected evidence.
 
 Results live under --out: reflections/*.json, errors/*.json, sessions.sqlite,
 and a git-tracked agent/ workspace with its journal. Successful results are
