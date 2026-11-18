@@ -41,7 +41,7 @@ def serve(specs: Sequence[ToolSpec]) -> Iterator[ToolEndpoint]:
         from mcp.server.mcpserver.tools import Tool
         from mcp.types import ToolAnnotations
     except ImportError as exc:
-        raise ReflectionError("missing_runtime", "Install thearc[mcp] to run thearc's tools") from exc
+        raise ReflectionError("missing_runtime", "The mcp package is missing: reinstall thearc") from exc
 
     def failing_as_tool_errors(function: Callable[..., str]) -> Callable[..., str]:
         @functools.wraps(function)
