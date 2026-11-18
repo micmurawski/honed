@@ -3,15 +3,14 @@
 `thearc` needs Python 3.11 or newer.
 
 ```sh
-python -m pip install "thearc[mcp,codex] @ git+https://github.com/micmurawski/thearc"
+python -m pip install "thearc[mcp]"
 ```
 
-or, from a clone of the repository, `python -m pip install -e '.[mcp,codex]'`.
+or, for the latest unreleased changes, from a clone of the repository: `python -m pip install -e '.[mcp]'`.
 
 | Extra | For |
 | --- | --- |
 | `mcp` | Reflection, curation, and merging: the agents hand in their work through MCP tools served for each run. |
-| `codex` | Codex as reflector, curator, or merger (the `openai-codex` SDK). |
 | `docs` | Building this site. |
 | `dev` | Tests, `ruff`, and `mypy`. |
 
