@@ -5,10 +5,22 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## 0.3.0
+
 ### Changed
 
+- `pip install thearc` is the whole install: `mcp` (the tools reflectors, curators, and mergers hand their work in
+  through) and `numpy` (session archetypes) are dependencies. The `mcp` and `aeg` extras remain, empty, so existing
+  install commands keep working. thearc is installed from PyPI in the README and the docs.
+- Codex reflectors, curators, and mergers run through the installed `codex` CLI (`codex exec --json`, `exec fork` to
+  hand off a session, `exec resume` for later turns), like Claude Code and Pi, instead of the `openai-codex` SDK and
+  the Codex binary it bundled. The `codex` extra is removed.
 - `MetaAgent` is renamed `AgentConfig`: it is an agent's configuration, not an agent. `MetaAgent` still imports, as a
   deprecated alias that warns, until the next minor release.
+
+### Fixed
+
+- A handed-off Codex session's usage no longer includes the usage of the session it was forked from.
 
 ## 0.2.0
 
