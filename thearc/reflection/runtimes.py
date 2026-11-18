@@ -10,7 +10,7 @@ context files) where the harness allows it.
 
 | Harness | How | Submit tool | Handoff (fork) |
 | --- | --- | --- | --- |
-| codex | ``openai-codex`` SDK, read-only sandbox | config override | yes |
+| codex | ``codex exec --json``, read-only sandbox | config override | yes (``codex exec fork``) |
 | claude | ``claude -p``, Read/Grep/Glob only | ``--mcp-config`` | yes (``--resume … --fork-session``) |
 | pi | ``pi -p --mode json``, read/grep/find/ls only | ``-e`` extension | yes (``--fork``) |
 | opencode | ``opencode run --format json``, per-run permissions | remote MCP config | yes (import and fork) |
@@ -24,10 +24,9 @@ import os
 import shutil
 import subprocess
 import tempfile
-import threading
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
@@ -184,92 +183,83 @@ class CodexRuntime(Runtime):
     def conversation(
         self, workspace: Path, tool: ToolEndpoint, *, fork: InstalledSession | None = None, edit: bool = False
     ) -> Iterator[Conversation]:
-        try:
-            from openai_codex import CodexConfig, Thread
-            from openai_codex.client import CodexClient
-            from openai_codex.generated.v2_all import ThreadTurnsListResponse
-        except ImportError as exc:
-            raise ReflectionError("missing_runtime", "Install thearc[codex] to reflect with Codex") from exc
-        overrides = (
-            *_CODEX_OVERRIDES,
-            f'mcp_servers.{SERVER}.url="{tool.url}"',
-            f'mcp_servers.{SERVER}.default_tools_approval_mode="approve"',
-        )
-        client = CodexClient(
-            CodexConfig(cwd=str(workspace), client_name="thearc_reflector", config_overrides=overrides)
-        )
-        client.start()
-        try:
-            client.initialize()
-            params: dict[str, Any] = {
-                "cwd": str(workspace),
-                "sandbox": "workspace-write" if edit else "read-only",
-                "approvalPolicy": "never",
-                "ephemeral": False,
-                **({"model": self.model} if self.model else {}),
-            }
-            started: Any
-            if fork is None:
-                started = client.thread_start(params)
-            else:
-                turns = client.request(
-                    "thread/turns/list",
-                    {"threadId": fork.session_id, "sortDirection": "desc", "limit": 1, "itemsView": "notLoaded"},
-                    response_model=ThreadTurnsListResponse,
-                ).data
-                if not turns:
-                    raise ReflectionError("missing_history", "The handed-off Codex session has no turns")
-                started = client.thread_fork(
-                    fork.session_id, {**params, "lastTurnId": turns[0].id, "excludeTurns": True}
-                )
-            yield _CodexConversation(Thread(client, started.thread.id), self.effort, self.timeout)
-        finally:
-            client.close()
+        if fork is not None and not Path(fork.path).is_file():
+            raise ReflectionError("missing_history", f"Installed Codex session not found: {fork.path}")
+        yield _CodexConversation(self, workspace, tool, fork, edit)
 
 
 class _CodexConversation(Conversation):
-    def __init__(self, thread: Any, effort: str | None, timeout: float):
-        self.thread, self.effort, self.id, self.timeout = thread, effort, thread.id, timeout
-        self._total = Usage()  # The thread's running total, as Codex last reported it.
+    """``codex exec``: the first turn starts a thread (or forks the handed-off one), later turns resume it."""
+
+    def __init__(
+        self, runtime: CodexRuntime, workspace: Path, tool: ToolEndpoint, fork: InstalledSession | None, edit: bool
+    ):
+        self.runtime, self.workspace, self.tool, self.fork, self.edit = runtime, workspace, tool, fork, edit
+        # Codex reports the thread's running total, and a fork's starts from its parent's: a turn used the difference.
+        self._total = _codex_thread_total(Path(fork.path)) if fork is not None else Usage()
 
     def send(self, message: str) -> str:
-        result = _within(self.timeout, "codex", lambda: self.thread.run(
-            message, **({"effort": self.effort} if self.effort else {})))
-        if result.usage is not None:  # Codex reports the thread's total; this turn used the difference.
-            total = _codex_usage(result.usage.total)
-            self.usage += Usage(*(getattr(total, name) - getattr(self._total, name)
-                                  for name in ("input", "output", "cache_read", "cache_write", "reasoning")))
-            self._total = total
-        if result.status.value != "completed" or not result.final_response:
-            raise ReflectionError("incomplete", f"Codex turn ended with status {result.status.value}")
-        return str(result.final_response)
+        if self.id is not None:
+            command = ["codex", "exec", "resume", self.id]
+        elif self.fork is not None:
+            command = ["codex", "exec", "fork", self.fork.session_id]
+        else:
+            command = ["codex", "exec"]
+        command += ["-", "--json", "--skip-git-repo-check"]  # The message comes on stdin.
+        overrides = (
+            *_CODEX_OVERRIDES,
+            f'mcp_servers.{SERVER}.url="{self.tool.url}"',
+            f'mcp_servers.{SERVER}.default_tools_approval_mode="approve"',
+            'approval_policy="never"',
+            f'sandbox_mode="{"workspace-write" if self.edit else "read-only"}"',  # resume and fork take no -s
+            *([f'model_reasoning_effort="{self.runtime.effort}"'] if self.runtime.effort else []),
+        )
+        for override in overrides:
+            command += ["-c", override]
+        command += ["-m", self.runtime.model] if self.runtime.model else []
+        output = _run(command, cwd=self.workspace, timeout=self.runtime.timeout, stdin=message)
+        answer, failure = None, None
+        for line in output.split("\n"):  # JSON Lines: a string may hold U+2028, which splitlines() cuts at.
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            kind = event.get("type")
+            if kind == "thread.started":
+                self.id = event.get("thread_id") or self.id
+            elif kind == "item.completed" and (event.get("item") or {}).get("type") == "agent_message":
+                answer = event["item"].get("text")
+            elif kind == "turn.completed":
+                total = _codex_usage(event.get("usage") or {})
+                self.usage += Usage(*(getattr(total, name) - getattr(self._total, name)
+                                      for name in ("input", "output", "cache_read", "cache_write", "reasoning")))
+                self._total = total
+            elif kind == "turn.failed":
+                failure = str((event.get("error") or {}).get("message") or "failed")
+        if failure is not None or not answer:
+            raise ReflectionError("incomplete", f"Codex turn failed: {(failure or 'no answer')[:300]}")
+        return str(answer)
 
 
-def _within(timeout: float, name: str, call: Callable[[], Any]) -> Any:
-    """``call()``, or a timeout error once ``timeout`` seconds pass without it returning. The call goes on in its
-    thread until its client is closed, which the caller's ``finally`` does."""
-    outcome: dict[str, Any] = {}
+def _codex_usage(raw: dict[str, Any]) -> Usage:
+    cached = raw.get("cached_input_tokens") or 0
+    return Usage(input=(raw.get("input_tokens") or 0) - cached, output=raw.get("output_tokens") or 0,
+                 cache_read=cached, cache_write=raw.get("cache_write_input_tokens") or 0,
+                 reasoning=raw.get("reasoning_output_tokens") or 0)
 
-    def target() -> None:
+
+def _codex_thread_total(rollout: Path) -> Usage:
+    """A recorded Codex thread's running token total, from its last ``token_count`` event: what a fork starts at."""
+    total = Usage()
+    for line in rollout.read_text(encoding="utf-8").split("\n"):
         try:
-            outcome["result"] = call()
-        except Exception as error:  # noqa: BLE001 -- re-raised in the caller's thread
-            outcome["error"] = error
-
-    worker = threading.Thread(target=target, name=f"thearc-{name}-turn", daemon=True)
-    worker.start()
-    worker.join(timeout)
-    if worker.is_alive():
-        raise ReflectionError("timeout", f"{name} did not finish within {timeout:.0f}s")
-    if "error" in outcome:
-        raise outcome["error"]
-    return outcome["result"]
-
-
-def _codex_usage(breakdown: Any) -> Usage:
-    cached = breakdown.cached_input_tokens or 0
-    return Usage(input=breakdown.input_tokens - cached, output=breakdown.output_tokens, cache_read=cached,
-                 cache_write=breakdown.cache_write_input_tokens or 0, reasoning=breakdown.reasoning_output_tokens or 0)
+            payload = json.loads(line).get("payload") or {}
+        except (ValueError, AttributeError):
+            continue
+        info = payload.get("info") if isinstance(payload, dict) and payload.get("type") == "token_count" else None
+        if info and info.get("total_token_usage"):
+            total = _codex_usage(info["total_token_usage"])
+    return total
 
 
 # --- Claude Code -------------------------------------------------------------------------------------------------

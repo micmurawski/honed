@@ -2,7 +2,6 @@
 the evolution dataset once per run."""
 
 import json
-from types import SimpleNamespace
 
 import pytest
 
@@ -46,25 +45,34 @@ def test_pi_reports_usage_per_model_call(monkeypatch, tmp_path):
     assert talk.usage.total == 13 + 6 + 12 + 1 and talk.usage.cost == pytest.approx(0.3)
 
 
-def test_codex_reports_the_thread_total_so_each_turn_counts_the_difference():
-    def breakdown(input_, cached, output):
-        return SimpleNamespace(input_tokens=input_, cached_input_tokens=cached, output_tokens=output,
-                               cache_write_input_tokens=0, reasoning_output_tokens=1, total_tokens=input_ + output)
+def _codex_turn(text, input_, cached, output, thread="t1"):
+    usage = {"input_tokens": input_, "cached_input_tokens": cached, "cache_write_input_tokens": 0,
+             "output_tokens": output, "reasoning_output_tokens": 1}
+    return "\n".join(json.dumps(event) for event in (
+        {"type": "thread.started", "thread_id": thread},
+        {"type": "item.completed", "item": {"id": "i", "type": "agent_message", "text": text}},
+        {"type": "turn.completed", "usage": usage}))
 
-    totals = [breakdown(100, 40, 10), breakdown(250, 140, 30)]
 
-    class Thread:
-        id = "t1"
+def test_codex_reports_the_thread_total_so_each_turn_counts_the_difference(monkeypatch, tmp_path):
+    outputs = [_codex_turn("ok", 100, 40, 10), _codex_turn("ok", 250, 140, 30)]
+    monkeypatch.setattr(runtimes, "_run", lambda *args, **kwargs: outputs.pop(0))
+    with runtimes.CodexRuntime().conversation(tmp_path, runtimes.ToolEndpoint("http://x")) as talk:
+        talk.send("one")
+        assert talk.usage == Usage(input=60, output=10, cache_read=40, reasoning=1)
+        talk.send("two")
+        assert talk.usage == Usage(input=110, output=30, cache_read=140, reasoning=1)
 
-        def run(self, message, **kwargs):
-            return SimpleNamespace(status=SimpleNamespace(value="completed"), final_response="ok",
-                                   usage=SimpleNamespace(total=totals.pop(0)))
 
-    talk = runtimes._CodexConversation(Thread(), None, 60)
-    talk.send("one")
-    assert talk.usage == Usage(input=60, output=10, cache_read=40, reasoning=1)
-    talk.send("two")
-    assert talk.usage == Usage(input=110, output=30, cache_read=140, reasoning=1)
+def test_a_codex_fork_starts_from_its_parents_total(monkeypatch, tmp_path):
+    parent = tmp_path / "rollout.jsonl"
+    total = {"input_tokens": 1000, "cached_input_tokens": 400, "output_tokens": 50, "reasoning_output_tokens": 1}
+    parent.write_text(json.dumps({"payload": {"type": "token_count", "info": {"total_token_usage": total}}}) + "\n")
+    monkeypatch.setattr(runtimes, "_run", lambda *args, **kwargs: _codex_turn("ok", 1100, 450, 60, thread="fork"))
+    fork = runtimes.InstalledSession("codex", "parent", parent, command="")
+    with runtimes.CodexRuntime().conversation(tmp_path, runtimes.ToolEndpoint("http://x"), fork=fork) as talk:
+        talk.send("one")
+    assert talk.id == "fork" and talk.usage == Usage(input=50, output=10, cache_read=50)
 
 
 def test_the_dataset_counts_each_agent_run_once(agent, tmp_path):

@@ -8,7 +8,7 @@ Thanks for helping. Bug reports, harness support, docs fixes, and ideas are all 
 git clone --recurse-submodules https://github.com/micmurawski/thearc
 cd thearc
 python -m venv .venv && . .venv/bin/activate
-python -m pip install -e '.[mcp,codex,dev,docs]'
+python -m pip install -e '.[dev,docs]'
 ```
 
 `tests/fastapi` is a submodule with the Graphify configuration the fixtures use; clone with
