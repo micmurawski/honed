@@ -16,7 +16,7 @@ examples/quickstart/run.sh            # in a new temporary folder; or give one: 
 MODEL=haiku examples/quickstart/run.sh   # the three work sessions on a cheaper model
 ```
 
-It needs thearc (`python -m pip install -e '.[mcp]'` in this repository) and Claude Code, installed and signed in.
+It needs thearc (`python -m pip install -e .` in this repository) and Claude Code, installed and signed in.
 It makes real model calls: three short sessions, three reflections, and one curation: a few minutes, and about a dollar for the round on
 Claude Code's default model (the report's **Token usage** tab shows what each run cost).
 

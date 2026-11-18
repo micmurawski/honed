@@ -15,6 +15,8 @@ dependencies = [
     "pyyaml>=6.0",
     "pydantic>=2.0.0",
     "jsonschema>=4.23,<5",
+    "mcp>=2.2,<3",  # The tools reflectors, curators and mergers hand their work in through.
+    "numpy>=1.26",  # Session archetypes in `thearc sessions graph aeg`.
 ]
 
 [project.scripts]
@@ -36,10 +38,9 @@ include = ["thearc*"]
                    "skills/reflect/SKILL.md"]
 
 [project.optional-dependencies]
-mcp = ["mcp>=2.2,<3"]
-aeg = ["numpy>=1.26"]  # Session archetypes in `thearc sessions graph aeg`; pyarrow adds Parquet tables.
+mcp = []  # Now a dependency; kept so `thearc[mcp]` still installs.
+aeg = []  # Now a dependency; kept so `thearc[aeg]` still installs. pyarrow adds Parquet tables.
 docs = ["mkdocs>=1.6,<2"]
-codex = ["openai-codex==0.157.1"]
 antigravity = ["google-antigravity==0.1.19"]
 dev = [
     "pytest>=8.0.0",

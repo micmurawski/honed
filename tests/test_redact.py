@@ -1,7 +1,6 @@
 """Redaction: secrets and personal paths out of a session before a reflector reads it; what the harness needs, kept."""
 
 import json
-import time
 from collections import Counter
 from pathlib import Path
 
@@ -107,10 +106,7 @@ def test_attached_evidence_is_redacted_too(agent):
     assert reflection.evidence["redacted"] == {"github-token": 1}
 
 
-def test_a_stalled_codex_turn_times_out():
+def test_a_stalled_turn_times_out(tmp_path):
     with pytest.raises(ReflectionError, match="did not finish within 0s") as error:
-        runtime_module._within(0.05, "codex", lambda: time.sleep(5))
+        runtime_module._run(["sleep", "5"], cwd=tmp_path, timeout=0.05)
     assert error.value.code == "timeout"
-    assert runtime_module._within(1, "codex", lambda: "done") == "done"
-    with pytest.raises(ValueError, match="bad"):
-        runtime_module._within(1, "codex", lambda: (_ for _ in ()).throw(ValueError("bad")))
