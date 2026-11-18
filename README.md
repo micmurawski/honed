@@ -10,7 +10,7 @@ installing it. It works across Claude Code, Codex, Pi, OpenCode, and Antigravity
 ## Quickstart
 
 ```sh
-python -m pip install "thearc[mcp]"
+python -m pip install thearc
 cd your-project                                       # a git repository
 thearc skills install self-evolve --harness claude    # or codex, pi, opencode
 ```
