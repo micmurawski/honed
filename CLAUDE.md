@@ -9,7 +9,7 @@ Rules:
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
 <!-- rtk-instructions v2 -->
-# Command output
+# Command output <!-- thearc 1.0.0 -->
 
 Command output here is condensed to save tokens, keeping every signal and
 dropping costly noise. Treat it as the complete result: run commands
