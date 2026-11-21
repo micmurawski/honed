@@ -5,9 +5,9 @@ import json
 import pytest
 from pydantic import BaseModel, Field
 
-from thearc.curation import Curator
-from thearc.reflection import Reflection, Reflector
-from thearc.resources import CategoricalScale, NumericScale, Ref, ReflectionSchema
+from honed.curation import Curator
+from honed.reflection import Reflection, Reflector
+from honed.resources import CategoricalScale, NumericScale, Ref, ReflectionSchema
 
 from .test_curation import ScriptedCurator
 from .test_reflection import Scripted
@@ -113,3 +113,10 @@ def test_a_lesson_is_submitted_whole_recorded_and_curated(agent, tmp_path):
     prompt = curator.sent[0]
     assert "#### Key Insight\n\nFix permanent errors; retry only transient ones." in prompt
     assert f"`{reflection.id}#/ratings/0` usefulness **harmful**" in prompt
+
+
+def test_of_wraps_a_model_and_keeps_a_schema():
+    assert ReflectionSchema.of(LESSON) is LESSON
+    wrapped = ReflectionSchema.of(Lesson)
+    assert isinstance(wrapped, ReflectionSchema) and wrapped.json_schema() == LESSON.json_schema()
+    assert ReflectionSchema.of(usefulness).is_list

@@ -9,11 +9,11 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from thearc import evolve
-from thearc.cli import main
-from thearc.evolve import live
-from thearc.sessions import Sessions
-from thearc.resources import AgentConfig, install
+from honed import evolve
+from honed.cli import main
+from honed.evolve import live
+from honed.sessions import Sessions
+from honed.resources import AgentConfig, install
 
 from .test_evolve import WORKSPACE, git, project  # noqa: F401 -- the fixture
 
@@ -30,14 +30,14 @@ def installed_line(project, relative, text):
 def test_self_evolve_installs_the_reflect_skill(project):
     evolve.install_evolve_skill(project, "claude")
     skill = (project / ".claude/skills/reflect/SKILL.md").read_text()
-    assert "thearc reflect begin" in skill and "claude instructions" in skill  # HARNESS filled in.
-    record = json.loads((project / ".thearc/installed.json").read_text())["agents"]["thearc-evolve"]["harnesses"]
+    assert "honed reflect begin" in skill and "claude instructions" in skill  # HARNESS filled in.
+    record = json.loads((project / ".honed/installed.json").read_text())["agents"]["honed-evolve"]["harnesses"]
     assert ".claude/skills/reflect/SKILL.md" in record["claude"]["files"]
-    assert not (project / ".thearc/reflections").exists()  # Reflections live in the session index.
+    assert not (project / ".honed/reflections").exists()  # Reflections live in the session index.
     agent = AgentConfig.from_workspace(project / WORKSPACE)
     drift = agent.sync_installation(project, ["claude"])
     assert not drift.entries and drift.agent.revision == agent.revision
-    assert "reflect" not in agent.skills and not any("thearc" in (hook.command or "") for hook in agent.hooks.values())
+    assert "reflect" not in agent.skills and not any("honed" in (hook.command or "") for hook in agent.hooks.values())
 
     evolve.uninstall_evolve_skill(project)
     assert not (project / ".claude/skills/reflect").exists() and not (project / ".claude/skills/evolve").exists()
@@ -46,7 +46,7 @@ def test_self_evolve_installs_the_reflect_skill(project):
 
 @pytest.mark.parametrize("harness", ["codex", "pi", "opencode"])
 def test_self_evolve_installs_the_reflect_skill_for_every_harness(agent, tmp_path, harness):
-    from thearc.resources.harness import get_harness
+    from honed.resources.harness import get_harness
 
     git(tmp_path, "init", "-q", "-b", "main")
     install(agent, harness, tmp_path)
@@ -67,7 +67,7 @@ def test_a_projects_own_reflect_skill_is_refused_unless_left_out(agent, tmp_path
     with pytest.raises(ValueError, match="--no-reflect"):
         evolve.install_evolve_skill(tmp_path, "claude")
     evolve.install_evolve_skill(tmp_path, "claude", reflect=False)
-    assert "thearc reflect" not in (tmp_path / ".claude/skills/reflect/SKILL.md").read_text()  # Theirs, untouched.
+    assert "honed reflect" not in (tmp_path / ".claude/skills/reflect/SKILL.md").read_text()  # Theirs, untouched.
 
 
 def test_reinstalling_upgrades_a_project_set_up_before_the_reflect_skill(project):
@@ -86,7 +86,7 @@ def test_reinstalling_upgrades_a_project_set_up_before_the_reflect_skill(project
 def test_begin_and_submit_an_in_session_reflection(project, session_index):
     evolve.install_evolve_skill(project, "claude")
     begun = live.begin(project, trigger="tests green")
-    assert begun.marker.startswith("thearc-reflect:") and "Review this project's agent configuration" in str(begun)
+    assert begun.marker.startswith("honed-reflect:") and "Review this project's agent configuration" in str(begun)
     assert "id: reflect" not in begun.question  # The recipe's prompt, without its frontmatter.
     copies = project / begun.files
     assert (copies / "skills/retry/SKILL.md").is_file()
@@ -107,7 +107,7 @@ def test_begin_and_submit_an_in_session_reflection(project, session_index):
     assert second == "skills/retry/SKILL.md#L7"
     assert reflection.prompt["name"] == "reflect" and reflection.prompt["text"].startswith("Review")
     assert not accepted.bound and "1 harmful" in str(accepted)  # Its marker is in no transcript yet.
-    assert accepted.index == session_index.resolve()  # $THEARC_INDEX: where sessions are indexed.
+    assert accepted.index == session_index.resolve()  # $HONED_INDEX: where sessions are indexed.
     with Sessions() as index:
         stored = index.index.connection.execute("SELECT id, session_id FROM reflections").fetchall()
     assert [tuple(row) for row in stored] == [(reflection.id, None)]
@@ -123,12 +123,12 @@ def test_an_in_session_reflection_joins_its_session_and_the_next_round_sources_i
     store = next((Path(os.environ["CLAUDE_CONFIG_DIR"]) / "projects").iterdir())
     lines = [{"type": "user", "message": {"role": "user", "content": "Fix the retry bug"}},
              {"type": "assistant", "message": {"role": "assistant", "content": [
-                 {"type": "tool_use", "id": "b", "name": "Bash", "input": {"command": "thearc reflect begin"}}]}},
+                 {"type": "tool_use", "id": "b", "name": "Bash", "input": {"command": "honed reflect begin"}}]}},
              {"type": "user", "message": {"role": "user", "content": [
                  {"type": "tool_result", "tool_use_id": "b", "content": str(begun)}]}},
              {"type": "assistant", "message": {"role": "assistant", "content": [
                  {"type": "tool_use", "id": "s", "name": "Bash",
-                  "input": {"command": f"thearc reflect submit {begun.marker} --file r.json"}}]}}]
+                  "input": {"command": f"honed reflect submit {begun.marker} --file r.json"}}]}}]
     (store / "s5.jsonl").write_text("".join(json.dumps({**line, "sessionId": "s5", "cwd": str(project.resolve()),
                                                          "timestamp": f"2099-01-01T11:00:0{i}Z", "uuid": f"u{i}"})
                                             + "\n" for i, line in enumerate(lines)))
@@ -169,8 +169,8 @@ def test_status_shows_the_reflect_skill_and_the_reflections(project):
 
 
 def test_reflect_installs_on_its_own_for_every_harness_and_judges_what_is_installed(agent, tmp_path):
-    from thearc.evolve.setup import install_reflect_skill, uninstall_reflect_skill
-    from thearc.resources.harness import get_harness, installed_agents
+    from honed.evolve.setup import install_reflect_skill, uninstall_reflect_skill
+    from honed.resources.harness import get_harness, installed_agents
 
     git(tmp_path, "init", "-q", "-b", "main")
     harnesses = ["claude", "codex", "pi", "opencode", "antigravity"]
@@ -180,10 +180,10 @@ def test_reflect_installs_on_its_own_for_every_harness_and_judges_what_is_instal
     for harness in harnesses:
         layout = get_harness(harness)
         skill = (tmp_path / layout.location("skills") / "reflect/SKILL.md").read_text()
-        assert f"thearc reflect begin --harness {harness}" in skill
-    assert set(installed_agents(tmp_path)["thearc-reflect"]) == set(harnesses)
+        assert f"honed reflect begin --harness {harness}" in skill
+    assert set(installed_agents(tmp_path)["honed-reflect"]) == set(harnesses)
 
-    # No evolution workspace: the reflection judges the configuration installed for its harness, thearc's skills
+    # No evolution workspace: the reflection judges the configuration installed for its harness, honed's skills
     # left out, and asks the default question.
     begun = live.begin(tmp_path, harness="codex")
     copies = tmp_path / begun.files
@@ -196,25 +196,25 @@ def test_reflect_installs_on_its_own_for_every_harness_and_judges_what_is_instal
     with pytest.raises(ValueError, match="--harness"):  # Several installed: which one?
         live.begin(tmp_path)
 
-    # The project's own agent is still what imports: thearc's tools never are.
+    # The project's own agent is still what imports: honed's tools never are.
     assert AgentConfig.from_installation("claude", tmp_path).name == agent.name
 
     assert uninstall_reflect_skill(tmp_path, ["pi"]) == ["pi"]
     assert not (tmp_path / ".pi/skills/reflect").exists() and (tmp_path / ".codex/skills/reflect").exists()
     uninstall_reflect_skill(tmp_path)
-    assert "thearc-reflect" not in installed_agents(tmp_path)
+    assert "honed-reflect" not in installed_agents(tmp_path)
 
 
 def test_self_evolve_takes_over_a_reflect_skill_installed_on_its_own(project):
-    from thearc.evolve.setup import install_reflect_skill
-    from thearc.resources.harness import installed_agents
+    from honed.evolve.setup import install_reflect_skill
+    from honed.resources.harness import installed_agents
 
     install_reflect_skill(project, ["claude"])
     git(project, "add", "-A")
     git(project, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "reflect")
     evolve.install_evolve_skill(project, "claude")
     agents = installed_agents(project)
-    assert "thearc-reflect" not in agents and "claude" in agents["thearc-evolve"]
+    assert "honed-reflect" not in agents and "claude" in agents["honed-evolve"]
     assert install_reflect_skill(project, ["claude"]) == []  # Has it with the evolve skill.
     begun = live.begin(project)  # The harness the project evolves: its release and the recipe's question.
     assert begun.revision == AgentConfig.from_workspace(project / WORKSPACE).revision

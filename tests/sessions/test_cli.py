@@ -3,7 +3,7 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from thearc.cli import main
+from honed.cli import main
 
 from .test_sessions import claude_session, write_jsonl
 

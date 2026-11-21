@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from thearc.sessions import Event, SearchFilters, Session, Sessions, SourceReference, UnsupportedConversion
+from honed.sessions import Event, SearchFilters, Session, Sessions, SourceReference, UnsupportedConversion
 
 LAYOUT = {
     "claude": "project/11111111-2222-3333-4444-555555555555.jsonl",

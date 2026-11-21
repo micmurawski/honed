@@ -3,16 +3,16 @@ import subprocess
 
 import pytest
 
-from thearc.resources import (
+from honed.resources import (
     Journal,
     AgentConfig,
     detect_changes,
     read_workspace,
     write_workspace,
 )
-from thearc.resources.git import _git
-from thearc.resources.journal import Rated
-from thearc.resources.targets import ResourceTarget, target_pattern
+from honed.resources.git import _git
+from honed.resources.journal import Rated
+from honed.resources.targets import ResourceTarget, target_pattern
 
 
 def test_round_trip_with_journal(agent, human, tmp_path):
@@ -228,7 +228,7 @@ def test_owns_hooks_is_its_own_file_and_part_of_the_revision(agent, tmp_path):
 
 
 def _reflection(agent):
-    from thearc.reflection import Reflector
+    from honed.reflection import Reflector
 
     from .test_reflection import GOOD, SCHEMA, Scripted, answer
 
@@ -246,7 +246,7 @@ def test_add_reflection_appends_to_the_workspace_journal(agent, tmp_path):
     assert after[: len(before)] == before and len(after) == len(before) + 2  # Appended, nothing rewritten:
     assert '"kind":"reflected"' in after[-1]  # the rating, and the whole reflection.
     assert workspace.add_reflection(reflection) == () and len(journal.read_text().splitlines()) == len(after)
-    from thearc.reflection import Reflection
+    from honed.reflection import Reflection
 
     from .test_reflection import SCHEMA
 
@@ -308,7 +308,7 @@ def test_the_byte_limit_covers_configuration_not_the_journal(agent, tmp_path):
 
 
 def test_a_workspace_repository_may_hold_its_own_files(agent, tmp_path):
-    from thearc.resources import agent_at
+    from honed.resources import agent_at
 
     workspace = agent.init_workspace(tmp_path / "ws")
     root = workspace.workspace
@@ -328,7 +328,7 @@ def test_a_workspace_repository_may_hold_its_own_files(agent, tmp_path):
 
 
 def test_bump_version():
-    from thearc.resources import bump_version
+    from honed.resources import bump_version
 
     assert bump_version("0.9.68") == "0.9.69"
     assert bump_version("0.9.68", "minor") == "0.10.0" and bump_version("0.9.68", "major") == "1.0.0"

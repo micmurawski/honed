@@ -61,9 +61,9 @@ jobs:
           python -m venv "$RUNNER_TEMP/release-smoke"
           "$RUNNER_TEMP/release-smoke/bin/python" -m pip install dist/*.whl
           "$RUNNER_TEMP/release-smoke/bin/python" -m pip check
-          "$RUNNER_TEMP/release-smoke/bin/python" -I -c 'from importlib.resources import files; from thearc.resources import AgentConfig; from thearc.sessions import Sessions; from thearc.reflection import Reflector; from thearc.curation import Curator, Merger; assert AgentConfig(name="smoke").name == "smoke"; assert all(files("thearc.flow").joinpath(asset).is_file() for asset in ("viz.css", "viz.js"))'
+          "$RUNNER_TEMP/release-smoke/bin/python" -I -c 'from importlib.resources import files; from honed.resources import AgentConfig; from honed.sessions import Sessions; from honed.reflection import Reflector; from honed.curation import Curator, Merger; assert AgentConfig(name="smoke").name == "smoke"; assert all(files("honed.flow").joinpath(asset).is_file() for asset in ("viz.css", "viz.js"))'
           cd "$RUNNER_TEMP"
-          "$RUNNER_TEMP/release-smoke/bin/thearc" --help
+          "$RUNNER_TEMP/release-smoke/bin/honed" --help
       - uses: actions/upload-artifact@v4
         with:
           name: python-distributions
@@ -71,12 +71,12 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: github.event_name == 'release' && github.repository == 'micmurawski/thearc'
+    if: github.event_name == 'release' && github.repository == 'micmurawski/honed'
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/thearc
+      url: https://pypi.org/p/honed
     permissions:
       id-token: write
     concurrency:

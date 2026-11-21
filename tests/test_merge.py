@@ -4,8 +4,8 @@ import subprocess
 
 import pytest
 
-from thearc.curation import Merger
-from thearc.resources import AgentConfig
+from honed.curation import Merger
+from honed.resources import AgentConfig
 
 from .pipelines import head, pipeline
 from .test_curation import ScriptedCurator, edit
@@ -69,7 +69,7 @@ def test_candidates_must_share_one_base(candidates, tmp_path):
 
 
 def test_the_evolution_graph_shows_candidates_merging_into_a_release(candidates, tmp_path):
-    from thearc.resources.evolution import evolution
+    from honed.resources.evolution import evolution
 
     one, two = candidates.one, candidates.two
 
@@ -97,8 +97,8 @@ def test_the_evolution_graph_shows_candidates_merging_into_a_release(candidates,
 
 
 def test_a_run_is_stale_only_when_its_base_misses_an_earlier_release(candidates, tmp_path):
-    from thearc.resources.evolution import evolution
-    from thearc.resources.graph import mentioned
+    from honed.resources.evolution import evolution
+    from honed.resources.graph import mentioned
 
     root = candidates.workspace.workspace
 
@@ -123,7 +123,7 @@ def test_a_run_is_stale_only_when_its_base_misses_an_earlier_release(candidates,
 
 
 def test_a_released_merge_keeps_its_candidates_once_the_trunk_moves_past_it(candidates, tmp_path):
-    from thearc.resources.evolution import evolution
+    from honed.resources.evolution import evolution
 
     root = candidates.workspace.workspace
 
@@ -147,15 +147,15 @@ def test_a_released_merge_keeps_its_candidates_once_the_trunk_moves_past_it(cand
 
 
 def test_a_workspace_inside_a_project_repository_keeps_to_its_prefixed_branches(agent, tmp_path):
-    from thearc.resources.evolution import evolution
+    from honed.resources.evolution import evolution
 
     project = tmp_path / "project"
     project.mkdir()
     git(project, "init", "-q", "-b", "main")
     git(project, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "Project")
-    workspace = agent.init_workspace(project / ".thearc/workspace", repository=project, prefix="thearc/")
+    workspace = agent.init_workspace(project / ".honed/workspace", repository=project, prefix="honed/")
     root = workspace.workspace
-    assert git(root, "rev-parse", "--abbrev-ref", "HEAD") == "thearc/main"
+    assert git(root, "rev-parse", "--abbrev-ref", "HEAD") == "honed/main"
     assert git(root, "rev-list", "--count", "HEAD") == "1"  # An orphan history: no project commits in it.
     one, two = workspace.to_worktree(tmp_path / "c1"), workspace.to_worktree(tmp_path / "c2")
     pipeline(one, ("max 3", "max 1", "One retry is enough"))
@@ -163,21 +163,21 @@ def test_a_workspace_inside_a_project_repository_keeps_to_its_prefixed_branches(
 
     def script(root, tool):
         edit(root, "max 3", "max 1")
-        assert not tool("commit_change", message="Take thearc/candidate/c1's limit")["error"]
+        assert not tool("commit_change", message="Take honed/candidate/c1's limit")["error"]
         tool("finish", summary="Took the limit.")
 
     merge = Merger(runtime=ScriptedCurator(script)).merge("Merge them.", [one, two])
     released = merge.agent.release()
-    assert merge.branch.startswith("thearc/merge/") and released.version == "1.0.1"
+    assert merge.branch.startswith("honed/merge/") and released.version == "1.0.1"
     branches = git(project, "for-each-ref", "--format=%(refname:short)", "refs/heads").split()
-    assert branches[0] == "main" and all(b.startswith("thearc/") for b in branches[1:])
-    assert {"thearc/candidate/c1", "thearc/release/1.0.1"} <= set(branches)
+    assert [b for b in branches if not b.startswith("honed/")] == ["main"]
+    assert {"honed/candidate/c1", "honed/release/1.0.1"} <= set(branches)
 
     graph = evolution(root)["graph"]
-    assert graph["trunk"] == "thearc/main"
+    assert graph["trunk"] == "honed/main"
     (run,) = [r for r in graph["runs"] if r["merges"]]
-    assert [c["branch"] for c in run["candidates"]] == ["thearc/candidate/c1", "thearc/candidate/c2"]
-    assert run["merges"][0]["candidates"] == ["thearc/candidate/c1", "thearc/candidate/c2"]
+    assert [c["branch"] for c in run["candidates"]] == ["honed/candidate/c1", "honed/candidate/c2"]
+    assert run["merges"][0]["candidates"] == ["honed/candidate/c1", "honed/candidate/c2"]
     assert graph["releases"][0]["merge"] == merge.branch and graph["releases"][0]["version"] == "1.0.1"
 
 

@@ -6,8 +6,8 @@ import subprocess
 
 import pytest
 
-from thearc.resources import Hook, AgentConfig, Skill, record_commits, write_workspace
-from thearc.resources.markers import annotate, strip
+from honed.resources import Hook, AgentConfig, Skill, record_commits, write_workspace
+from honed.resources.markers import annotate, strip
 
 from .test_reflection import GOOD, SCHEMA, Scripted, answer
 
@@ -50,7 +50,7 @@ def test_workspace_files_carry_ids_but_the_configuration_does_not(workspace):
 
 
 def test_the_reflectors_workspace_has_no_ids_or_ratings(workspace):
-    from thearc.reflection import Reflector
+    from honed.reflection import Reflector
 
     workspace.add_reflection(Reflector(runtime=Scripted(answer(GOOD))).reflect("Review.", workspace, SCHEMA))
     runtime = Scripted(answer(GOOD))

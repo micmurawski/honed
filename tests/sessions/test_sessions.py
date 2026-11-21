@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from thearc.sessions import Sessions, detect_harness
+from honed.sessions import Sessions, detect_harness
 
 
 def write_jsonl(path, records):

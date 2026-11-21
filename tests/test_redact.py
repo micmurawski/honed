@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from thearc.reflection import ReflectionError, Reflector
-from thearc.reflection import runtimes as runtime_module
-from thearc.sessions.redact import Redaction, summary
+from honed.reflection import ReflectionError, Reflector
+from honed.reflection import runtimes as runtime_module
+from honed.sessions.redact import Redaction, summary
 
 from .sessions.test_round_trip import SESSION
 from .test_reflection import GOOD, SCHEMA, Scripted, answer

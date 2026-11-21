@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lint and type-check thearc: ruff (style, imports, common bugs) and mypy (types, settings in pyproject.toml).
+# Lint and type-check honed: ruff (style, imports, common bugs) and mypy (types, settings in pyproject.toml).
 # Usage: ./lint.sh [--fix]   (--fix lets ruff apply safe fixes before checking)
 set -euo pipefail
 
@@ -9,10 +9,10 @@ bin=".venv/bin"
 
 status=0
 if [[ "${1:-}" == "--fix" ]]; then
-    "$bin/ruff" check thearc --fix --quiet || true
+    "$bin/ruff" check honed --fix --quiet || true
 fi
 echo "== ruff"
-"$bin/ruff" check thearc || status=1
+"$bin/ruff" check honed || status=1
 echo "== mypy"
 "$bin/mypy" || status=1
 exit "$status"

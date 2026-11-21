@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{#- The honed mark: the tab's icon (an SVG one, ahead of the theme's own img/favicon.ico) and beside the name. -#}
+{%- block extrahead %}
+  <link rel="icon" type="image/svg+xml" href="{{ 'assets/honed-mark.svg'|url }}">
+{%- endblock %}
+{%- block site_name %}
+  <a class="navbar-brand d-flex align-items-center gap-2" href="{{ nav.homepage.url|url }}"><img src="{{ 'assets/honed-mark.svg'|url }}" alt="" width="28" height="28">{{ config.site_name }}</a>
+{%- endblock %}

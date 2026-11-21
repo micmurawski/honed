@@ -1,7 +1,7 @@
 import json
 
-from thearc.resources import ContextDocument, Hook, AgentConfig, Skill, install
-from thearc.resources.markers import stamp_file, stamp_markdown, unstamp_file, unstamp_markdown
+from honed.resources import ContextDocument, Hook, AgentConfig, Skill, install
+from honed.resources.markers import stamp_file, stamp_markdown, unstamp_file, unstamp_markdown
 
 USER_CLAUDE = "# Project\n\nUse uv.\n\n## graphify\n\nOld instructions.\n"
 

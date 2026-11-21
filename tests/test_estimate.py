@@ -2,8 +2,8 @@
 
 from types import SimpleNamespace
 
-from thearc.evolve.estimate import estimate
-from thearc.sessions.export import export_events
+from honed.evolve.estimate import estimate
+from honed.sessions.export import export_events
 
 from .sessions.test_round_trip import SESSION
 

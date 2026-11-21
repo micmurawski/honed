@@ -1,8 +1,12 @@
-# thearc ⚡
+<p align="center">
+  <img src="https://raw.githubusercontent.com/micmurawski/honed/main/docs/assets/honed-mark.svg" alt="honed logo" width="112">
+</p>
+
+<h1 align="center">honed</h1>
 
 **Your coding agent's `CLAUDE.md`, `AGENTS.md`, and skills, improved from evidence of how it actually worked.**
 
-thearc reads the sessions your agent ran in a project, has a reviewer agent rate each line of its instructions and
+honed reads the sessions your agent ran in a project, has a reviewer agent rate each line of its instructions and
 skills against what happened, and has a curator rewrite what hurt and keep what helped. Every rating and change lands
 in a git-tracked journal, so each new version says why it changed, and you review it like a pull request before
 installing it. It works across Claude Code, Codex, Pi, OpenCode, and Antigravity.
@@ -10,12 +14,12 @@ installing it. It works across Claude Code, Codex, Pi, OpenCode, and Antigravity
 ## Quickstart
 
 ```sh
-python -m pip install thearc
+python -m pip install honed
 cd your-project                                       # a git repository
-thearc skills install self-evolve --harness claude    # or codex, pi, opencode
+honed skills install self-evolve --harness claude    # or codex, pi, opencode
 ```
 
-Commit what it installs (the skill, and the workspace as the submodule `.thearc/workspace`).
+Commit what it installs (the skill, and the workspace as the submodule `.honed/workspace`).
 
 Work in the project as usual. After three sessions or more, type `/evolve` in the agent: it reflects on the last
 week's sessions, curates, and proposes a new version of the project's instructions and skills. `/evolve diff` shows
@@ -24,7 +28,7 @@ in the evolve skill, with its prompts beside it) that you can edit: see [the gui
 
 No project at hand? [`examples/quickstart/run.sh`](examples/quickstart/) sets up a toy project whose `CLAUDE.md` has
 a wrong instruction, runs three Claude Code sessions in it, and runs a round that finds and fixes it. The
-[example evolution report](https://micmurawski.github.io/thearc/examples/report.html) shows four releases, parallel
+[example evolution report](https://micmurawski.github.io/honed/examples/report.html) shows four releases, parallel
 candidates, merges, and section histories from a Graphify evolution workspace.
 
 ## Supported agents
@@ -42,12 +46,12 @@ agent supports them (Pi has no hooks or MCP servers). Details per harness: [runt
 
 ## The framework
 
-`thearc` is a framework for context engineering: it turns your agents' sessions into evidence, and that evidence into
+`honed` is a framework for context engineering: it turns your agents' sessions into evidence, and that evidence into
 versioned changes to their context files, skills, hooks, prompts, and MCP servers. It doesn't prescribe an agent
 design; it gives you the pieces — a session index and query language, reflectors, curators, mergers, and a
 git-tracked journal — to build your own improvement pipelines.
 
-Build agentic context-engineering pipelines on top of `thearc`: inspect sessions, extract reusable lessons and failures, curate versioned updates, evaluate their effect, and install the resulting capabilities into agent environments. The framework is designed to let these pipelines evolve as new artifacts and evaluation methods emerge, drawing direction from work on [agentic context engineering](https://arxiv.org/pdf/2510.04618), [meta-skill evolution](https://arxiv.org/pdf/2607.05297), [self-evolving agent skills](https://arxiv.org/pdf/2608.02636), [self-evolving agents](https://arxiv.org/html/2507.21046v4), and [meta context engineering](https://arxiv.org/pdf/2601.21557).
+Build agentic context-engineering pipelines on top of `honed`: inspect sessions, extract reusable lessons and failures, curate versioned updates, evaluate their effect, and install the resulting capabilities into agent environments. The framework is designed to let these pipelines evolve as new artifacts and evaluation methods emerge, drawing direction from work on [agentic context engineering](https://arxiv.org/pdf/2510.04618), [meta-skill evolution](https://arxiv.org/pdf/2607.05297), [self-evolving agent skills](https://arxiv.org/pdf/2608.02636), [self-evolving agents](https://arxiv.org/html/2507.21046v4), and [meta context engineering](https://arxiv.org/pdf/2601.21557).
 
 ## The learning cycle
 
@@ -58,8 +62,8 @@ sessions ─▶ reflection ─▶ ratings in the journal ─▶ curation ─▶ 
 Index sessions from any supported harness:
 
 ```sh
-thearc sessions --index sessions.sqlite sync logs/codex-training
-thearc sessions --index sessions.sqlite query 'select:session'
+honed sessions --index sessions.sqlite sync logs/codex-training
+honed sessions --index sessions.sqlite query 'select:session'
 ```
 
 Reflect, record, and curate:
@@ -67,10 +71,10 @@ Reflect, record, and curate:
 ```python
 from typing import Annotated
 from pydantic import BaseModel
-from thearc.curation import Curator
-from thearc.reflection import Reflector
-from thearc.resources import CategoricalScale, AgentConfig, Ref, ReflectionSchema
-from thearc.sessions import Sessions
+from honed.curation import Curator
+from honed.reflection import Reflector
+from honed.resources import CategoricalScale, AgentConfig, Ref
+from honed.sessions import Sessions
 
 usefulness = CategoricalScale("usefulness", ["harmful", "neutral", "helpful"], ordered=True)
 
@@ -88,7 +92,7 @@ agent = agent.init_workspace("artifacts/my-agent")       # git-tracked, with a j
 with Sessions("sessions.sqlite") as sessions:
     session = sessions.get()                                  # the most recent session
 reflection = Reflector("codex").handoff("Review the configuration against this session.",
-                                        session, agent, ReflectionSchema(Lesson))
+                                        session, agent, Lesson)
 agent.add_reflection(reflection)                          # ratings → journal
 
 curation = Curator("codex").curate("Address the reflections.", [reflection], agent, scales=[usefulness])
@@ -110,4 +114,4 @@ harness with `agent.install("claude", "path/to/project")`.
 ## Contributing and license
 
 Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), and report vulnerabilities as
-[SECURITY.md](SECURITY.md) describes. thearc is licensed under the [Apache License 2.0](LICENSE).
+[SECURITY.md](SECURITY.md) describes. honed is licensed under the [Apache License 2.0](LICENSE).

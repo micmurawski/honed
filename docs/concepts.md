@@ -1,6 +1,6 @@
 # Concepts
 
-Every concept in `thearc`, kept in step with the code. These describe the domain first and identify
+Every concept in `honed`, kept in step with the code. These describe the domain first and identify
 current Python types where useful. A concept can exist without a dedicated class.
 
 ## The learning cycle
@@ -109,7 +109,7 @@ merged into the harness's own configuration files. Supported harnesses are
 `claude`, `codex`, `antigravity`, `pi`, and `opencode`.
 
 An installation **owns** what it wrote. The **install record**
-(`.thearc/installed.json`, one per project) lists, per installed AgentConfig, the
+(`.honed/installed.json`, one per project) lists, per installed AgentConfig, the
 context sections it owns and, per harness, its version, revision, files, hooks, and
 MCP servers. Context documents belong to the agent, not to a harness: several
 harnesses read the same `AGENTS.md`, so uninstalling the agent from one harness
@@ -127,7 +127,7 @@ the harness layout back into an AgentConfig.
   top-level sections are merged by heading title: a section with the same title
   is replaced in place, a new one is appended, and the rest of the document is
   kept. Sections the AgentConfig no longer has are removed on reinstall. A
-  document thearc created is owned whole.
+  document honed created is owned whole.
 - **Merged configuration** — hooks and MCP servers go into the harness's own
   files (`.claude/settings.json`, `.mcp.json`, `.codex/hooks.json`,
   `.codex/config.toml`, ...) next to entries the AgentConfig does not own.
@@ -136,7 +136,7 @@ the harness layout back into an AgentConfig.
 - **Hooks per harness** — a hook can be limited to some harnesses (its
   `harnesses`; empty means all), because matchers name a harness's own tools:
   Graphify guards `Bash|Grep` and `Read|Glob` in Claude but checks `Bash` in
-  Codex. Hooks found in a harness's files that thearc did not install are
+  Codex. Hooks found in a harness's files that honed did not install are
   imported limited to that harness, so imports from several harnesses combine
   into one AgentConfig.
 - **Owned hooks** — (stored in the agent file `owned_hooks.json`, so they are
@@ -204,7 +204,7 @@ Every rating is traceable. It records:
 
 A **reflection schema** is the operator-defined contract for what a reflection
 (see the Reflection section) returns: any shape the operator designs, validated
-before anything is recorded. `thearc` only needs to find what it rates, so it
+before anything is recorded. `honed` only needs to find what it rates, so it
 looks for two kinds of fields — by their type, never by their name:
 
 | Field | Type | Meaning |
@@ -237,7 +237,7 @@ schema = ReflectionSchema(Lesson)
 Every object holding a rating yields one **item** per rating field: its ref,
 value, scale, its location in the output (a JSON pointer such as
 `/ratings/2`), and the object's other fields. Each item becomes one Rated
-journal entry per target its ref resolves to. `thearc` adds what the reflection
+journal entry per target its ref resolves to. `honed` adds what the reflection
 itself cannot be trusted to supply — the resolved target and the revision it
 judged — plus any extra fields the caller passes. Entries keep the original
 `ref` and share the item's ID (`<reflection id>#<location>`), so the entries of
@@ -285,7 +285,7 @@ reference to a missing file, or beyond the end of a file, does not resolve.
 ### Rating scale
 
 A **rating scale** defines which values a rating may take and how many ratings
-combine into one summary. `thearc` does not fix a scale; a user chooses or
+combine into one summary. `honed` does not fix a scale; a user chooses or
 defines one, and several scales can be used on the same AgentConfig side by side.
 
 | Kind | Values | Summary | Example |
@@ -381,7 +381,7 @@ too, and `skill:<name>` its files), kept in `agent.json`. Neither is configurati
 
 ### Drift
 
-Edits made to an installation since thearc installed it, by hand or by another tool. `agent.sync_installation(
+Edits made to an installation since honed installed it, by hand or by another tool. `agent.sync_installation(
 project, harnesses)` imports each harness's copy and commits what differs to the workspace, with its author, so the
 next install keeps it.
 
@@ -448,7 +448,7 @@ lossless for configuration content.
 | Installation | The harness-native layout (e.g. `.claude/`, `.codex/`) produced by `install()` and read back by `AgentConfig.from_installation()`. |
 | Agent files | The configuration as files, in the same layout as the workspace but **without markers**: `skills/<name>/SKILL.md`, `context/…`, `rules/…`, `hooks.json`, `mcp.json`, `owned_hooks.json`. What a reflector reads and cites, what installation writes from, and what the revision hashes. |
 | Revision | `version@rev_…` — the AgentConfig's version (when it has one) and a content hash of the agent files only (no name, journal, ratings, or markers), pinning which configuration a journal entry refers to. Without a version it is just `rev_…`. |
-| Evolution report | One HTML file (`thearc report`) showing a workspace's history across branches: the evolution graph, each section's versions across a run, every change with its reason, ratings per section and revision, and the files at any revision. Built from the evolution dataset (`resources.evolution`). |
+| Evolution report | One HTML file (`honed report`) showing a workspace's history across branches: the evolution graph, each section's versions across a run, every change with its reason, ratings per section and revision, and the files at any revision. Built from the evolution dataset (`resources.evolution`). |
 | Evolution graph | The report's view of a workspace's history as the agent's evolution: each change commit a node, candidates as branches from their base, merges joined to the candidates they drew on (from the journal — dashed where git has no edge), releases as tags; bookkeeping commits hidden. Not a plain git commit graph. |
 
 ### Markers
@@ -556,7 +556,7 @@ source record.
 
 The index is also where sessions are **kept**: when a transcript disappears
 from its source, its indexed events are marked unavailable but stay searchable.
-It is therefore a store as well as an index, and `thearc` uses one name for it —
+It is therefore a store as well as an index, and `honed` uses one name for it —
 session index — rather than two.
 
 ### Session view
@@ -568,7 +568,7 @@ when that trajectory ended. It must end at a recorded trajectory boundary.
 
 A session, trajectory, or session view written in a harness's own transcript
 format — `claude`, `codex`, `pi`, `opencode`, or `antigravity` — or as canonical
-`thearc` JSONL. Prompts, replies, thinking, tool calls with their results and
+`honed` JSONL. Prompts, replies, thinking, tool calls with their results and
 status, system messages, and compaction summaries use the target's native form
 where it has one. An export is **strict** by default: anything the target
 cannot represent faithfully (thinking without the signature Claude requires,
@@ -596,7 +596,7 @@ harness's **layout** is where installed configuration goes in a project.
 
 ### In code
 
-| Concept | `thearc` |
+| Concept | `honed` |
 | --- | --- |
 | Entry point: add sources, synchronize, list, resolve, get, search | `sessions.Sessions` |
 | Session | `sessions.Session` (immutable; events read from a pinned index snapshot) |
@@ -606,9 +606,9 @@ harness's **layout** is where installed configuration goes in a project.
 | Records the index stores | `sessions.SessionMetadata`, `Run`, `Event`, `SourceConfig`, `IndexHit` |
 | Behavioral patterns | `sessions.scanner` |
 | Export to a harness format | `session.export(format)`, `sessions.export_events` (`sessions.export`) |
-| Session installation | `session.install(harness)`, `Sessions.install_all`, `thearc s install` |
+| Session installation | `session.install(harness)`, `Sessions.install_all`, `honed s install` |
 | Harness names; installation layout | `harnesses.Harness`; `resources.HarnessLayout` |
-| Command line | `python -m thearc sessions …` (`sessions.cli`) |
+| Command line | `python -m honed sessions …` (`sessions.cli`) |
 | Reflection | `reflection.Reflector(harness).reflect(…)` / `.handoff(…)` → `Reflection`; `agent.add_reflection(reflection)` |
 | Submit tool | `reflection.Submission(files, schema).serve()` → `ToolEndpoint` |
 
@@ -640,7 +640,7 @@ The agent that performs a reflection: a harness, a model, and its settings.
 *Reflector* is a role, not a different kind of agent. It reads the evaluated
 agent's rating-free files from a workspace of its own with its harness's read-only
 tools, cites them by path and line, and hands in its reflection with the submit tool
-(see Validation loop) — the one tool thearc adds. Codex, Claude, and Pi can
+(see Validation loop) — the one tool honed adds. Codex, Claude, and Pi can
 reflect on attached or handed-off evidence. Antigravity cannot reflect yet: it
 reads MCP servers only from the user's own configuration, so the submit tool
 cannot be connected for one run.
@@ -681,7 +681,7 @@ the installed copy, record by record); what it took out is counted in the reflec
 ### Validation loop
 
 The reflector hands in its reflection through one tool, `submit_reflection`, an
-MCP server that thearc runs for the length of the reflection and connects to that
+MCP server that honed runs for the length of the reflection and connects to that
 run only. The tool's input is the reflection schema. A call validates the whole
 reflection — every field, every rating a value of its scale — and, once that
 passes, checks that every `Ref` resolves to lines of the agent files. If anything
@@ -722,21 +722,21 @@ fingerprint of both. Two reflections with the same `asked` answered the same que
 
 ### Reflections in the session index
 
-Every reflection is kept in the session index — the same one sessions are indexed in, `$THEARC_INDEX` or
-`~/.thearc/learning.sqlite` — as `Reflection.to_dict()` (`Sessions.add_reflection`). The index is where reflections
+Every reflection is kept in the session index — the same one sessions are indexed in, `$HONED_INDEX` or
+`~/.honed/learning.sqlite` — as `Reflection.to_dict()` (`Sessions.add_reflection`). The index is where reflections
 live, not a cache of them: they cost model calls, so deleting the index loses them
-(`thearc sessions query --json 'select:reflection'` exports them). The `reflected` lines of evolution workspaces'
+(`honed sessions query --json 'select:reflection'` exports them). The `reflected` lines of evolution workspaces'
 journals — what a team shares — are read as a source too (`Sessions.add_reflections(project)`); a reflection stored
 in the index wins over a journal's copy.
 
 The index joins reflections to the sessions they judge: by the session their evidence
-names, or — for an in-session reflection — by its **marker** (`thearc-reflect:…`, printed into the transcript by
-`thearc reflect begin`). Syncing tags the in-session reflection's own turns (`event_tags`, `reflection:<id>`), which
+names, or — for an in-session reflection — by its **marker** (`honed-reflect:…`, printed into the transcript by
+`honed reflect begin`). Syncing tags the in-session reflection's own turns (`event_tags`, `reflection:<id>`), which
 are then left out of the session's events, digests and evidence, and works out its segment: after the previous
 in-session reflection of the session (or its start) up to its own turns. **Coverage** is, per session, question and
 revision, how far its reflections reach: `full`, or `partial` with the number of events after them (`tail`).
 
-Query them with `thearc sessions query`: `reflected:`, `prompt:` (`reflect`, `reflect@1`, `p_…`), `asked:`,
+Query them with `honed sessions query`: `reflected:`, `prompt:` (`reflect`, `reflect@1`, `p_…`), `asked:`,
 `schema:`, `revision:`, `mode:`, `trigger:`, `reflector:`, `model:`, `coverage:`, and on their ratings `rated:`,
 `target:`, `failure:`; `select:reflection` returns reflections. Reflection and rating terms side by side hold for
 the same reflection (and one rating of it): `NOT (prompt:reflect@1 revision:1.4.0 coverage:full)` is "no reflection
@@ -766,7 +766,7 @@ only read, nor the agent's identity (`agent.json`), which versioning owns. It
 works in its own clone of the workspace at `B`, whose markers give every section's
 lineage ID; its prompt lists each section's ratings so far by that ID, so it can
 weigh them against the text it decides to keep, rewrite, or delete. It edits files but runs no commands; it commits and finishes
-through thearc's tools (see Curation tools). Codex, Claude, and Pi can curate.
+through honed's tools (see Curation tools). Codex, Claude, and Pi can curate.
 
 ### Curation prompt
 
@@ -781,7 +781,7 @@ sections are now.
 
 ### Curation tools
 
-The two tools thearc connects to the curator's run, as for the reflector's
+The two tools honed connects to the curator's run, as for the reflector's
 submit tool:
 
 - **`commit_change(message)`** commits everything edited since the last commit
@@ -847,14 +847,14 @@ judgement: a change may be taken as it is, combined with another candidate's,
 rewritten, or left out, and the base kept. Like the curator it works in a clone
 of the workspace at `B`, edits files directly, and commits through
 `commit_change` — **one commit per section, the reason as the message**, naming
-the candidates and commits it drew on — and ends with `finish`. thearc finds `B`
+the candidates and commits it drew on — and ends with `finish`. honed finds `B`
 from the candidates' branches; candidates of different workspaces, or whose
 branches do not all meet at one commit (one started from another's result), are
 refused.
 
 ### Proposals
 
-What the merger decides on, gathered by thearc before it starts: every section
+What the merger decides on, gathered by honed before it starts: every section
 changed by at least one candidate, grouped by **lineage ID** — so a section one
 candidate renamed still lines up with the others' versions of it — each with:
 
@@ -906,14 +906,14 @@ release becomes `main` or is installed is the pipeline's decision.
 Evolving a project's configuration for one harness from that harness's sessions run in it (see
 `docs/guides/evolve-skill.md`).
 
-- **Evolve skill**: the skill `thearc skills install self-evolve --harness H` installs into H's skills folder:
+- **Evolve skill**: the skill `honed skills install self-evolve --harness H` installs into H's skills folder:
   `SKILL.md`, the **recipe** `evolve.py` (`propose(evolution)`; `HARNESS` and `RUNTIME` set at install), and its
   prompts in `prompts/`. It is not part of the AgentConfig, which ignores it (`skill:evolve`); it is recorded as agent
-  `thearc-evolve` and never evolved.
+  `honed-evolve` and never evolved.
 - **Workspace submodule**: the AgentConfig's workspace is a repository of its own, a git submodule of the project at
-  `.thearc/workspace` (`main`, `candidate/…`, `merge/…`, `release/…`, `proposal/…`), so each project commit pins the
+  `.honed/workspace` (`main`, `candidate/…`, `merge/…`, `release/…`, `proposal/…`), so each project commit pins the
   workspace commit its installed files came from. A project evolves one harness. (A workspace kept inside another
-  repository instead uses a **branch prefix**, git config `thearc.<agent>.prefix`, before every branch thearc makes.)
+  repository instead uses a **branch prefix**, git config `honed.<agent>.prefix`, before every branch honed makes.)
 - **Runtime**: the harness that runs a round's reflections and curation.
 - **Round**: drift, then the recipe, then a **proposal**: a new version on `proposal/<version>`, not
   installed until it is **applied**. An **amendment** is a person's commit to an open proposal.

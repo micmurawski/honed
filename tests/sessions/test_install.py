@@ -3,8 +3,8 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from thearc.cli import main
-from thearc.sessions import Session, SessionAlreadyInstalled, Sessions
+from honed.cli import main
+from honed.sessions import Session, SessionAlreadyInstalled, Sessions
 
 from .test_round_trip import SESSION, ev
 from .test_sessions import claude_session, write_jsonl

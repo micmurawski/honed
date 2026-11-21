@@ -3,7 +3,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from thearc.sessions import Session, Sessions, SourceConfig, UnsupportedConversion, evidence_to_markdown
+from honed.sessions import Session, Sessions, SourceConfig, UnsupportedConversion, evidence_to_markdown
 
 from .conftest import event
 

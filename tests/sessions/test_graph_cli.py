@@ -1,11 +1,11 @@
-"""`thearc sessions graph`: what a query selected (piped in), graphed by one of four methods."""
+"""`honed sessions graph`: what a query selected (piped in), graphed by one of four methods."""
 
 import json
 
 import pytest
 from click.testing import CliRunner
 
-from thearc.cli import main
+from honed.cli import main
 
 from .test_query import call, result, user
 from .test_sessions import write_jsonl

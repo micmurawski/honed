@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in thearc doesn't work as documented.
+description: Something in honed doesn't work as documented.
 labels: [bug]
 body:
   - type: textarea
@@ -26,5 +26,5 @@ body:
     id: versions
     attributes:
       label: Versions
-      description: thearc, Python, OS, and the harness CLI (e.g. `claude --version`).
-      placeholder: thearc 0.1.0, Python 3.13, macOS 15, claude 2.1.0
+      description: honed, Python, OS, and the harness CLI (e.g. `claude --version`).
+      placeholder: honed 0.1.0, Python 3.13, macOS 15, claude 2.1.0

@@ -4,7 +4,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from thearc.cli import main
+from honed.cli import main
 
 
 def commands(group: click.Group, path: tuple[str, ...] = ()):
@@ -18,10 +18,10 @@ def commands(group: click.Group, path: tuple[str, ...] = ()):
                          if isinstance(v, tuple) else "")
 def test_every_command_has_a_short_unique_alias(path, command, parent):
     aliases = getattr(command, "aliases", [])
-    assert any(len(alias) <= 2 for alias in aliases), f"thearc {' '.join(path)} needs a one- or two-letter alias"
+    assert any(len(alias) <= 2 for alias in aliases), f"honed {' '.join(path)} needs a one- or two-letter alias"
     siblings = [name for other_name, other in parent.commands.items() if other is not command
                 for name in (other_name, *getattr(other, "aliases", []))]
-    assert not {path[-1], *aliases} & set(siblings), f"thearc {' '.join(path)}: an alias clashes with a sibling"
+    assert not {path[-1], *aliases} & set(siblings), f"honed {' '.join(path)}: an alias clashes with a sibling"
 
 
 @pytest.mark.parametrize("words", [["s", "q"], ["s", "g", "a"], ["e", "st"], ["sk", "i", "r"], ["sk", "u", "se"],

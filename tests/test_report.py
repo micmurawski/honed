@@ -5,10 +5,10 @@ import re
 
 from click.testing import CliRunner
 
-from thearc.cli import main
-from thearc.curation import Curator
-from thearc.resources.evolution import evolution
-from thearc.resources.report import render_report
+from honed.cli import main
+from honed.curation import Curator
+from honed.resources.evolution import evolution
+from honed.resources.report import render_report
 
 from .test_curation import ScriptedCurator, edit
 
@@ -54,7 +54,7 @@ def test_the_report_embeds_the_dataset_safely(reviewed, tmp_path):
     data["changes"][0]["reason"] = "</script><script>alert(1)</script>"
     page = render_report(data)
     assert page.startswith("<!doctype html>") and "<title>demo evolution</title>" in page
-    embedded = re.search(r'<script type="application/json" id="thearc-data">(.*?)</script>', page, re.DOTALL)[1]
+    embedded = re.search(r'<script type="application/json" id="honed-data">(.*?)</script>', page, re.DOTALL)[1]
     assert json.loads(embedded) == json.loads(json.dumps(data))  # Escaping keeps the JSON intact…
     assert "</script><script>alert" not in page  # …and keeps it inside its script element.
     assert not render_report(data, standalone=False).startswith("<!doctype")
@@ -69,7 +69,7 @@ def test_the_report_command(reviewed, tmp_path):
                                        "--reflections", str(folder)])
     assert result.exit_code == 0, result.output
     page = (tmp_path / "r.html").read_text()
-    data = json.loads(re.search(r'id="thearc-data">(.*?)</script>', page, re.DOTALL)[1])
+    data = json.loads(re.search(r'id="honed-data">(.*?)</script>', page, re.DOTALL)[1])
     assert reflection.id in data["reflections"] and "## Ratings" not in data["reflections"][reflection.id]["markdown"]
 
 

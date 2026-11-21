@@ -5,9 +5,9 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from thearc.cli import main
-from thearc.sessions.analysis import graphquery, graphstore
-from thearc.sessions.query import QuerySyntaxError
+from honed.cli import main
+from honed.sessions.analysis import graphquery, graphstore
+from honed.sessions.query import QuerySyntaxError
 
 from . import test_aeg
 

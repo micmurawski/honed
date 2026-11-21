@@ -5,14 +5,14 @@
 const fs = require("fs");
 
 const html = fs.readFileSync(process.argv[2], "utf8");
-const data = html.match(/<script type="application\/json" id="thearc-data">([\s\S]*?)<\/script>/)[1];
+const data = html.match(/<script type="application\/json" id="honed-data">([\s\S]*?)<\/script>/)[1];
 const code = html.match(/<script>\n(\(function \(\) \{[\s\S]*?\}\)\(\);)\n<\/script>/)[1];
-const theme = html.match(/<script id="thearc-theme">([\s\S]*?)<\/script>/)[1];  // thearc.ui's toggle
+const theme = html.match(/<script id="honed-theme">([\s\S]*?)<\/script>/)[1];  // honed.ui's toggle
 
 const elements = {};
 const handlers = {};
 const element = (id) => elements[id] || (elements[id] = {
-  id, innerHTML: "", textContent: id === "thearc-data" ? data : "", hidden: false, value: "", attrs: {},
+  id, innerHTML: "", textContent: id === "honed-data" ? data : "", hidden: false, value: "", attrs: {},
   setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k] ?? null; }, onclick: null,
   addEventListener(type, fn) { handlers[`${id}:${type}`] = fn; },
 });
@@ -55,7 +55,7 @@ if (cell) {  // Open a section: its chart renders in each view.
     result.charts[view] = { pressed: html.includes(`data-chart="${view}" aria-pressed="true"`), bars: (html.match(/class="sc-bar up"/g) || []).length,
       dots: (html.match(/class="sc-dot"/g) || []).length, bands: (html.match(/class="sc-band/g) || []).length };
   }
-  result.chartStored = store["thearc-report-chart"] || null;
+  result.chartStored = store["honed-report-chart"] || null;
   result.scoreChart = elements.detail.innerHTML.slice(0, elements.detail.innerHTML.indexOf('<div class="events">'));
 }
 handlers["theme:click"]();

@@ -1,6 +1,6 @@
 import pytest
 
-from thearc.resources import CategoricalScale, CountSummary, LabelScale, NumericScale, NumericSummary
+from honed.resources import CategoricalScale, CountSummary, LabelScale, NumericScale, NumericSummary
 
 usefulness = CategoricalScale("usefulness", ["harmful", "neutral", "helpful"], ordered=True)
 

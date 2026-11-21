@@ -1,6 +1,8 @@
-# thearc
+<img src="assets/honed-mark.svg" alt="" width="88" align="right">
 
-`thearc` improves an AI agent's configuration — its context files, skills, hooks, MCP servers,
+# honed
+
+`honed` improves an AI agent's configuration — its context files, skills, hooks, MCP servers,
 and extensions — from evidence of how the agent actually behaved. It is harness-independent:
 it reads sessions from Claude Code, Codex, Pi, OpenCode, and Antigravity, and installs
 configurations back into them.
@@ -22,9 +24,9 @@ sessions ─▶ reflection ─▶ ratings in the journal ─▶ curation ─▶ 
 - **Merging**: candidates curated in parallel are combined section by section by a merger agent.
 
 ```python
-from thearc.resources import AgentConfig
-from thearc.reflection import Reflector
-from thearc.curation import Curator
+from honed.resources import AgentConfig
+from honed.reflection import Reflector
+from honed.curation import Curator
 
 agent = AgentConfig.from_installation("codex", "path/to/project", name="graphify", version="1.0")
 agent = agent.init_workspace("artifacts/graphify")      # git-tracked, with a journal

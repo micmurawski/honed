@@ -2,7 +2,7 @@
 
 import json
 
-from thearc.resources import ContextDocument, AgentConfig, install
+from honed.resources import ContextDocument, AgentConfig, install
 
 CLAUDE = "# Project\n\nUse uv.\n\n# Private notes\n\nMy token lives in 1Password.\n\n## Keys\n\nNone here.\n"
 
@@ -36,7 +36,7 @@ def test_install_leaves_ignored_files_and_sections_alone_and_owned_by_nobody(age
     install(ignoring.without_ignored(), "claude", tmp_path)
     assert "my own line" in skill.read_text()  # Neither rewritten nor deleted.
     assert "Still none." in claude.read_text() and "Use uv." in claude.read_text()
-    record = json.loads((tmp_path / ".thearc/installed.json").read_text())["agents"]["demo"]
+    record = json.loads((tmp_path / ".honed/installed.json").read_text())["agents"]["demo"]
     assert not any("retry" in path for path in record["harnesses"]["claude"]["files"])
     assert record["context"]["CLAUDE.md"] == ["Project"]
 

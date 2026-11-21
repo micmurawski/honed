@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from thearc.sessions import Event, Session, SourceReference, UnsupportedConversion
+from honed.sessions import Event, Session, SourceReference, UnsupportedConversion
 
 
 def event(number, harness="claude", *, kind="message", role="assistant", text="", raw=None, pointer="", **kwargs):
@@ -130,7 +130,7 @@ def test_best_effort_orphan_tool_result_and_unknown_kinds():
 def test_cli_best_effort_lists_transformations_on_stderr(tmp_path):
     from click.testing import CliRunner
 
-    from thearc.cli import main
+    from honed.cli import main
 
     from .test_sessions import write_jsonl
 

@@ -1,6 +1,6 @@
 import pytest
 
-from thearc.resources import (
+from honed.resources import (
     CategoricalScale,
     LabelScale,
     ReflectionSchema,

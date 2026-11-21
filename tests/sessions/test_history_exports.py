@@ -2,9 +2,9 @@
 
 import json
 
-from thearc.sessions.adapters import DataClawAdapter
-from thearc.sessions.index import SessionIndex
-from thearc.sessions.models import SearchFilters, SearchQuery, SourceConfig
+from honed.sessions.adapters import DataClawAdapter
+from honed.sessions.index import SessionIndex
+from honed.sessions.models import SearchFilters, SearchQuery, SourceConfig
 
 
 def test_nested_output_exit_code_and_parser_upgrade(tmp_path, monkeypatch):

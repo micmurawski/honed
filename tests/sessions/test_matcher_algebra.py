@@ -2,8 +2,8 @@
 
 import pytest
 
-from thearc.sessions import Session
-from thearc.sessions.scanner import (
+from honed.sessions import Session
+from honed.sessions.scanner import (
     AllOf,
     AnyOf,
     BehavioralPattern,

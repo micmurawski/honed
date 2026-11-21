@@ -1,4 +1,4 @@
-"""``thearc agent install``: an AgentConfig from its workspace repository, at a release, into a project or a harness's
+"""``honed agent install``: an AgentConfig from its workspace repository, at a release, into a project or a harness's
 own folder."""
 
 import json
@@ -6,10 +6,10 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from thearc.cli import main
-from thearc.resources import ContextDocument, Hook
-from thearc.resources.harness import global_layout, installed_agents
-from thearc.resources.source import agent_from, is_url
+from honed.cli import main
+from honed.resources import ContextDocument, Hook
+from honed.resources.harness import global_layout, installed_agents
+from honed.resources.source import agent_from, is_url
 
 
 @pytest.fixture
@@ -90,10 +90,10 @@ def test_project_and_global_exclude_each_other(repository, tmp_path):
 def test_metaagent_is_a_deprecated_alias_of_agentconfig():
     import warnings
 
-    from thearc.resources import AgentConfig
+    from honed.resources import AgentConfig
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        from thearc.resources import MetaAgent
+        from honed.resources import MetaAgent
     assert MetaAgent is AgentConfig
     assert any(issubclass(w.category, DeprecationWarning) and "AgentConfig" in str(w.message) for w in caught)

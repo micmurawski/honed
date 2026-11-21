@@ -1,8 +1,8 @@
 import json
 
-from thearc.sessions.index import SessionIndex
-from thearc.sessions.models import SearchFilters, SourceConfig
-from thearc.sessions.trajectories import split_trajectories
+from honed.sessions.index import SessionIndex
+from honed.sessions.models import SearchFilters, SourceConfig
+from honed.sessions.trajectories import split_trajectories
 
 
 def test_export_message_boundaries_and_original_evidence(tmp_path):

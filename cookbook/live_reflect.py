@@ -31,11 +31,11 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # A /evolve round's schema, so the cookbook's reflections and a round's compare.
-from thearc.evolve.defaults import SCHEMA, USEFULNESS, Lesson, Rated  # noqa: F401 -- re-exported
-from thearc.reflection import Reflection, Reflector
-from thearc.resources import GitError, AgentConfig
-from thearc.sessions import Sessions
-from thearc.sessions.scanner import ShellCommand
+from honed.evolve.defaults import SCHEMA, USEFULNESS, Lesson, Rated  # noqa: F401 -- re-exported
+from honed.reflection import Reflection, Reflector
+from honed.resources import GitError, AgentConfig
+from honed.sessions import Sessions
+from honed.sessions.scanner import ShellCommand
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 PROMPT = """Review the supplied Graphify AgentConfig configuration using the inherited session as evidence.
@@ -86,9 +86,9 @@ def git(workspace: Path, *args: str) -> str:
             "-C",
             str(workspace),
             "-c",
-            "user.name=thearc reflector",
+            "user.name=honed reflector",
             "-c",
-            "user.email=reflector@thearc.local",
+            "user.email=reflector@honed.local",
             "-c",
             "commit.gpgsign=false",
             *args,

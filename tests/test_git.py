@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from thearc.resources import Journal, ResourceTarget, agent_at, record_commits, write_workspace
+from honed.resources import Journal, ResourceTarget, agent_at, record_commits, write_workspace
 
 SKILL = Path("skills/retry/SKILL.md")
 EXAMPLES = ResourceTarget(kind="skill", name="retry", section="Retry > Examples")
@@ -148,7 +148,7 @@ def test_workspace_in_a_subdirectory(agent, tmp_path):
 
 
 def test_since_adopts_an_existing_journal(agent, human, repo):
-    from thearc.resources import CategoricalScale, ReflectionSchema, detect_changes
+    from honed.resources import CategoricalScale, ReflectionSchema, detect_changes
 
     usefulness = CategoricalScale("u", ["bad", "good"])
     agent.journal.record(*detect_changes(None, agent, **human))
@@ -163,7 +163,7 @@ def test_since_adopts_an_existing_journal(agent, human, repo):
 
 
 def test_adding_a_live_target_again_keeps_its_history(agent, human):
-    from thearc.resources import CategoricalScale, ReflectionSchema, detect_changes
+    from honed.resources import CategoricalScale, ReflectionSchema, detect_changes
 
     usefulness = CategoricalScale("u", ["bad", "good"])
     agent.journal.record(*detect_changes(None, agent, **human))

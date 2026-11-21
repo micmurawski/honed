@@ -1,7 +1,7 @@
-site_name: thearc
-site_url: https://micmurawski.github.io/thearc/
+site_name: honed
+site_url: https://micmurawski.github.io/honed/
 site_description: Improve AI agents' configurations from evidence of how they behaved — reflection, curation, and merging across harnesses.
-repo_url: https://github.com/micmurawski/thearc
+repo_url: https://github.com/micmurawski/honed
 edit_uri: ''
 docs_dir: docs
 site_dir: site
@@ -9,6 +9,7 @@ strict: true
 
 theme:
   name: mkdocs
+  custom_dir: docs-theme  # The honed mark as favicon and beside the site name.
   color_mode: auto
   navigation_depth: 3
 

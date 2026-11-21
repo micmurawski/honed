@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from thearc.sessions.index import SessionIndex
-from thearc.sessions.models import Event, SearchFilters, SourceConfig, SourceReference
-from thearc.sessions.trajectories import split_trajectories
+from honed.sessions.index import SessionIndex
+from honed.sessions.models import Event, SearchFilters, SourceConfig, SourceReference
+from honed.sessions.trajectories import split_trajectories
 
 
 def event(i, *, kind="message", role="assistant", text="response", raw=None, run="main"):

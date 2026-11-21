@@ -1,0 +1,255 @@
+"""Turning git commits of a workspace into journal entries.
+
+An agent or a person edits the workspace files and commits each change with its
+reason as the commit message. ``record_commits`` walks the commits the journal
+has not seen yet and, for each, compares the workspace with its parent commit:
+every changed target gets its own Added / Modified / Moved / Removed entry with
+the commit message as ``reason`` and the commit hash as ``commit``. A commit that
+touches two sections yields two entries with the same reason; a section that
+appears in a commit is Added. Only the main line of history (first parents) is
+followed. The repository is only read.
+"""
+
+from __future__ import annotations
+
+import subprocess
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path, PurePosixPath
+from typing import Any
+
+from pydantic import ValidationError
+
+from honed.resources.agent import AgentConfig
+from honed.resources.changes import detect_changes
+from honed.resources.journal import Entry, Journal, Moved
+from honed.resources.targets import ResourceTarget
+from honed.resources.workspace import JOURNAL_FILE, MANIFEST, is_managed, parse_workspace
+
+
+class GitError(RuntimeError):
+    """A git command failed, or a commit does not hold a readable workspace."""
+
+
+def _git(repo: str | Path, *args: str, stdin: bytes | None = None) -> bytes:
+    result = subprocess.run(["git", "-C", str(repo), *args], input=stdin, capture_output=True, check=False)
+    if result.returncode != 0:
+        raise GitError(f"git {' '.join(args)}: {result.stderr.decode(errors='replace').strip()}")
+    return result.stdout
+
+
+def commit(repo: str | Path, message: str, *, author: str = "honed", email: str = "honed@localhost") -> str:
+    """Commit what is staged in ``repo`` under ``author`` (never signed); returns the new commit."""
+    _git(repo, "-c", f"user.name={author}", "-c", f"user.email={email}", "-c", "commit.gpgsign=false",
+         "commit", "-q", "-m", message)
+    return _git(repo, "rev-parse", "HEAD").decode().strip()
+
+
+def commit_journal(root: str | Path, message: str = "Record ratings") -> str | None:
+    """Commit journal lines appended since the last commit (e.g. by ``add_reflection``); None if there are none."""
+    if not _git(root, "status", "--porcelain", "--", JOURNAL_FILE).strip():
+        return None
+    _git(root, "add", JOURNAL_FILE)
+    return commit(root, message)
+
+
+def prefix_key(name: str) -> str:
+    """The git config key holding the branch prefix of agent ``name``'s workspace."""
+    return f"honed.{name}.prefix"
+
+
+def branch_prefix(root: str | Path) -> str:
+    """The prefix of the workspace's branch names (``honed/claude/`` for a workspace inside a project's repository,
+    so ``honed/claude/main``, ``honed/claude/release/1.2.0``, …); empty for a repository of its own.
+
+    Kept in the repository's git config under the agent's name (``prefix_key``), so several workspaces — one per
+    harness — can share a repository, and every worktree of one workspace finds the same prefix.
+    """
+    import json
+
+    from honed.resources.workspace import MANIFEST
+
+    try:
+        name = json.loads((Path(root) / MANIFEST).read_text(encoding="utf-8"))["name"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return ""
+    for key in (prefix_key(name), f"thearc.{name}.prefix"):  # The second: a workspace thearc made, before 0.4.
+        try:
+            return _git(root, "config", "--get", key).decode().strip()
+        except (GitError, OSError):
+            continue
+    return ""
+
+
+def branch_name(root: str | Path, kind: str, rest: str) -> str:
+    """A workspace branch: ``<prefix><kind>/<rest>``, e.g. ``honed/merge/1a2b3c4d5e6f``."""
+    return f"{branch_prefix(root)}{kind}/{rest}"
+
+
+def is_worktree(root: str | Path) -> bool:
+    """Whether ``root`` is a linked git worktree (its ``.git`` is a file), not the main checkout."""
+    return (Path(root) / ".git").is_file()
+
+
+@dataclass(frozen=True)
+class Commit:
+    sha: str
+    parent: str | None
+    at: datetime
+    author: str
+    message: str
+
+
+def _prefix(path: str) -> str:
+    path = PurePosixPath(path).as_posix().strip("/") if path else ""
+    return "" if path in {"", "."} else path + "/"
+
+
+def workspace_commits(repo: str | Path, *, path: str = "", rev: str = "HEAD") -> list[Commit]:
+    """Commits on the first-parent line of ``rev`` that touch the workspace at ``path``, oldest first."""
+    parents = {}
+    for line in _git(repo, "rev-list", "--first-parent", "--parents", rev).decode().splitlines():
+        sha, *rest = line.split()
+        parents[sha] = rest[0] if rest else None
+    output = _git(
+        repo,
+        "log",
+        "--first-parent",
+        "--reverse",
+        "--format=%H%x00%cI%x00%an%x00%B%x1e",
+        rev,
+        "--",
+        _prefix(path) or ".",
+    ).decode()
+    commits = []
+    for record in output.split("\x1e"):
+        if not record.strip():
+            continue
+        sha, at, author, message = record.lstrip("\n").split("\x00", 3)
+        commits.append(Commit(sha, parents.get(sha), datetime.fromisoformat(at), author, message.strip()))
+    return commits
+
+
+def agent_at(repo: str | Path, commit: str, *, path: str = "") -> AgentConfig | None:
+    """The AgentConfig configuration stored in ``commit`` (journal excluded), or ``None`` if it has no workspace."""
+    snapshot = snapshot_at(repo, commit, path=path)
+    return snapshot[0] if snapshot else None
+
+
+def snapshot_at(
+    repo: str | Path, commit: str, *, path: str = ""
+) -> tuple[AgentConfig, dict[ResourceTarget, str]] | None:
+    """The configuration stored in ``commit`` and the lineage IDs its markers give; ``None`` without a workspace."""
+    prefix = _prefix(path)
+    listing = _git(repo, "ls-tree", "-r", "-z", "--full-tree", commit, "--", prefix or ".")
+    names = []
+    for item in listing.split(b"\0"):
+        if not item:
+            continue
+        meta, name = item.decode().split("\t", 1)
+        relative = name[len(prefix) :]
+        if not name.startswith(prefix) or relative == JOURNAL_FILE or not is_managed(relative):
+            continue  # Dot-files and the repository's own files (README, LICENSE, …) are not the agent's.
+        if meta.split()[0] not in {"100644", "100755"}:
+            raise GitError(f"{commit}: {name} is not a regular file")
+        names.append((name, relative))
+    if not any(relative == MANIFEST for _, relative in names):
+        return None
+    batch = _git(repo, "cat-file", "--batch", stdin="".join(f"{commit}:{name}\n" for name, _ in names).encode())
+    texts, position = {}, 0
+    for _, relative in names:
+        header_end = batch.index(b"\n", position)
+        size = int(batch[position:header_end].split()[2])
+        texts[relative] = batch[header_end + 1 : header_end + 1 + size].decode("utf-8")
+        position = header_end + 1 + size + 1
+    try:
+        return parse_workspace(texts)
+    except (ValueError, ValidationError, KeyError, TypeError) as error:
+        raise GitError(f"{commit}: invalid workspace: {error}") from error
+
+
+def _before(entry: Entry) -> ResourceTarget:
+    """The address a change's target had before the commit."""
+    return entry.previous if isinstance(entry, Moved) else entry.target
+
+
+def record_commits(
+    repo: str | Path, journal: Journal, *, path: str = "", rev: str = "HEAD", since: str | None = None, **extra: Any
+) -> list[Entry]:
+    """Append entries for every workspace commit after the last one ``journal`` has recorded; returns them.
+
+    ``since`` marks a commit the journal already reflects although no entry
+    names it (e.g. a journal built before the workspace was committed); it and
+    earlier commits are skipped. Running it again records nothing new. Each
+    entry's ``extra`` holds the commit author plus any keyword arguments.
+    """
+    commits = workspace_commits(repo, path=path, rev=rev)
+    seen = journal.recorded_commits()
+    if since is not None:
+        seen.add(_git(repo, "rev-parse", "--verify", f"{since}^{{commit}}").decode().strip())
+    start = max((index + 1 for index, commit in enumerate(commits) if commit.sha in seen), default=0)
+    loaded: dict[str, tuple[AgentConfig, dict[ResourceTarget, str]] | None] = {}
+
+    def load(sha: str | None) -> tuple[AgentConfig, dict[ResourceTarget, str]] | None:
+        if sha is None:
+            return None
+        if sha not in loaded:
+            loaded[sha] = snapshot_at(repo, sha, path=path)
+        return loaded[sha]
+
+    recorded: list[Entry] = []
+    for commit in commits[start:]:
+        snapshot = load(commit.sha)
+        if snapshot is None or commit.sha in seen:
+            continue
+        after, after_ids = snapshot
+        before = load(commit.parent)
+        ids = {**after_ids, **journal.ids()}  # Lineage IDs, by the addresses before this commit.
+        entries = detect_changes(
+            before[0] if before else None,
+            after,
+            identities=(before[1] if before else {}, after_ids),
+            reason=commit.message,
+            at=commit.at,
+            commit=commit.sha,
+            parent=commit.parent,
+            author=commit.author,
+            **extra,
+        )
+        touched = sorted({ids.get(_before(entry), ids.get(entry.target, entry.target.id)) for entry in entries})
+        entries = [entry.model_copy(update={"touched": touched}) for entry in entries]
+        journal.record(*entries)
+        recorded += entries
+    return recorded
+
+
+def commit_configuration(
+    agent: AgentConfig, message: str, *, author: str = "honed", email: str = "honed@localhost", **extra: Any
+) -> list[Entry]:
+    """Write ``agent``'s configuration over its workspace, commit it as one change with ``message`` as its reason,
+    and record that commit in the journal (committed too); returns the entries. Nothing changed, nothing recorded.
+
+    The workspace is the one ``agent`` is bound to; it must have no pending edits. Its journal is kept, and ``extra``
+    is stored on every entry, with the commit's author.
+    """
+    from honed.resources.workspace import write_workspace
+
+    root = agent.workspace
+    if root is None:
+        raise ValueError("commit_configuration needs an agent bound to a workspace")
+    commit_journal(root)
+    if pending := _git(root, "status", "--porcelain").decode().strip():
+        raise ValueError(f"commit or undo the workspace's pending edits first: {pending.splitlines()}")
+    base = _git(root, "rev-parse", "HEAD").decode().strip()
+    write_workspace(agent, root, journal=False, overwrite=True)
+    _git(root, "add", "-A")
+    if not _git(root, "status", "--porcelain").strip():
+        return []
+    commit(root, message, author=author, email=email)
+    journal = Journal.load(root / JOURNAL_FILE)
+    entries = record_commits(root, journal, since=base, **extra)
+    if entries:
+        Journal.append(root / JOURNAL_FILE, entries)
+        _git(root, "add", JOURNAL_FILE)
+        commit(root, f"Record {message.splitlines()[0]}", author=author, email=email)
+    return entries

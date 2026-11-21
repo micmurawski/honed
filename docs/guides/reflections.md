@@ -6,7 +6,7 @@ answers in the shape of a **reflection schema** you design.
 
 ## The schema
 
-thearc needs only two kinds of fields, found by type:
+honed needs only two kinds of fields, found by type:
 
 - `Ref` — a file reference to configuration lines, `path#Lx` or `path#Lx-Ly`. Wherever it
   appears, it must resolve.
@@ -18,7 +18,7 @@ is yours.
 ```python
 from typing import Annotated
 from pydantic import BaseModel, Field
-from thearc.resources import CategoricalScale, NumericScale, Ref, ReflectionSchema
+from honed.resources import CategoricalScale, NumericScale, Ref, ReflectionSchema
 
 usefulness = CategoricalScale("usefulness", {"harmful": "…", "neutral": "…", "helpful": "…"}, ordered=True)
 
@@ -64,7 +64,7 @@ for a list of `{ref, rating, …}` items.
 ## Running a reflector
 
 ```python
-from thearc.reflection import Reflector
+from honed.reflection import Reflector
 
 reflector = Reflector("codex")                                       # or "claude", "pi"
 reflection = reflector.reflect(PROMPT, agent, schema, evidence=text)  # evidence in the prompt
@@ -82,7 +82,7 @@ reflector what a harness's record leaves out, and `provenance` adds what you kno
 
 ```python
 reflector.handoff(PROMPT, session, agent, schema,
-                  provenance=f"thearc had installed {agent.name} {agent.version} for opencode in this project.")
+                  provenance=f"honed had installed {agent.name} {agent.version} for opencode in this project.")
 ```
 
 Both reach the reflector under "How the session ran (not in its record)"; `provenance` is also
@@ -109,7 +109,7 @@ Fields a harness needs to open the copy are kept (`cwd`: Claude Code runs the fo
 counted in `reflection.evidence["redacted"]` and listed in `reflection.notes`.
 
 ```python
-from thearc.sessions.redact import Redaction
+from honed.sessions.redact import Redaction
 
 Reflector("codex", redaction=Redaction(literals=("Project Falcon",), patterns=(r"ACME-\d+",)))
 Reflector("codex", redaction=Redaction.off())   # the session as it was recorded

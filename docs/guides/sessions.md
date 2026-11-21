@@ -3,17 +3,17 @@
 Sessions are read from each harness's transcripts into a local SQLite index.
 
 ```sh
-thearc sessions --index sessions.sqlite sync logs/codex-training     # register the folder, read it
-thearc sessions --index sessions.sqlite sync                          # later: read what changed
-thearc sessions --index sessions.sqlite query 'harness:codex select:session'
-thearc sessions --index sessions.sqlite trajectories <session>
-thearc sessions --index sessions.sqlite render <session> --trajectory 0
+honed sessions --index sessions.sqlite sync logs/codex-training     # register the folder, read it
+honed sessions --index sessions.sqlite sync                          # later: read what changed
+honed sessions --index sessions.sqlite query 'harness:codex select:session'
+honed sessions --index sessions.sqlite trajectories <session>
+honed sessions --index sessions.sqlite render <session> --trajectory 0
 ```
 
 The same from Python:
 
 ```python
-from thearc.sessions import Sessions
+from honed.sessions import Sessions
 
 with Sessions("sessions.sqlite") as sessions:
     source = sessions.add("logs/claude-training")            # detects the harness, synchronizes
@@ -33,7 +33,7 @@ raises an ambiguity error when multiple run or transcript streams are present.
 ## Finding sessions
 
 ```python
-from thearc.sessions.scanner import ShellCommand, SkillUsage
+from honed.sessions.scanner import ShellCommand, SkillUsage
 
 hits = sessions.search("SyntaxError", kind="tool_result", status="failure")
 used = {m.session_id for m in sessions.match(ShellCommand(contains="graphify query"))}
@@ -45,12 +45,12 @@ instructions, shell commands, skill usage). A match is a signal to inspect, not 
 
 ## Thread families
 
-TheArc uses these terms for different boundaries:
+Honed uses these terms for different boundaries:
 
-| TheArc term | Definition | Boundary and caveat |
+| Honed term | Definition | Boundary and caveat |
 |---|---|---|
 | **Session** | An indexed transcript container. Its `session_id` is taken from a harness-native conversation ID or, when unavailable, an adapter fallback. | One session can contain multiple threads (Claude Code). A delegated thread can instead be a separate session (Codex and OpenCode). “Session” therefore does not mean the same native object in every harness. |
-| **Thread** | One independently ordered execution stream. | Currently represented by a normalized `run_id`; all events with that ID belong to the stream. TheArc’s thread is a common abstraction and may map to a native agent, thread, or session. |
+| **Thread** | One independently ordered execution stream. | Currently represented by a normalized `run_id`; all events with that ID belong to the stream. Honed’s thread is a common abstraction and may map to a native agent, thread, or session. |
 | **Trajectory** | One user prompt and its recorded response work within one thread. | Prompt splitting is done per stream. It does not join parent and child activity, even if they overlap in time. |
 | **Parent / child** | A directed relationship between two threads: the child records the parent thread ID. | These are direct links, not a stored root-to-leaf path. Links may cross sessions. A link identifies lineage, but does not necessarily identify the exact tool call that spawned the child. |
 | **Family** | The selected thread’s highest available linked parent plus its known descendants. | Family membership follows indexed parent links. The root is derived from those links; ancestors are not copied onto every thread. A missing parent record can make the family incomplete. |
@@ -62,21 +62,21 @@ is outside the included family; when an ancestor is missing from the index, this
 thread can still have a non-null `parent_id`. `root_thread` means a thread with no recorded parent
 link, not necessarily the harness’s designated “main agent.”
 
-### Mapping harness records to TheArc
+### Mapping harness records to Honed
 
-The adapters map transcript identities and links into TheArc’s `session_id`, `run_id`, and
+The adapters map transcript identities and links into Honed’s `session_id`, `run_id`, and
 `parent_run_id`. The table describes current adapter behavior, not a claim that the harnesses use the
 same underlying concept.
 
-| Harness | Native record used for TheArc session | Native record mapped to TheArc thread | Parent/child mapping and current limits |
+| Harness | Native record used for Honed session | Native record mapped to Honed thread | Parent/child mapping and current limits |
 |---|---|---|---|
 | **Claude Code** | `sessionId`; child-agent files use the enclosing session directory. | Main transcript and each `subagents/agent-*.jsonl` file become separate threads in that session. | The adapter links each child-agent thread to the main thread based on file layout. It does not retain nested child-to-child parentage, so nested agents appear as children of the main thread. This link is adapter-inferred from layout. |
-| **Codex** | `session_meta.payload.id` (or `session_id`). | Each native thread ID becomes a TheArc session with its own main thread. | `source.subagent.thread_spawn.parent_thread_id` becomes the child thread’s parent link. The family crosses TheArc session boundaries. Both parent and child records must be indexed to inspect both streams. |
-| **OpenCode** | Exported `info.id`. | Each exported session becomes a TheArc session with a main thread. | Exported `info.parentID` (also accepted as `parentId`) becomes the parent link. Parent and child are separate TheArc sessions; both exports must be indexed for a complete family. |
+| **Codex** | `session_meta.payload.id` (or `session_id`). | Each native thread ID becomes a Honed session with its own main thread. | `source.subagent.thread_spawn.parent_thread_id` becomes the child thread’s parent link. The family crosses Honed session boundaries. Both parent and child records must be indexed to inspect both streams. |
+| **OpenCode** | Exported `info.id`. | Each exported session becomes a Honed session with a main thread. | Exported `info.parentID` (also accepted as `parentId`) becomes the parent link. Parent and child are separate Honed sessions; both exports must be indexed for a complete family. |
 | **Pi** | The JSONL session header’s `id`. | The current adapter maps the session to one main thread. | Per-record `parentId` is retained as event-level native metadata; it is not converted into thread parentage. Pi history branching is therefore not represented as agent delegation in the current thread family. Extension-created workers have no standardized link in this adapter. |
 | **Antigravity** | `conversation_id`, falling back to an ID derived from the transcript path. | The current adapter maps the transcript to one main thread. | The adapter does not currently extract a parent-thread link for delegated work. Tool steps remain events in the conversation thread; separate, unlinked transcripts cannot be safely attached to a family. |
 
-TheArc’s normalized `run_id` is generated from the adapter’s session identity and agent identity; it is
+Honed’s normalized `run_id` is generated from the adapter’s session identity and agent identity; it is
 not necessarily a native ID. `parent_run_id` is projected to `Thread.parent_id`, and reverse links
 produce `child_ids`. Claude’s parent link is inferred from file layout; Codex and OpenCode adapters
 use explicit parent IDs from their records. Pi branching metadata and Antigravity relationships are
@@ -84,8 +84,8 @@ not converted into thread links by the current adapters. Treat other lineage as 
 adapter can extract it reliably.
 
 ```python
-from thearc.sessions import DecisionTrace, Sessions, WeightedPatternView, WorkGraph
-from thearc.sessions.scanner import ShellCommand
+from honed.sessions import DecisionTrace, Sessions, WeightedPatternView, WorkGraph
+from honed.sessions.scanner import ShellCommand
 
 with Sessions("sessions.sqlite") as sessions:
     session = sessions.get("<session-id>")
@@ -109,7 +109,7 @@ with Sessions("sessions.sqlite") as sessions:
 `Sessions.root_threads()` selects those without a recorded parent. `Sessions.thread(reference)` resolves
 a run ID. `sessions.family(reference, exclude_root=False)` follows parent links to build the known
 family and includes its derived root by default; `exclude_root=True` omits that thread. From the command
-line, `thearc sessions query 'family:<reference> select:thread'` lists a family (add `at:child` to leave its
+line, `honed sessions query 'family:<reference> select:thread'` lists a family (add `at:child` to leave its
 root out). Analyses receive a selected thread or an explicit thread collection; they do not merge parent and
 child event streams into a single timeline.
 `Session`, `Thread`, and `Trajectory` implement `EventSequence`, so graph constructors accept any of
@@ -118,8 +118,8 @@ it omits the global conversation overview because those streams have no single t
 
 ## Graphs of what a query selected
 
-`thearc sessions graph <kind>` (short: `thearc s g <kind>`) reads the results of
-`thearc sessions query --json` (or session and run IDs, one per line) from stdin and graphs them:
+`honed sessions graph <kind>` (short: `honed s g <kind>`) reads the results of
+`honed sessions query --json` (or session and run IDs, one per line) from stdin and graphs them:
 
 - `workgraph`: one graph per session or thread: its events, tool calls and signals.
 - `decision-trace`: one graph per session or thread: its decisions and what they were based on.
@@ -129,28 +129,28 @@ it omits the global conversation overview because those streams have no single t
 
 The query decides what is graphed. `select:session` graphs whole sessions (for `aeg`, their root threads),
 `select:thread` graphs those threads (add `at:root` for main threads only), and an event match stands for the
-thread it occurred in. `thearc sessions query` returns 50 results unless the query says `count:N`.
+thread it occurred in. `honed sessions query` returns 50 results unless the query says `count:N`.
 
 ```sh
-thearc s q --json 'harness:codex select:session count:50' | thearc s g weighted
-thearc s q --json 'harness:codex select:session' | thearc s g weighted --pattern-length 2 --pattern-length 3
-thearc s q --json 'session:abc123 select:session' | thearc s g workgraph -o mermaid
-thearc s q --json 'shell.startswith:pytest status:failure' | thearc s g aeg --export artifacts/aeg
+honed s q --json 'harness:codex select:session count:50' | honed s g weighted
+honed s q --json 'harness:codex select:session' | honed s g weighted --pattern-length 2 --pattern-length 3
+honed s q --json 'session:abc123 select:session' | honed s g workgraph -o mermaid
+honed s q --json 'shell.startswith:pytest status:failure' | honed s g aeg --export artifacts/aeg
 ```
 
 Every kind prints Markdown by default, or `-o json|mermaid` (and `sankey` for `aeg`); for the per-session
 kinds `-o mermaid` prints one graph, so it needs a single result. `--export DIR` writes report files (to
 `DIR/<kind>/`) instead; add `-o` to print as well. `--png` (not for `aeg`) also renders PNGs when Mermaid CLI
-(`mmdc`) is installed. Each kind has its own options: see `thearc s g <kind> --help`.
+(`mmdc`) is installed. Each kind has its own options: see `honed s g <kind> --help`.
 
 Weighted patterns report each pattern's occurrence count and number of distinct cases, with source event IDs
 for tracing examples. Windows are counted only within one recorded run stream; unrelated runs are never
 joined, and an observed sequence does not establish causation. The default case is a whole session;
 `--case-scope trajectory` uses each prompt trajectory. Case support is descriptive, not a significance test.
-Use example event IDs with `thearc sessions show` to inspect source records.
+Use example event IDs with `honed sessions show` to inspect source records.
 
 The AEG adds `--abstraction`, `--compare`, `--llm`,
-`--judge N` (model: `THEARC_JUDGE_MODEL`), `--revisions PROJECT` (drift by release) and `--gold FILE`.
+`--judge N` (model: `HONED_JUDGE_MODEL`), `--revisions PROJECT` (drift by release) and `--gold FILE`.
 
 ## Querying graph artifacts
 
@@ -163,19 +163,19 @@ activity, a WorkGraph event kind) and properties; **walks**, one case's ordered 
 **occurrences**, where a node or edge happened (walk, step, time, event IDs); and **annotations**, the AEG's
 findings and critical steps and the WorkGraph's signals.
 
-`thearc sessions graph query DIR… 'QUERY'` (short: `thearc s g q`) uses the syntax of session queries.
+`honed sessions graph query DIR… 'QUERY'` (short: `honed s g q`) uses the syntax of session queries.
 Leading directories are the artifacts (a parent finds every artifact below it); `select:` returns graphs,
 nodes (default), edges, walks, occurrences, annotations, sessions, threads or events.
 
 ```sh
-thearc s q --json 'harness:claude after:30d select:session' | thearc s g aeg --export artifacts/claude
-thearc s q --json 'harness:claude after:30d select:session' | thearc s g workgraph --export artifacts/claude
-thearc s g q artifacts/claude --info
-thearc s g q artifacts/claude 'graph:aeg label.startswith:TEST select:node'
-thearc s g q artifacts/claude 'path:"EDIT -> TEST:fail ->> DONE" outcome:failed select:walk'
-thearc s g q artifacts/claude 'edge.probability<0.05 edge.count>=3 select:edge'
-thearc s g q artifacts/claude 'aeg.finding:premature_done workgraph.signal:Stubborn select:session'
-thearc s g q --json artifacts/claude 'critical:guardrail select:thread' | thearc s g decision-trace
+honed s q --json 'harness:claude after:30d select:session' | honed s g aeg --export artifacts/claude
+honed s q --json 'harness:claude after:30d select:session' | honed s g workgraph --export artifacts/claude
+honed s g q artifacts/claude --info
+honed s g q artifacts/claude 'graph:aeg label.startswith:TEST select:node'
+honed s g q artifacts/claude 'path:"EDIT -> TEST:fail ->> DONE" outcome:failed select:walk'
+honed s g q artifacts/claude 'edge.probability<0.05 edge.count>=3 select:edge'
+honed s g q artifacts/claude 'aeg.finding:premature_done workgraph.signal:Stubborn select:session'
+honed s g q --json artifacts/claude 'critical:guardrail select:thread' | honed s g decision-trace
 ```
 
 A term holds when some element of its level related to the result satisfies it: a node's walks, a walk's nodes

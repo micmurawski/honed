@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from thearc.sessions.index import SessionIndex
-from thearc.sessions.models import SearchFilters, SearchQuery, SourceConfig
+from honed.sessions.index import SessionIndex
+from honed.sessions.models import SearchFilters, SearchQuery, SourceConfig
 
 CUTOFF = datetime(2026, 9, 1, tzinfo=UTC)
 
