@@ -917,12 +917,15 @@ Evolving a project's configuration for one harness from that harness's sessions 
 - **Runtime**: the harness that runs a round's reflections and curation.
 - **Round**: drift, then the recipe, then a **proposal**: a new version on `proposal/<version>`, not
   installed until it is **applied**. An **amendment** is a person's commit to an open proposal.
-- **Remembered reflection**: a reflection an earlier round made, kept on a branch of the workspace (a discarded
-  candidate, say) and reused instead of paying again: same session events (`evidence["digest"]`), same revision, same
-  prompt and schema (`evidence["asked"]`). See `evolution.remembered` and `evolution.recall`.
+- **Sourced reflection**: a reflection made already (in the session by `/reflect`, or by an earlier round, a stopped
+  or discarded one included) that a round takes instead of paying again: same revision, and the same question (the
+  same prompt text and schema, `evidence["asked"]`, or the same prompt `name@version` and schema). The session index
+  keeps every one of them; `evolution.partition` (`Sessions.partition`) says which sessions they cover, wholly or up
+  to a tail of later events.
 - **Estimate**: what a round will cost, worked out before it reflects: its sessions' size in tokens of evidence,
   priced by what earlier reflections and curations in the workspace cost (`evolution.estimate`). A **budget** in the
   recipe stops a round estimated over it.
-- **Evolution**: what the recipe is given: the project's sessions (`evolution.sessions(harness=…, since=…)`), a
-  candidate (`evolution.candidate()`), and where a stopped round left off.
+- **Evolution**: what the recipe is given: the round (its release, folder and log), the project's sessions
+  (`evolution.sessions(since=…)`) and what reflections cover of them (`evolution.partition`), and candidates of the
+  release (`evolution.candidate()`), a stopped round's if it made them.
 

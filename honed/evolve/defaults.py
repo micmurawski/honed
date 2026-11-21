@@ -1,5 +1,6 @@
 """The default reflection schema of a round: lessons from a session, with the configuration lines rated on usefulness
-and, when the session shows one, the failure mode they contributed to (the taxonomy of the session analysis).
+and, when the session shows one, the failure mode they contributed to (``honed.taxonomy``: the modes the session
+analysis finds too).
 
 The recipe (``evolve.py`` in the evolve skill) imports these; a recipe may declare its own instead.
 """
@@ -11,7 +12,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from honed.resources import CategoricalScale, Ref
-from honed.sessions.analysis.aeg.failures import failure_mode_scale
+from honed.taxonomy import TAXONOMY
 
 USEFULNESS = CategoricalScale(
     "usefulness",
@@ -24,7 +25,12 @@ USEFULNESS = CategoricalScale(
     description="Evidence-based effect of cited configuration lines; absence of evidence does not imply harm.",
 )
 
-FAILURE_MODES = failure_mode_scale()
+FAILURE_MODES = CategoricalScale(
+    "failure_mode",
+    {mode.id: mode.definition for mode in TAXONOMY},
+    description="The failure mode the cited lines contributed to (or failed to prevent), when the session shows one; "
+    "leave it empty when no failure mode is evidenced.",
+)
 
 
 class Rated(BaseModel):

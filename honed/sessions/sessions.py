@@ -13,7 +13,7 @@ import builtins
 import json
 import os
 import sqlite3
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from datetime import UTC, datetime
 from itertools import islice
 from pathlib import Path
@@ -32,6 +32,7 @@ from .session import Results, SearchHit, Session, query_events, read_only_index,
 
 if TYPE_CHECKING:
     from .query import QueryMatch
+    from .reflections import Partition
     from .threads import Thread
 
 DEFAULT_INDEX = Path("~/.honed/learning.sqlite")
@@ -392,6 +393,32 @@ class Sessions:
         index = read_only_index(path)
         try:
             return execute(index, text, limit=limit, offset=offset, loader=lambda session: self._get(path, session))
+        finally:
+            index.close()
+
+    def partition(self, histories: Sequence[Session | Thread], prompt: Any, schema: Any, *, revision: str,
+                  tail_min: int = 1) -> Partition:
+        """Split ``histories`` (sessions, or threads of them) by what the reflections kept here cover of them: those
+        of ``revision``, made in the session or handed off, that ask the same question: ``prompt`` (the same text,
+        or the same ``name@version``) with ``schema``.
+
+        A history is covered when fewer than ``tail_min`` of its events come after the furthest event its
+        reflections judged; partly covered when more do; not reflected on when no reflection reaches into it."""
+        from .reflections import partition
+
+        return partition(self, histories, prompt, schema, revision=revision, tail_min=tail_min)
+
+    def count(self, text: str) -> int:
+        """How many results a query (see ``query``) has, without loading them.
+
+            sessions.count("select:reflection bound:no cwd:~/project")
+        """
+        from .query import count
+
+        path = self._capture()
+        index = read_only_index(path)
+        try:
+            return count(index, text)
         finally:
             index.close()
 

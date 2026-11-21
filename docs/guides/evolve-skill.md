@@ -151,11 +151,13 @@ def propose(evolution: Evolution) -> AgentConfig | None:
 - `partition` splits them by what reflections made already cover (in the sessions, by `/reflect`, or by earlier
   rounds), runs the failure rules for the reflector's hints (`FOCUS`, `SELECT`), and estimates the round: it stops
   there for `--estimate` or a round over `BUDGET`, and otherwise sets up the candidate (`evolution.candidate()`).
-- `source` records the reflections made already into the candidate, without a model call.
+- `source` records the reflections made already into the candidate (`candidate.add_reflections`), without a model
+  call.
 - `reflect` is a batch node (`@node(batch=True, items_key="to_reflect", item="handed")`): one
-  `Reflector(RUNTIME, timeout=TIMEOUT).handoff(...)` per session left, skipping those a stopped round already
-  reflected on (`evolution.reflected`) and reusing an earlier round's reflection where there is one
-  (`evolution.recall`).
+  `Reflector(RUNTIME, timeout=TIMEOUT).handoff(...)` per session left, or per tail of one partly covered, recorded
+  with `evolution.record(candidate, reflection)`: in the candidate, and in the session index, so a stopped round
+  resumed, or the next round after a discard, takes it instead of reflecting again. A changed reflect prompt asks
+  the same question until its `version` is bumped.
 - `curate` runs `Curator(RUNTIME, timeout=TIMEOUT).curate(...)` on the candidate and returns it as the proposal.
 
 The steps and the graph are defined once, at module level; `propose` only runs the flow. A step with an argument it
@@ -163,7 +165,7 @@ doesn't find in the shared state, and no default for it, fails with its name.
 
 Each node writes to `evolution.log`. `evolution.track(flow, shared, logs={"name": path})` adds more log files as tabs.
 A recipe may curate several candidates in parallel (`evolution.candidate("a")`, `evolution.candidate("b")`) and
-merge them with `Merger`; `evolution.merged()` returns the merge a stopped round made.
+merge them with `Merger`.
 
 ## Ignored
 

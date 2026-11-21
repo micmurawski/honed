@@ -18,7 +18,7 @@ The pipeline follows ``AEG.md``:
 Start from ``ExecutionGraphView.build(threads)``.
 """
 
-from .failures import TAXONOMY, CriticalStep, Finding, failure_mode_scale, focus
+from .failures import TAXONOMY, CriticalStep, Finding, focus
 from .judge import FailureJudge
 from .view import ExecutionGraphView, export_execution_graph, session_failures
 
@@ -29,7 +29,6 @@ __all__ = [
     "FailureJudge",
     "Finding",
     "export_execution_graph",
-    "failure_mode_scale",
     "focus",
     "session_failures",
 ]

@@ -66,7 +66,7 @@ UNRECORDED = {
 def fingerprint(prompt: str | Prompt, schema: ReflectionSchema | Any) -> str:
     """What a reflection was asked: its prompt (the body of a ``Prompt``) and schema, as a short digest. Two reflections
     on the same evidence and revision with the same fingerprint answer the same question (see
-    ``Evolution.remembered``)."""
+    ``Sessions.partition``)."""
     asked = json.dumps([prompt_text(prompt), ReflectionSchema.of(schema).json_schema()], sort_keys=True, default=str)
     return hashlib.sha256(asked.encode()).hexdigest()[:16]
 

@@ -36,16 +36,21 @@ TIMEOUT = 900  # Seconds an agent's turn may take before it counts as stalled an
 # What of a session the reflector is handed: "session" (all of it, subagent threads appended to the main one as if
 # the same agent went on) or "root" (only the root thread, the main agent's own run; subagents show as their calls).
 REFLECT_ON = "session"
-# Failure modes found by rules in each session (premature_done, no_verification, step_repetition, …; no model calls):
-# FOCUS hands them to its reflector as hints of where to look. SELECT "findings" reflects only on sessions where the
-# rules found one, spending the reflection budget where there is evidence; "all" reflects on every session.
+# Failure modes found by rules in each session left to reflect on (premature_done, no_verification, step_repetition,
+# …; cheap, no model calls). FOCUS and SELECT use them independently:
+# FOCUS: True hands a session's findings to its reflector as hints of where to look; it changes no session's fate.
 FOCUS = True
+# SELECT: which of the sessions no reflection covers yet (or covers only partly) are reflected on.
+#   "all"       every one of them (the default).
+#   "findings"  only those where the rules found a failure mode: the reflection budget goes where there is evidence,
+#               and the estimate and BUDGET count only those. The rest are left out of this round (not marked: the
+#               next round looks at them again); sessions that went well, where a reflection would rate lines
+#               helpful, are skipped too, so the curator sees mostly what hurt.
+# Sessions already covered are sourced either way: SELECT only decides what is reflected on anew.
 SELECT = "all"
-# Reflections made already — in the sessions themselves (/reflect) or by earlier rounds — are taken, not made again.
-SOURCE = True  # False: reflect on every session, whatever covers it.
-SOURCE_MATCH = "version"  # Which earlier prompts ask the same question: "hash" (same text), "version", "name".
-SOURCE_MODES = ("in-session", "handoff")
-TAILS = "reflect"  # A partly covered session: "reflect" on what came after its reflections, or "ignore" it.
+# Reflections made already (in the sessions themselves by /reflect, or by earlier rounds, a stopped or discarded one
+# included) are taken, not made again, when they ask the same question: the reflect prompt's text or its
+# name@version (bump its version to ask anew). A partly covered session is reflected on from where they stop.
 TAIL_MIN_EVENTS = 20  # A shorter tail is not worth a reflection: the session counts as covered.
 
 
@@ -85,18 +90,12 @@ def stop():
     """Estimated only, or over the budget: nothing reflected on."""
 
 
-@node(validate=False, metadata={"prompt": REFLECT.label, "match": SOURCE_MATCH, "budget": BUDGET})
+@node(validate=False, metadata={"prompt": REFLECT.label, "budget": BUDGET})
 def partition(evolution: Evolution, sessions: list):
     """The sessions by what reflections made already cover: covered, partly covered, not reflected on."""
-    if not SOURCE:
-        parts, to_reflect = evolution.partition([], REFLECT, SCHEMA), [history(s) for s in sessions]
-    else:
-        parts = evolution.partition([history(s) for s in sessions], REFLECT, SCHEMA, match=SOURCE_MATCH,
-                                    modes=SOURCE_MODES, tail_min=TAIL_MIN_EVENTS)
-        tails = list(parts.partial) if TAILS == "reflect" else []
-        to_reflect = [part.history for part in parts.unreflected] + [part.history for part in tails]
-    evolution.log.info(f"{parts} (by {REFLECT.label}, matched by {SOURCE_MATCH})" if SOURCE
-                       else "taking no reflections made already: reflecting on every session")
+    parts = evolution.partition([history(s) for s in sessions], REFLECT, SCHEMA, tail_min=TAIL_MIN_EVENTS)
+    to_reflect = [part.history for part in (*parts.unreflected, *parts.partial)]
+    evolution.log.info(f"{parts} (by {REFLECT.label})")
     for label, covered in (("covered", parts.covered), ("partly covered", parts.partial)):
         for part in covered:
             made = ", ".join(sorted(f"{n} {mode}" for mode, n in Counter(r.mode for r in part.reflections).items()))
@@ -110,10 +109,10 @@ def partition(evolution: Evolution, sessions: list):
             if findings:
                 evolution.log.info(f"  {sid}: {', '.join(sorted({f.mode for f in findings}))}")
         if SELECT == "findings":
-            to_reflect = [h for h in to_reflect if found.get(_sid(h), ([], None))[0]]
+            to_reflect = [h for h in to_reflect if found.get(h.session_id, ([], None))[0]]
             evolution.log.info(f"{len(to_reflect)} session(s) with failure findings to reflect on")
     # Size, earlier costs, and what is reused: of what each reflector will be handed.
-    estimate = evolution.estimate(to_reflect, RUNTIME, prompt=REFLECT, sourced=len(parts.covered))
+    estimate = evolution.estimate(to_reflect, RUNTIME, reused=len(parts.covered))
     if evolution.estimate_only:
         evolution.nothing(f"estimate only: {estimate}; {parts}")
         return None, "stop"
@@ -123,18 +122,20 @@ def partition(evolution: Evolution, sessions: list):
     return {
         "partition": parts,
         "to_reflect": to_reflect,
-        "tails": {part.session.id: part for part in parts.partial} if TAILS == "reflect" else {},
+        "tails": {part.session.id: part for part in parts.partial},
         "focus": hints if FOCUS else {},
         "candidate": evolution.candidate(),  # A worktree of the installed release.
     }, "go"
 
 
-@node(validate=False, metadata={"modes": ", ".join(SOURCE_MODES)})
+@node(validate=False)
 def source(evolution: Evolution, candidate: AgentConfig, partition: Partition):
     """The reflections made already on covered and partly covered sessions, into the candidate: no model call."""
-    recorded = evolution.source(candidate, partition.sourced)
-    modes = Counter(reflection.mode for reflection in partition.sourced)
-    evolution.log.info(f"sourced {recorded} reflection(s) made already "
+    refused = candidate.add_reflections(partition.sourced)
+    for identifier, why in refused.items():  # E.g. a citation the files do not have: the rest still count.
+        evolution.log.warning(f"{identifier}: not sourced ({why})")
+    modes = Counter(reflection.mode for reflection in partition.sourced if reflection.id not in refused)
+    evolution.log.info(f"sourced {sum(modes.values())} reflection(s) made already "
                        f"({', '.join(f'{n} {mode}' for mode, n in sorted(modes.items())) or 'none'})")
 
 
@@ -143,13 +144,7 @@ def source(evolution: Evolution, candidate: AgentConfig, partition: Partition):
 def reflect(handed: Session | Thread, evolution: Evolution, candidate: AgentConfig, focus: dict, tails: dict):
     """Each session no reflection covers yet (or the tail of one partly covered), reviewed against the installed
     configuration: which lines helped, which hurt."""
-    sid = _sid(handed)
-    if evolution.reflected(handed, candidate):  # A stopped round kept its reflections.
-        evolution.log.info(f"{sid}: reflected on in an earlier, stopped run")
-        return
-    if (reused := evolution.recall(handed, candidate, REFLECT)) is not None:
-        evolution.log.info(f"{sid}: reused {reused.id} from an earlier round (no model call)")
-        return
+    sid = handed.session_id
     tail = tails.get(sid)
     part = f" (root thread {handed.id[:12]}, without its subagents)" if REFLECT_ON == "root" and handed.id != sid \
         else ""
@@ -158,13 +153,12 @@ def reflect(handed: Session | Thread, evolution: Evolution, candidate: AgentConf
                        + (f" on its last {tail.tail} event(s)" if tail else "") + "…")
     try:
         reflection = Reflector(RUNTIME, timeout=TIMEOUT).handoff(
-            REFLECT, handed, candidate, SCHEMA, provenance=evolution.provenance(_session(handed)),
+            REFLECT, handed, candidate, SCHEMA, provenance=provenance(evolution, handed.session),
             focus="\n\n".join(hints) or None, judged_from=tail.tail_from if tail else None)
     except ReflectionError as error:  # One failed reflection costs its session, not the round.
         evolution.log.warning(f"{sid}: no reflection ({error}); going on without it")
         return
-    evolution.keep(reflection)  # For later rounds and queries, whatever this round proposes.
-    candidate.add_reflection(reflection)
+    evolution.record(candidate, reflection)  # In the index too: later rounds find it, whatever this one proposes.
     rated = Counter(item.rating for item in reflection)
     evolution.log.info(f"{sid}: {len(reflection)} rating(s) "
                        f"({', '.join(f'{value} {label}' for label, value in rated.items()) or 'none'})")
@@ -174,7 +168,7 @@ def reflect(handed: Session | Thread, evolution: Evolution, candidate: AgentConf
 def curate(evolution: Evolution, candidate: AgentConfig):
     """The configuration changed where the reflections show it hurt, and kept where they show it helped."""
     if not evolution.curated(candidate):
-        reflections = evolution.reflections(candidate)
+        reflections = candidate.reflections(SCHEMA)
         if not reflections:
             evolution.nothing("no reflection succeeded")
             return None
@@ -189,12 +183,11 @@ def curate(evolution: Evolution, candidate: AgentConfig):
     return {"proposal": candidate.reload()}
 
 
-def _session(handed):
-    return handed if not hasattr(handed, "session_id") or handed.session_id == handed.id else handed.session
-
-
-def _sid(handed):
-    return _session(handed).id
+def provenance(evolution, session):
+    """What the reflector should know about how ``session`` ran: which configuration was installed for it."""
+    release = evolution.release
+    return (f"The session ran in this project with {release.name} {release.version} installed for "
+            f"{session.metadata.harness}: the files you are given, which the harness loaded when the session started.")
 
 
 def _tail_focus(tail):

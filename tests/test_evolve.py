@@ -14,6 +14,7 @@ from honed import evolve
 from honed.curation import Curator
 from honed.reflection import Reflector
 from honed.resources import AgentConfig, install
+from honed.sessions.events import records
 
 from .test_curation import ScriptedCurator, edit
 from .test_reflection import GOOD, SCHEMA, Scripted, answer
@@ -330,8 +331,10 @@ def test_a_later_round_reuses_the_reflections_of_one_that_was_discarded(project,
         def handoff(self, prompt, session, agent, schema, *, provenance=None, focus=None, judged_from=None):
             reflected.append(session.id)
             reflection = Reflector(runtime=Scripted([lesson])).reflect(prompt, agent, schema)
-            return dataclasses.replace(reflection, evidence={
-                "session": session.id, "digest": events_digest(session), "asked": fingerprint(prompt, schema)})
+            ids = [event["id"] for event in records(session.selected_events)]
+            return dataclasses.replace(reflection, mode="handoff", evidence={
+                "session": session.id, "digest": events_digest(session), "asked": fingerprint(prompt, schema),
+                "from_event": ids[0], "to_event": ids[-1]})
 
     def curator(harness, **options):
         def script(root, tool):
@@ -360,12 +363,12 @@ def test_a_later_round_reuses_the_reflections_of_one_that_was_discarded(project,
     again = evolve.run(project)
     assert again.version == "1.0.1" and "max 2" in again.diff
     assert len(reflected) == 3  # No reflector ran: the discarded round's reflections were reused.
-    assert "from an earlier round (no model call)" in Path(again.progress).read_text()
+    assert "3 covered, 0 partly covered, 0 not reflected on" in Path(again.progress).read_text()
     stamp = Path(first.progress).parent.name  # Rounds: the first, the estimate, this one.
     assert Path(again.progress).parent.name == f"{stamp}-3"
 
-    recipe = project / ".claude/skills/evolve/prompts/reflect.md"
-    recipe.write_text(recipe.read_text() + "\nAlso note anything slow.\n")  # A new question: reflect again.
+    recipe = project / ".claude/skills/evolve/prompts/reflect.md"  # A new question: reflect again.
+    recipe.write_text(recipe.read_text().replace("version: 1", "version: 2") + "\nAlso note anything slow.\n")
     evolve.discard(project)
     evolve.run(project)
     assert len(reflected) == 6
@@ -396,8 +399,11 @@ def test_the_recipe_can_reflect_on_root_threads_only(project, monkeypatch):
             handed.append(history)
             owner = history.session if isinstance(history, Thread) else history
             reflection = Reflector(runtime=Scripted([lesson])).reflect(prompt, agent, schema)
-            return dataclasses.replace(reflection, evidence={
-                "session": owner.id, "digest": events_digest(history), "asked": fingerprint(prompt, schema)})
+            ids = [event["id"] for event in records(history.selected_events)]
+            return dataclasses.replace(reflection, mode="handoff", evidence={
+                "session": owner.id, "digest": events_digest(history), "asked": fingerprint(prompt, schema),
+                "from_event": ids[0], "to_event": ids[-1],
+                **({"thread": history.id} if isinstance(history, Thread) else {})})
 
     def curator(harness, **options):
         def script(root, tool):
@@ -554,16 +560,12 @@ def test_a_round_sources_existing_reflections_and_reflects_only_on_the_rest(proj
     evolve.discard(project)
 
     handed.clear()
-    recipe = project / ".claude/skills/evolve/evolve.py"
-    recipe.write_text(recipe.read_text().replace("SOURCE = True", "SOURCE = False"))
-    evolve.run(project)
-    assert sorted(native for native, _, _ in handed) == ["s1", "s2", "s3"]  # Whatever covers them.
-    evolve.discard(project)
-    handed.clear()
 
-    prompt_file = project / ".claude/skills/evolve/prompts/reflect.md"  # Same version, new text: by hash, a new
-    prompt_file.write_text(prompt_file.read_text() + "\nAlso note anything slow.\n")  # question.
-    recipe.write_text(recipe.read_text().replace("SOURCE = False", "SOURCE = True")
-                      .replace('SOURCE_MATCH = "version"', 'SOURCE_MATCH = "hash"'))
+    prompt_file = project / ".claude/skills/evolve/prompts/reflect.md"  # New text, same version: the same question.
+    prompt_file.write_text(prompt_file.read_text() + "\nAlso note anything slow.\n")
+    evolve.run(project)
+    assert handed == []  # Every session is covered now, by the first round's reflections too.
+    evolve.discard(project)
+    prompt_file.write_text(prompt_file.read_text().replace("version: 1", "version: 2"))  # A new question.
     evolve.run(project)
     assert sorted(native for native, _, _ in handed) == ["s1", "s2", "s3"]

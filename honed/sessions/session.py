@@ -351,6 +351,11 @@ class Session(EventSequence):
         return self.id
 
     @property
+    def session(self) -> Session:
+        """This session itself: what a ``Thread``'s ``session`` is, so either can be handed where a history is."""
+        return self
+
+    @property
     def metadata(self) -> Record:
         return self._metadata
 
