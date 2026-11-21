@@ -8,8 +8,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from thearc.resources.evolution import evolution
-from thearc.resources.report import render_report
+from honed.resources.evolution import evolution
+from honed.resources.report import render_report
 
 WORKSPACE = ROOT / "artifacts" / "evolution" / "graphify"
 OUTPUT = ROOT / "docs" / "examples" / "report.html"

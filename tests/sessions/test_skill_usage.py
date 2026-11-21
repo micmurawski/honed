@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from thearc.resources import AgentConfig, Skill
-from thearc.sessions import Session
-from thearc.sessions.scanner import AllOf, PatternScanner, ShellCommand, SkillUsage
+from honed.resources import AgentConfig, Skill
+from honed.sessions import Session
+from honed.sessions.scanner import AllOf, PatternScanner, ShellCommand, SkillUsage
 
 from .conftest import event
 

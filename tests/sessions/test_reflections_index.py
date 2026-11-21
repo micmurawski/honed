@@ -6,8 +6,8 @@ import subprocess
 
 import pytest
 
-from thearc.reflection.reflector import ids_digest
-from thearc.sessions import Sessions
+from honed.reflection.reflector import ids_digest
+from honed.sessions import Sessions
 
 CWD = "/work/app"
 
@@ -28,7 +28,7 @@ def result(native, n, call, output):
     return line("user", native, n, [{"type": "tool_result", "tool_use_id": call, "content": output}])
 
 
-MARK1, MARK2 = "thearc-reflect:aaaa1111", "thearc-reflect:bbbb2222"
+MARK1, MARK2 = "honed-reflect:aaaa1111", "honed-reflect:bbbb2222"
 
 
 def transcript(native="s1", *, second=True):
@@ -38,9 +38,9 @@ def transcript(native="s1", *, second=True):
         bash(native, 2, "c1", "pytest -q"),
         result(native, 3, "c1", "1 failed"),
         line("assistant", native, 4, [{"type": "text", "text": "Fixed it."}]),
-        bash(native, 5, "r1", "thearc reflect begin --trigger tests-green"),
+        bash(native, 5, "r1", "honed reflect begin --trigger tests-green"),
         result(native, 6, "r1", f"marker: {MARK1}\nQuestion: …"),
-        bash(native, 7, "r2", f"thearc reflect submit {MARK1} --file /tmp/r.json"),
+        bash(native, 7, "r2", f"honed reflect submit {MARK1} --file /tmp/r.json"),
         result(native, 8, "r2", f"Accepted reflection_1 for {MARK1}: 1 rating"),
         line("user", native, 9, "Now add a test"),
         bash(native, 10, "c2", "pytest -q"),
@@ -48,9 +48,9 @@ def transcript(native="s1", *, second=True):
     ]
     if second:
         lines += [
-            bash(native, 12, "r3", "thearc reflect begin"),
+            bash(native, 12, "r3", "honed reflect begin"),
             result(native, 13, "r3", f"marker: {MARK2}"),
-            bash(native, 14, "r4", f"thearc reflect submit {MARK2} -"),
+            bash(native, 14, "r4", f"honed reflect submit {MARK2} -"),
             result(native, 15, "r4", f"Accepted reflection_2 for {MARK2}"),
             line("assistant", native, 16, [{"type": "text", "text": "Reflected."}]),
         ]
@@ -101,7 +101,7 @@ def test_in_session_reflections_are_bound_by_their_markers_and_their_turns_are_n
     session = sessions.get("s1")
     work = [event.id for event in session.events]
     assert len(work) == 8  # 15 events, less the two reflections' turns (begin, its output, submit, its output).
-    assert not any("thearc reflect" in event.text for event in session.events)
+    assert not any("honed reflect" in event.text for event in session.events)
 
     first, second = rows(sessions, "SELECT * FROM reflections ORDER BY id")
     assert first["session_id"] == second["session_id"] == session.id
@@ -142,7 +142,7 @@ def test_handoff_reflections_cover_what_they_were_handed_and_journals_are_a_sour
     sessions = open_index(tmp_path, store, root)
     session = sessions.get("s1")
     work = [event.id for event in session.events]
-    workspace = root / ".thearc/workspace"
+    workspace = root / ".honed/workspace"
     workspace.mkdir(parents=True)
     git = ["git", "-C", str(workspace)]
     subprocess.run([*git, "init", "-q", "-b", "main"], check=True)
@@ -257,7 +257,7 @@ def test_select_reflections(indexed):
 
 
 def test_reflection_turns_are_hidden_from_text_unless_internal(indexed):
-    assert indexed.query('"thearc reflect" select:event') == []
-    assert len(indexed.query('"thearc reflect" select:event internal:yes')) == 4
+    assert indexed.query('"honed reflect" select:event') == []
+    assert len(indexed.query('"honed reflect" select:event internal:yes')) == 4
     assert len(indexed.query("tag:reflection select:event")) == 8
     assert natives(indexed, "select:session shell:pytest") == ["s1"]

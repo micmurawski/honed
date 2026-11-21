@@ -5,9 +5,9 @@ from datetime import UTC, datetime
 import pytest
 from click.testing import CliRunner
 
-from thearc.cli import main
-from thearc.sessions import Sessions
-from thearc.sessions.query import And, Not, Or, QuerySyntaxError, Term, execute, parse
+from honed.cli import main
+from honed.sessions import Sessions
+from honed.sessions.query import And, Not, Or, QuerySyntaxError, Term, execute, parse
 
 from .test_sessions import write_jsonl
 

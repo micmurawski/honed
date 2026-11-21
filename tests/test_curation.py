@@ -7,11 +7,11 @@ from contextlib import contextmanager
 
 import pytest
 
-from thearc.curation import CurationError, Curator
-from thearc.reflection import Conversation, Reflector, Runtime
-from thearc.reflection import runtimes as runtime_module
-from thearc.reflection.runtimes import ToolEndpoint
-from thearc.resources import AgentConfig
+from honed.curation import CurationError, Curator
+from honed.reflection import Conversation, Reflector, Runtime
+from honed.reflection import runtimes as runtime_module
+from honed.reflection.runtimes import ToolEndpoint
+from honed.resources import AgentConfig
 
 from .test_reflection import GOOD, SCHEMA, Scripted, answer, usefulness
 
@@ -235,9 +235,9 @@ def test_cli_runtimes_can_edit_when_asked(monkeypatch, tmp_path):
     claude, pi = calls
     assert claude[claude.index("--tools") + 1] == "Read,Grep,Glob,Edit,Write"
     assert claude[claude.index("--allowedTools") + 1] == (
-        "mcp__thearc__commit_change,mcp__thearc__finish,Edit,Write")
+        "mcp__honed__commit_change,mcp__honed__finish,Edit,Write")
     assert pi[pi.index("--tools") + 1] == (
-        "read,grep,find,ls,edit,write,mcp__thearc__commit_change,mcp__thearc__finish")
+        "read,grep,find,ls,edit,write,mcp__honed__commit_change,mcp__honed__finish")
 
 
 def test_a_runtime_started_inside_a_harness_session_is_not_nested(monkeypatch, tmp_path):

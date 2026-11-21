@@ -1,6 +1,6 @@
 # Runtime support
 
-Reflectors, curators, and mergers run in the harnesses you already use. thearc connects its
+Reflectors, curators, and mergers run in the harnesses you already use. honed connects its
 tools (`submit_reflection`, or `commit_change` and `finish`) to each run as an MCP server served
 from your own process, and turns off your own customizations — hooks, skills, context files —
 where the harness allows it.
@@ -11,7 +11,7 @@ where the harness allows it.
 | Claude Code | yes | yes | yes | `claude -p`; Read/Grep/Glob, plus Edit/Write to edit |
 | Pi | yes | yes | yes | `pi -p --mode json`; read/grep/find/ls, plus edit/write; tools through a run-only extension |
 | OpenCode | yes | yes | yes | `opencode run --format json`; isolated run config, restricted permissions, per-run MCP tools |
-| Antigravity | no | no | no | reads MCP servers only from your own configuration, so thearc cannot connect its tools for one run |
+| Antigravity | no | no | no | reads MCP servers only from your own configuration, so honed cannot connect its tools for one run |
 
 Sessions can be indexed from Claude Code, Codex, Pi, OpenCode, and Antigravity, and exported to
 any of their formats; `--best-effort` keeps what a format cannot represent as labelled text.

@@ -29,9 +29,9 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from thearc.flow import AsyncFlow, AsyncNode, AsyncParallelBatchNode, BatchNode, Flow, Node
-from thearc.flow.decorators import node
-from thearc.flow.viz import FlowTracker
+from honed.flow import AsyncFlow, AsyncNode, AsyncParallelBatchNode, BatchNode, Flow, Node
+from honed.flow.decorators import node
+from honed.flow.viz import FlowTracker
 
 APP = logging.getLogger("flow_viz.app")  # What the flow does, step by step.
 WORKER = logging.getLogger("flow_viz.worker")  # Per-item work of batch nodes.

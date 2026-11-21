@@ -32,7 +32,7 @@ from scripts.prompt_harnesses import (
     skills_advertised,
     snapshot_agent,
 )
-from thearc.sessions import Sessions
+from honed.sessions import Sessions
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TOOL_ITEMS = {"command_execution", "file_change", "mcp_tool_call", "web_search", "collab_tool_call"}

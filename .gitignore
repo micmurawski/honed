@@ -36,5 +36,5 @@ graphify-out/
 artifacts/
 archive/
 .rtk/
-/.thearc/cache/
+/.honed/cache/
 RELEASE_PLAN.md

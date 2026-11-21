@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from thearc.curation import Merger
-from thearc.resources import CategoricalScale, AgentConfig
-from thearc.resources.evolution import evolution
-from thearc.resources.report import render_report, write_report
+from honed.curation import Merger
+from honed.resources import CategoricalScale, AgentConfig
+from honed.resources.evolution import evolution
+from honed.resources.report import render_report, write_report
 
 from .test_curation import ScriptedCurator, edit
 

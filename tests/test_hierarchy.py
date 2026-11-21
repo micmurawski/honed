@@ -1,6 +1,6 @@
 """Sections and their subsections: containment, rating roll-up, and change history of a subtree."""
 
-from thearc.resources import (
+from honed.resources import (
     CategoricalScale,
     AgentConfig,
     ReflectionSchema,

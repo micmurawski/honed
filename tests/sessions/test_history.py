@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from thearc.sessions.index import SessionIndex
-from thearc.sessions.models import SearchFilters, SearchQuery, SourceConfig
+from honed.sessions.index import SessionIndex
+from honed.sessions.models import SearchFilters, SearchQuery, SourceConfig
 
 
 def write(path, records):
@@ -448,7 +448,7 @@ def test_antigravity_adapter(tmp_path):
 def test_pi_system_prompt_sections_reach_the_export(tmp_path):
     """Pi 1.x keeps its system prompt in ``sections`` with an empty ``content``: a handoff still shows the
     project instructions and skills the session ran with."""
-    from thearc.sessions import Sessions
+    from honed.sessions import Sessions
 
     write(
         tmp_path / "pi" / "session.jsonl",

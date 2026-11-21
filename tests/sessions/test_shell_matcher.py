@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from thearc.sessions import Session
-from thearc.sessions.scanner import PatternScanner, ShellCommand
+from honed.sessions import Session
+from honed.sessions.scanner import PatternScanner, ShellCommand
 
 from .conftest import event
 

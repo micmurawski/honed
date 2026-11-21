@@ -20,11 +20,11 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cookbook.live_reflect import PROMPT, REPOSITORY, SCHEMA, SOURCES, USEFULNESS, graphify_agent
-from thearc.curation import Curator
-from thearc.reflection import Reflection, Reflector
-from thearc.resources import GitError, agent_at
-from thearc.sessions import Sessions
-from thearc.sessions.scanner import ShellCommand
+from honed.curation import Curator
+from honed.reflection import Reflection, Reflector
+from honed.resources import GitError, agent_at
+from honed.sessions import Sessions
+from honed.sessions.scanner import ShellCommand
 
 SESSIONS = 2  # How many Graphify sessions to reflect on before curating.
 

@@ -1,7 +1,7 @@
 # See how an agent evolved
 
 ```sh
-thearc report artifacts/graphify -o report.html --reflections artifacts/reflections
+honed report artifacts/graphify -o report.html --reflections artifacts/reflections
 ```
 
 Runs, candidates, merges and releases come from the workspace's branches —
@@ -23,8 +23,8 @@ another) and follows sections across renames by their lineage ID.
 From Python, with your scales for exact label order and meaning:
 
 ```python
-from thearc.resources.report import write_report
-from thearc.resources.evolution import evolution
+from honed.resources.report import write_report
+from honed.resources.evolution import evolution
 
 write_report("artifacts/graphify", "report.html", scales=[USEFULNESS], reflections="artifacts/reflections")
 data = evolution("artifacts/graphify")   # the same data as JSON, for your own tools
@@ -55,5 +55,5 @@ stamps it on each entry it records, and readers count it once per curation or me
 
 The **Token usage** tab sums them by kind, by round, by harness and model, and lists every run; the header shows
 the total. In code, `Reflection.reflector["usage"]`, `Curation.curator["usage"]` and `Merge.merger["usage"]` hold
-the same numbers, and `thearc.reflection.Usage.from_dict` reads them back. Runs made before thearc recorded usage
+the same numbers, and `honed.reflection.Usage.from_dict` reads them back. Runs made before honed recorded usage
 show none.

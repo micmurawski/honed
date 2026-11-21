@@ -5,6 +5,29 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- thearc is renamed **honed**: the package (`pip install honed`), the module (`import honed`), the command (`honed`,
+  and `hnd` for short), the repository (`micmurawski/honed`) and the docs (`micmurawski.github.io/honed`). In
+  projects and in your home folder `.thearc/` becomes `.honed/`, `$THEARC_INDEX` becomes `$HONED_INDEX`, and
+  `$THEARC_JUDGE_MODEL` becomes `$HONED_JUDGE_MODEL`.
+- Reflectors take the output model itself where they took a `ReflectionSchema`: `Reflector.reflect`,
+  `reflect_with_tools`, `handoff`, `WorkGraphReflector`, `Reflection.from_dict` and `Reflection.load` wrap it with
+  the new `ReflectionSchema.of`, so `handoff(prompt, session, agent, Lesson)` is enough. A `ReflectionSchema` still
+  works as before.
+
+### Migrating from thearc
+
+- The session index thearc made stays in use: `$THEARC_INDEX` is read when `$HONED_INDEX` is unset, and
+  `~/.thearc/learning.sqlite` while `~/.honed/learning.sqlite` does not exist. Move it with
+  `mv ~/.thearc ~/.honed` when you like.
+- A project thearc set up is refused until its folder is moved: `git mv .thearc .honed` (the workspace submodule and
+  the install record move with it), `mv .thearc/cache .honed/` if a cache is left, then reinstall the skills with
+  `hnd skills install self-evolve --project . --harness <harness>`: the installed `evolve.py` imports `thearc`.
+- Workspaces thearc made keep their branch names: the prefix is still read from `thearc.<agent>.prefix` in git
+  config.
+- `--format thearc` still exports sessions, as `honed`.
+
 ## 0.3.0
 
 ### Changed

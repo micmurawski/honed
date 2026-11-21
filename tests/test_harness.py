@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from thearc.resources import (
+from honed.resources import (
     HARNESSES,
     MCP,
     ContextDocument,
@@ -15,7 +15,7 @@ from thearc.resources import (
     installed_agents,
     uninstall,
 )
-from thearc.resources.markdown import split_frontmatter
+from honed.resources.markdown import split_frontmatter
 
 FASTAPI = Path(__file__).resolve().parent / "fastapi"
 
@@ -24,7 +24,7 @@ FASTAPI = Path(__file__).resolve().parent / "fastapi"
 def test_install_then_import_round_trips(agent, harness, tmp_path):
     result = install(agent, harness, tmp_path)
     imported = AgentConfig.from_installation(harness, tmp_path)
-    if harness in {"pi", "opencode"}:  # Neither takes hooks or MCP servers from thearc.
+    if harness in {"pi", "opencode"}:  # Neither takes hooks or MCP servers from honed.
         assert result.skipped == ("hook:guard", "hook:lint", "mcp:docs")
         agent = agent.model_copy(update={"hooks": {}, "mcps": {}})
     assert imported.revision == agent.revision
@@ -148,7 +148,7 @@ def test_reinstall_removes_dropped_sections_and_keeps_user_content(tmp_path):
     assert (tmp_path / "CLAUDE.md").read_text().rstrip() == USER_AGENTS.rstrip()
 
 
-def test_context_created_by_thearc_is_owned_whole(agent, tmp_path):
+def test_context_created_by_honed_is_owned_whole(agent, tmp_path):
     result = install(agent, "claude", tmp_path)
     assert result.context == {"AGENTS.md": None}
     uninstall("claude", tmp_path)

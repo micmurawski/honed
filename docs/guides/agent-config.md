@@ -7,7 +7,7 @@ extensions. It also carries a **journal** — the history of every section.
 ## Import, edit, install
 
 ```python
-from thearc.resources import Hook, AgentConfig, Skill
+from honed.resources import Hook, AgentConfig, Skill
 
 agent = AgentConfig.from_installation("claude", "path/to/project", name="graphify", version="1.0")
 agent.skills["retry"] = Skill(name="retry", description="Retry failing commands", instructions="# Retry\n…")
@@ -60,7 +60,7 @@ The journal is append-only. It holds **ratings** (from reflections) and **change
 Modified, Moved, Removed — from commits, each with the commit message as its reason).
 
 ```python
-from thearc.resources import record_commits, agent_at
+from honed.resources import record_commits, agent_at
 
 record_commits("artifacts/graphify", agent.journal)        # commits not yet in the journal
 agent.journal.changes(target, subsections=True)            # a section's change log, across moves

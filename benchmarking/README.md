@@ -13,9 +13,9 @@ can show that.
 
 - **`A`**: [Graphify](https://github.com/Graphify-Labs/graphify) 0.9.99, installed by its own installer
   (`graphify install --project --platform claude`, `graphify claude install`) into
-  [FastAPI](https://github.com/fastapi/fastapi) at `45cb2252`, then adopted by thearc
-  (`thearc skills install self-evolve`), which adds only section markers. Its files (`.claude/`, `CLAUDE.md`, minus
-  thearc's own evolve skill) are the snapshot `A`.
+  [FastAPI](https://github.com/fastapi/fastapi) at `45cb2252`, then adopted by honed
+  (`honed skills install self-evolve`), which adds only section markers. Its files (`.claude/`, `CLAUDE.md`, minus
+  honed's own evolve skill) are the snapshot `A`.
 - **`B`**: one `/evolve` round from `A`, on the sessions of the train tasks only, applied unedited, and snapshotted
   the same way.
 
@@ -90,7 +90,7 @@ B=artifacts/benchmark
 G="--graphify $B/.venv-graphify/bin/graphify --graphs $B/graphs"
 python -m benchmarking.bench train --benchmark benchmarking/fastapi-graphify --project $B/evolve-project \
   --model claude-sonnet-5-5 --path $B/.venv-fastapi/bin --path $B/.venv-graphify/bin $G --out $B/train
-(cd $B/evolve-project && thearc evolve && thearc evolve apply)
+(cd $B/evolve-project && honed evolve && honed evolve apply)
 python -m benchmarking.bench snapshot --project $B/evolve-project --out $B/arms/B
 python -m benchmarking.bench run --benchmark benchmarking/fastapi-graphify --repo $B/fastapi \
   --python $B/.venv-fastapi/bin/python --arm A=$B/arms/A --arm B=$B/arms/B --model claude-sonnet-5-5 \

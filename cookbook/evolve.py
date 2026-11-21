@@ -1,4 +1,4 @@
-"""Evolve Graphify over epochs with thearc: sessions on every harness → reflect → curate → merge → release.
+"""Evolve Graphify over epochs with honed: sessions on every harness → reflect → curate → merge → release.
 
     .venv/bin/python cookbook/evolve.py seed              # epoch 0: Graphify as the harnesses ran it
     .venv/bin/python cookbook/evolve.py epoch 1 [--push]  # then 2, 3, 4; a stopped epoch resumes when run again
@@ -26,12 +26,12 @@ if __package__ in {None, ""}:
 from cookbook.live_ace import CURATION_PROMPT
 from cookbook.live_ace_with_merge import MERGE_PROMPT
 from cookbook.live_reflect import PROMPT, SCHEMA, USEFULNESS
-from thearc.curation import Curator, Merger
-from thearc.harnesses import Harness
-from thearc.reflection import Reflection, Reflector
-from thearc.resources import AgentConfig
-from thearc.resources.report import write_report
-from thearc.sessions import Sessions
+from honed.curation import Curator, Merger
+from honed.harnesses import Harness
+from honed.reflection import Reflection, Reflector
+from honed.resources import AgentConfig
+from honed.resources.report import write_report
+from honed.sessions import Sessions
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT, BASE = ROOT / "tests" / "fastapi", "75e0095ea"  # FastAPI with Graphify 0.9.68, installed by Graphify.
@@ -39,7 +39,7 @@ OUT = ROOT / "artifacts" / "evolution"
 WORKSPACE, INSTALLED = OUT / "graphify", OUT / "project"
 MODEL = "minimax/MiniMax-M3#thinking"
 HARNESSES: dict[Harness, list[str]] = {"claude": [], "codex": [], "pi": ["-m", MODEL], "opencode": ["-m", MODEL]}
-# Sessions run Graphify's CLI, which is installed in thearc's virtual environment: put it on their PATH.
+# Sessions run Graphify's CLI, which is installed in honed's virtual environment: put it on their PATH.
 SESSION_ENV = {**os.environ, "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"}
 PROBES = ["02_deprecated_at_route_field.md", "06_structured_validation_error_code.md", "10_route_class_map.md"]
 WRITE_PROMPTS = """Write 5 new coding tasks for AI agents working on the FastAPI repository in this directory:
@@ -172,7 +172,7 @@ def curate(agent: AgentConfig, harness: Harness, session_ids: list[str], out: Pa
             if saved.exists():
                 reflection = Reflection.load(saved, SCHEMA)
             else:
-                installed = f"The session ran where thearc had installed {agent.name} {agent.version} for {harness}: " \
+                installed = f"The session ran where honed had installed {agent.name} {agent.version} for {harness}: " \
                             "the files you are given, loaded by the harness when the session started."
                 reflection = Reflector("codex").handoff(PROMPT, sessions.get(session_id), candidate, SCHEMA,
                                                         provenance=installed)
@@ -188,7 +188,7 @@ def report(path: Path) -> None:
 
 
 def git(repo: Path, *args: object, check: bool = True) -> str:
-    command = ["git", "-C", repo, "-c", "user.name=thearc", "-c", "user.email=thearc@localhost", *args]
+    command = ["git", "-C", repo, "-c", "user.name=honed", "-c", "user.email=honed@localhost", *args]
     return subprocess.run(list(map(str, command)), capture_output=True, text=True, check=check).stdout.strip()
 
 

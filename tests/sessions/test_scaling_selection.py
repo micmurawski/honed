@@ -2,8 +2,8 @@
 
 import pytest
 
-from thearc.sessions.index import SessionIndex
-from thearc.sessions.models import Event, SearchFilters, SourceReference
+from honed.sessions.index import SessionIndex
+from honed.sessions.models import Event, SearchFilters, SourceReference
 
 
 @pytest.fixture

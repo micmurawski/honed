@@ -1,4 +1,4 @@
-"""Tests for thearc.sessions.scanner module.
+"""Tests for honed.sessions.scanner module.
 
 Run with:
     python -m pytest tests/learning/sessions/test_session_scanner.py -v
@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
-from thearc.sessions.models import Event, SourceReference
-from thearc.sessions.scanner import DEFAULT_PATTERNS, PatternScanner
-from thearc.sessions.scanner.patterns import (
+from honed.sessions.models import Event, SourceReference
+from honed.sessions.scanner import DEFAULT_PATTERNS, PatternScanner
+from honed.sessions.scanner.patterns import (
     AbandonedFix,
     BehavioralPattern,
     EmptyToolResult,
@@ -434,8 +434,8 @@ class TestPatternScanner:
 def indexed_store(tmp_path):
     import json
 
-    from thearc.sessions.index import SessionIndex
-    from thearc.sessions.models import SourceConfig
+    from honed.sessions.index import SessionIndex
+    from honed.sessions.models import SourceConfig
 
     root = tmp_path / "logs"
     root.mkdir()
@@ -482,7 +482,7 @@ def indexed_store(tmp_path):
 
 
 def test_sql_filters_select_sessions_and_load_complete_sequences(indexed_store, monkeypatch):
-    from thearc.sessions.models import SearchFilters
+    from honed.sessions.models import SearchFilters
 
     store = indexed_store
     filters = SearchFilters(
@@ -534,7 +534,7 @@ def test_sql_filters_select_sessions_and_load_complete_sequences(indexed_store, 
 
 
 def test_filters_must_match_the_same_event(indexed_store):
-    from thearc.sessions.models import SearchFilters
+    from honed.sessions.models import SearchFilters
 
     # These sessions contain both calls and failures, but no failed call event.
     assert (
@@ -553,8 +553,8 @@ def test_filters_must_match_the_same_event(indexed_store):
 def test_candidate_selection_has_no_page_cap(tmp_path):
     import json
 
-    from thearc.sessions.index import SessionIndex
-    from thearc.sessions.models import SearchFilters, SourceConfig
+    from honed.sessions.index import SessionIndex
+    from honed.sessions.models import SearchFilters, SourceConfig
 
     root = tmp_path / "logs"
     root.mkdir()
@@ -679,7 +679,7 @@ def test_abandoned_fix_requires_evidence_of_editing_another_file():
 
 
 def test_pattern_definitions_have_one_canonical_module():
-    from thearc.sessions.scanner import patterns
+    from honed.sessions.scanner import patterns
 
     assert all(
         getattr(patterns, name).__module__ == patterns.__name__

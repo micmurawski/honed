@@ -226,7 +226,7 @@ def main(argv: list[str] | None = None) -> None:
     snapping = commands.add_parser("snapshot", help="Save a project's installed configuration as an arm.")
     snapping.add_argument("--project", type=Path, required=True)
     snapping.add_argument("--files", nargs="+", default=[".claude", "CLAUDE.md"])
-    snapping.add_argument("--exclude", nargs="*", default=["evolve"], help="Names left out (thearc's own skill).")
+    snapping.add_argument("--exclude", nargs="*", default=["evolve"], help="Names left out (honed's own skill).")
     snapping.add_argument("--out", type=Path, required=True)
     snapping.set_defaults(handler=snapshot_command)
     analysing = commands.add_parser("analyze", help="Delta, its interval, the verdict, and costs.")

@@ -175,8 +175,8 @@ The collector creates `index.sqlite` with source ID `<harness>-prompts`.
 Only the copied corpus is indexed:
 
 ```bash
-.venv/bin/thearc sessions --index logs/pi-prompts/fastapi/index.sqlite list
-.venv/bin/thearc sessions --index logs/pi-prompts/fastapi/index.sqlite search "routing.py" --kind tool_call
+.venv/bin/honed sessions --index logs/pi-prompts/fastapi/index.sqlite list
+.venv/bin/honed sessions --index logs/pi-prompts/fastapi/index.sqlite search "routing.py" --kind tool_call
 ```
 
 Use the [Graphify evidence recipe](../docs/examples/graphify.md) to select sessions

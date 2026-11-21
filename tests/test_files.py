@@ -1,7 +1,7 @@
 import pytest
 
-from thearc.resources import FileReference, AgentConfig, ResourceTarget, Skill
-from thearc.resources.markdown import outline, split_frontmatter
+from honed.resources import FileReference, AgentConfig, ResourceTarget, Skill
+from honed.resources.markdown import outline, split_frontmatter
 
 SKILL = "skills/retry/SKILL.md"
 

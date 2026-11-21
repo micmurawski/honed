@@ -13,9 +13,9 @@ Publishing a GitHub Release triggers a PyPI upload after all checks pass.
 
    | Field | Value |
    | --- | --- |
-   | PyPI project | `thearc` |
+   | PyPI project | `honed` |
    | Owner | `micmurawski` |
-   | Repository | `thearc` |
+   | Repository | `honed` |
    | Workflow filename | `release.yml` |
    | Environment | `pypi` |
 
@@ -31,9 +31,9 @@ them to `main`. Use a clean, reviewed commit; do not include unrelated local wor
 Then create a matching tag and publish the GitHub Release:
 
 ```sh
-git tag -a v0.1.0 -m "thearc 0.1.0"
+git tag -a v0.1.0 -m "honed 0.1.0"
 git push origin v0.1.0
-gh release create v0.1.0 --verify-tag --title "thearc 0.1.0" --generate-notes
+gh release create v0.1.0 --verify-tag --title "honed 0.1.0" --generate-notes
 ```
 
 Replace `0.1.0` with the new version. Tag names must exactly equal `v` plus the

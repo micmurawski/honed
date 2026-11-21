@@ -10,10 +10,10 @@ from pathlib import Path
 
 import pytest
 
-from thearc import evolve
-from thearc.curation import Curator
-from thearc.reflection import Reflector
-from thearc.resources import AgentConfig, install
+from honed import evolve
+from honed.curation import Curator
+from honed.reflection import Reflector
+from honed.resources import AgentConfig, install
 
 from .test_curation import ScriptedCurator, edit
 from .test_reflection import GOOD, SCHEMA, Scripted, answer
@@ -44,7 +44,7 @@ def project(agent, tmp_path, monkeypatch):
              "message": {"role": "user", "content": text}}) + "\n")
     evolved = {"type": "assistant", "sessionId": "s4", "cwd": str(root.resolve()), "timestamp": now,
                "message": {"role": "assistant", "content": [
-                   {"type": "tool_use", "id": "t", "name": "Bash", "input": {"command": "thearc evolve --json"}}]}}
+                   {"type": "tool_use", "id": "t", "name": "Bash", "input": {"command": "honed evolve --json"}}]}}
     (store / "s4.jsonl").write_text(json.dumps(evolved) + "\n")  # An /evolve run: never evidence.
     return root
 
@@ -73,7 +73,7 @@ def scripted_recipe(edits, seen):
     return propose
 
 
-WORKSPACE = ".thearc/workspace"
+WORKSPACE = ".honed/workspace"
 
 
 def test_install_adopts_the_harness_configuration_beside_the_evolve_skill(project):
@@ -81,18 +81,18 @@ def test_install_adopts_the_harness_configuration_beside_the_evolve_skill(projec
     workspace = project / WORKSPACE
     assert git(workspace, "rev-parse", "--abbrev-ref", "HEAD") == "main"  # A repository of its own…
     assert git(project, "ls-files", "--stage", WORKSPACE).startswith("160000")  # …added as a submodule.
-    assert "path = .thearc/workspace" in (project / ".gitmodules").read_text()
-    assert not git(project, "for-each-ref", "refs/heads/thearc")  # No workspace branches in the project.
+    assert "path = .honed/workspace" in (project / ".gitmodules").read_text()
+    assert not git(project, "for-each-ref", "refs/heads/honed")  # No workspace branches in the project.
     assert setup.agent.name == "app" and set(setup.agent.skills) == {"retry"}
     assert setup.agent.ignore == ["skill:evolve", "skill:reflect"] and not setup.agent.frozen  # Never evolved.
     skill = project / ".claude/skills/evolve"
     assert 'RUNTIME = "claude"' in (skill / "evolve.py").read_text() and (skill / "prompts/curate.md").is_file()
     assert 'HARNESS = "claude"' in (skill / "evolve.py").read_text()  # Only Claude's sessions are read.
-    assert "`thearc evolve diff`" in (skill / "SKILL.md").read_text()
-    record = json.loads((project / ".thearc/installed.json").read_text())["agents"]
-    assert ".claude/skills/evolve/SKILL.md" in record["thearc-evolve"]["harnesses"]["claude"]["files"]
+    assert "`honed evolve diff`" in (skill / "SKILL.md").read_text()
+    record = json.loads((project / ".honed/installed.json").read_text())["agents"]
+    assert ".claude/skills/evolve/SKILL.md" in record["honed-evolve"]["harnesses"]["claude"]["files"]
     ignored = set((project / ".gitignore").read_text().splitlines())
-    assert "/.thearc/cache/" in ignored and "/.thearc/workspace/" not in ignored
+    assert "/.honed/cache/" in ignored and "/.honed/workspace/" not in ignored
     assert git(project, "rev-parse", "--abbrev-ref", "HEAD") == "main"  # The project's checkout is untouched.
     status = evolve.status(project)
     assert status["installed"] == "1.0.0" and status["runtime"] == "claude" and status["harness"] == "claude"
@@ -138,7 +138,7 @@ def test_a_round_proposes_amends_and_applies(project):
     assert git(workspace, "rev-parse", "--abbrev-ref", "HEAD") == "main"
     branches = git(workspace, "for-each-ref", "--format=%(refname:short)", "refs/heads").split()
     assert "release/1.0.1" in branches and not any("proposal" in b for b in branches)
-    assert git(project, "status", "--porcelain", WORKSPACE).endswith("M .thearc/workspace")  # The submodule moved.
+    assert git(project, "status", "--porcelain", WORKSPACE).endswith("M .honed/workspace")  # The submodule moved.
     assert AgentConfig.from_workspace(workspace).version == "1.0.1"
 
     installed = project / ".claude/skills/retry/SKILL.md"  # A hand edit before the next round…
@@ -182,8 +182,8 @@ def test_the_default_recipe_is_the_installed_one_and_waits_for_enough_sessions(p
 def test_the_default_recipe_shows_its_progress_and_proposes(project, monkeypatch):
     import dataclasses
 
-    import thearc.curation
-    import thearc.reflection
+    import honed.curation
+    import honed.reflection
 
     lesson = {"reasoning": "r", "error_identification": "e", "root_cause_analysis": "c", "correct_approach": "a",
               "key_insight": "k", "ratings": [{"ref": "skills/retry/SKILL.md#L17", "usefulness": "harmful"}]}
@@ -197,7 +197,7 @@ def test_the_default_recipe_shows_its_progress_and_proposes(project, monkeypatch
         def handoff(self, prompt, session, agent, schema, *, provenance=None, focus=None, judged_from=None):
             if not failed:
                 failed.append(session.id)
-                raise thearc.reflection.ReflectionError("no_submission", "ended without a submission")
+                raise honed.reflection.ReflectionError("no_submission", "ended without a submission")
             reflection = Reflector(runtime=Scripted([lesson])).reflect(prompt, agent, schema)
             return dataclasses.replace(reflection, evidence={"session": session.id, "provenance": provenance})
 
@@ -208,8 +208,8 @@ def test_the_default_recipe_shows_its_progress_and_proposes(project, monkeypatch
             tool("finish", summary="Lowered the limit.")
         return Curator(runtime=ScriptedCurator(script))
 
-    monkeypatch.setattr(thearc.reflection, "Reflector", ScriptedReflector)
-    monkeypatch.setattr(thearc.curation, "Curator", curator)
+    monkeypatch.setattr(honed.reflection, "Reflector", ScriptedReflector)
+    monkeypatch.setattr(honed.curation, "Curator", curator)
     evolve.install_evolve_skill(project, "claude")
     proposal = evolve.run(project)
     assert proposal.version == "1.0.1" and proposal.sessions == 3 and "max 2" in proposal.diff
@@ -217,7 +217,7 @@ def test_the_default_recipe_shows_its_progress_and_proposes(project, monkeypatch
     assert page.count('class="chip success">success') == 5  # FindSessions, Partition, Source, Reflect, Curate.
     assert "3 claude session(s)" in page and "1 rating(s) (1 harmful)" in page and "Two tries are enough" in page
     assert f"{failed[0]}: no reflection (ended without a submission); going on without it" in page
-    assert (project / ".thearc/cache/progress.html").read_text() == page
+    assert (project / ".honed/cache/progress.html").read_text() == page
 
 
 def test_a_project_evolves_one_harness(project):
@@ -231,7 +231,7 @@ def test_a_project_evolves_one_harness(project):
 def test_the_command_line(project, tmp_path):
     from click.testing import CliRunner
 
-    from thearc.cli import main
+    from honed.cli import main
 
     runner = CliRunner()
     result = runner.invoke(main, ["skills", "install", "self-evolve", "--project", str(project), "--harness", "claude"])
@@ -288,22 +288,22 @@ def test_apply_pushes_the_workspace_when_asked(project, tmp_path, monkeypatch):
 
 
 def test_a_round_can_be_estimated_first_and_stops_over_its_budget(project, monkeypatch):
-    import thearc.reflection
+    import honed.reflection
 
     def no_model(*args, **kwargs):
         raise AssertionError("an estimate makes no model call")
 
-    monkeypatch.setattr(thearc.reflection, "Reflector", no_model)
+    monkeypatch.setattr(honed.reflection, "Reflector", no_model)
     evolve.install_evolve_skill(project, "claude")
     estimated = evolve.run(project, estimate_only=True)
     assert estimated.version is None and estimated.estimate is not None and estimated.estimate.sessions == 3
     assert estimated.estimate.cost is None and "no cost history yet" in estimated.reason
     assert estimated.estimate.tokens > 0 and "Stop" in Path(estimated.progress).read_text()
-    assert not list((project / ".thearc/cache/rounds").glob("*/candidates"))  # Nothing was set up for reflecting.
+    assert not list((project / ".honed/cache/rounds").glob("*/candidates"))  # Nothing was set up for reflecting.
 
     recipe = project / ".claude/skills/evolve/evolve.py"
     recipe.write_text(recipe.read_text().replace("BUDGET: float | None = None", "BUDGET: float | None = 0.01"))
-    monkeypatch.setattr("thearc.evolve.round.estimate", lambda *a, **k: evolve.Estimate(3, 900, 0.5, "from history"))
+    monkeypatch.setattr("honed.evolve.round.estimate", lambda *a, **k: evolve.Estimate(3, 900, 0.5, "from history"))
     over = evolve.run(project)
     assert over.version is None and over.reason == "estimated at $0.50, over the budget of $0.01"
 
@@ -311,9 +311,9 @@ def test_a_round_can_be_estimated_first_and_stops_over_its_budget(project, monke
 def test_a_later_round_reuses_the_reflections_of_one_that_was_discarded(project, monkeypatch):
     import dataclasses
 
-    import thearc.curation
-    import thearc.reflection
-    from thearc.reflection.reflector import events_digest, fingerprint
+    import honed.curation
+    import honed.reflection
+    from honed.reflection.reflector import events_digest, fingerprint
 
     lesson = {"reasoning": "r", "error_identification": "e", "root_cause_analysis": "c", "correct_approach": "a",
               "key_insight": "k", "ratings": [{"ref": "skills/retry/SKILL.md#L17", "usefulness": "harmful"}]}
@@ -341,9 +341,9 @@ def test_a_later_round_reuses_the_reflections_of_one_that_was_discarded(project,
         def now(cls, tz=None):
             return datetime(2099, 1, 2, 3, 4, 5, tzinfo=tz)
 
-    monkeypatch.setattr(thearc.reflection, "Reflector", ScriptedReflector)
-    monkeypatch.setattr(thearc.curation, "Curator", curator)
-    monkeypatch.setattr("thearc.evolve.round.datetime", Frozen)
+    monkeypatch.setattr(honed.reflection, "Reflector", ScriptedReflector)
+    monkeypatch.setattr(honed.curation, "Curator", curator)
+    monkeypatch.setattr("honed.evolve.round.datetime", Frozen)
     evolve.install_evolve_skill(project, "claude")
     first = evolve.run(project)
     assert first.version == "1.0.1" and len(reflected) == 3
@@ -370,10 +370,10 @@ def test_a_later_round_reuses_the_reflections_of_one_that_was_discarded(project,
 def test_the_recipe_can_reflect_on_root_threads_only(project, monkeypatch):
     import dataclasses
 
-    import thearc.curation
-    import thearc.reflection
-    from thearc.reflection.reflector import events_digest, fingerprint
-    from thearc.sessions import Thread
+    import honed.curation
+    import honed.reflection
+    from honed.reflection.reflector import events_digest, fingerprint
+    from honed.sessions import Thread
 
     store = next((Path(os.environ["CLAUDE_CONFIG_DIR"]) / "projects").iterdir())
     subagent = {"type": "user", "sessionId": "s1", "cwd": str(project.resolve()), "timestamp": "2099-01-01T10:00:01Z",
@@ -402,8 +402,8 @@ def test_the_recipe_can_reflect_on_root_threads_only(project, monkeypatch):
             tool("finish", summary="Lowered the limit.")
         return Curator(runtime=ScriptedCurator(script))
 
-    monkeypatch.setattr(thearc.reflection, "Reflector", ScriptedReflector)
-    monkeypatch.setattr(thearc.curation, "Curator", curator)
+    monkeypatch.setattr(honed.reflection, "Reflector", ScriptedReflector)
+    monkeypatch.setattr(honed.curation, "Curator", curator)
     evolve.install_evolve_skill(project, "claude")
     recipe = project / ".claude/skills/evolve/evolve.py"
     recipe.write_text(recipe.read_text().replace('REFLECT_ON = "session"', 'REFLECT_ON = "root"'))
@@ -422,8 +422,8 @@ def test_the_recipe_can_reflect_on_root_threads_only(project, monkeypatch):
 def test_the_recipe_hands_reflectors_the_failure_findings_and_can_select_by_them(project, monkeypatch):
     import dataclasses
 
-    import thearc.curation
-    import thearc.reflection
+    import honed.curation
+    import honed.reflection
 
     store = next((Path(os.environ["CLAUDE_CONFIG_DIR"]) / "projects").iterdir())
     cwd, now = str(project.resolve()), "2099-01-01T10:00:00Z"
@@ -460,8 +460,8 @@ def test_the_recipe_hands_reflectors_the_failure_findings_and_can_select_by_them
             tool("finish", summary="Lowered the limit.")
         return Curator(runtime=ScriptedCurator(script))
 
-    monkeypatch.setattr(thearc.reflection, "Reflector", ScriptedReflector)
-    monkeypatch.setattr(thearc.curation, "Curator", curator)
+    monkeypatch.setattr(honed.reflection, "Reflector", ScriptedReflector)
+    monkeypatch.setattr(honed.curation, "Curator", curator)
     evolve.install_evolve_skill(project, "claude")
     recipe = project / ".claude/skills/evolve/evolve.py"
     recipe.write_text(recipe.read_text().replace("MIN_SESSIONS = 3", "MIN_SESSIONS = 1"))
@@ -483,10 +483,10 @@ def test_a_round_sources_existing_reflections_and_reflects_only_on_the_rest(proj
     the two existing reflections, hands off s3 whole and s2's tail, and curates from all four."""
     import dataclasses
 
-    import thearc.curation
-    import thearc.reflection
-    from thearc.reflection import Prompt
-    from thearc.sessions import Sessions
+    import honed.curation
+    import honed.reflection
+    from honed.reflection import Prompt
+    from honed.sessions import Sessions
 
     store = next((Path(os.environ["CLAUDE_CONFIG_DIR"]) / "projects").iterdir())
     lines = [json.dumps({"type": "user" if i % 2 else "assistant", "sessionId": "s2", "cwd": str(project.resolve()),
@@ -523,8 +523,8 @@ def test_a_round_sources_existing_reflections_and_reflects_only_on_the_rest(proj
 
         return Recording(runtime=ScriptedCurator(script))
 
-    monkeypatch.setattr(thearc.reflection, "Reflector", ScriptedReflector)
-    monkeypatch.setattr(thearc.curation, "Curator", curator)
+    monkeypatch.setattr(honed.reflection, "Reflector", ScriptedReflector)
+    monkeypatch.setattr(honed.curation, "Curator", curator)
     evolve.install_evolve_skill(project, "claude")
     release = AgentConfig.from_workspace(project / WORKSPACE)
     prompt = Prompt.load(project / ".claude/skills/evolve/prompts/reflect.md")

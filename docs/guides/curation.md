@@ -3,7 +3,7 @@
 A **curator** edits the configuration in response to reflections, like acting on a code review.
 
 ```python
-from thearc.curation import Curator
+from honed.curation import Curator
 
 curation = Curator("codex").curate(PROMPT, reflections, agent, scales=[usefulness])
 curation.commits      # one per change: sha, message (the reason), targets changed

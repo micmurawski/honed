@@ -46,7 +46,7 @@ GitHub Pages. Pull requests and other branches do not publish. Maintainers can
 also run the workflow manually on `main` from the Actions tab. Deployments use the
 `github-pages` environment and respect its protection rules.
 
-The public URL is `https://micmurawski.github.io/thearc/`, also configured as
+The public URL is `https://micmurawski.github.io/honed/`, also configured as
 `site_url` in `mkdocs.yml`. If using a fork or custom domain, change that setting.
 If renaming `main`, update the workflow's upload and deployment conditions.
 Local `mkdocs build` and `mkdocs serve` never publish anything.

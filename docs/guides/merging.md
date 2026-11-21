@@ -3,7 +3,7 @@
 Run several pipelines in parallel from the same base, then combine their candidates.
 
 ```python
-from thearc.curation import Curator, Merger
+from honed.curation import Curator, Merger
 
 c1 = agent.to_worktree("runs/1/p1")       # branch candidate/p1, from the workspace's current commit
 c2 = agent.to_worktree("runs/1/p2")
@@ -20,7 +20,7 @@ merge.commits        # one per section
 
 ## How merging works
 
-- thearc finds the candidates' shared base from git and refuses candidates of different
+- honed finds the candidates' shared base from git and refuses candidates of different
   workspaces, or ones that did not all branch from the same commit.
 - It gathers the **proposals**: every section any candidate changed, grouped by lineage ID, with
   its text at the base, each candidate's version, the commit messages behind it, and the ratings

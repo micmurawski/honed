@@ -3,8 +3,8 @@
 import subprocess
 from types import SimpleNamespace
 
-from thearc.curation import Curator
-from thearc.reflection import Reflector
+from honed.curation import Curator
+from honed.reflection import Reflector
 
 from .test_curation import ScriptedCurator, edit
 from .test_reflection import GOOD, SCHEMA, Scripted, answer

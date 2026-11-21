@@ -2,8 +2,8 @@
 
 import json
 
-from thearc.sessions import Sessions
-from thearc.sessions.stores import store_folders
+from honed.sessions import Sessions
+from honed.sessions.stores import store_folders
 
 
 def line(native, cwd, content, kind="user"):
@@ -26,7 +26,7 @@ def test_a_projects_claude_sessions_are_found_and_evolve_runs_left_out(tmp_path)
     write(store / f"{mangled}-src" / "b.jsonl", line("b", str(project / "src"), "Add a test"))
     write(store / f"{mangled}-src" / "c.jsonl", line("c", str(project / "src"), "Evolve"),
           line("c", str(project / "src"), [{"type": "tool_use", "id": "t", "name": "Bash",
-                                            "input": {"command": "thearc evolve --json"}}], kind="assistant"))
+                                            "input": {"command": "honed evolve --json"}}], kind="assistant"))
     write(store / f"{mangled}x" / "d.jsonl", line("d", f"{project}x", "Elsewhere"))  # A sibling, not below.
     write(store / "-other" / "e.jsonl", line("e", "/other", "Unrelated"))
 
@@ -38,7 +38,7 @@ def test_a_projects_claude_sessions_are_found_and_evolve_runs_left_out(tmp_path)
         sessions.add(store / f"{mangled}x", harness="claude")
         found = {s.native_id for s in sessions.list(cwd=project)}
         assert found == {"a", "b", "c"}
-        assert {s.native_id for s in sessions.list(cwd=project, without_call="thearc evolve")} == {"a", "b"}
+        assert {s.native_id for s in sessions.list(cwd=project, without_call="honed evolve")} == {"a", "b"}
         assert {s.native_id for s in sessions.list(cwd=project / "src")} == {"b", "c"}
 
 

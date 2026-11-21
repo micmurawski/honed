@@ -3,12 +3,12 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from thearc.cli import main
-from thearc.sessions import Event, Session, Sessions, SourceReference
-from thearc.sessions.analysis.aeg import ExecutionGraphView, export_execution_graph
-from thearc.sessions.analysis.aeg.events import cases_from_threads, truncate_output
-from thearc.sessions.analysis.aeg.graph import CaseSequence, aggregate, outcome
-from thearc.sessions.analysis.aeg.labels import (
+from honed.cli import main
+from honed.sessions import Event, Session, Sessions, SourceReference
+from honed.sessions.analysis.aeg import ExecutionGraphView, export_execution_graph
+from honed.sessions.analysis.aeg.events import cases_from_threads, truncate_output
+from honed.sessions.analysis.aeg.graph import CaseSequence, aggregate, outcome
+from honed.sessions.analysis.aeg.labels import (
     LLMLabeler,
     assistant_kind,
     command_family,
@@ -17,8 +17,8 @@ from thearc.sessions.analysis.aeg.labels import (
     significant_part,
     user_intent,
 )
-from thearc.sessions.analysis.aeg.mining import contrast, happy_path, loop_instances, loops, prefixspan
-from thearc.sessions.analysis.aeg.states import abstract, check_abstraction, coarsen
+from honed.sessions.analysis.aeg.mining import contrast, happy_path, loop_instances, loops, prefixspan
+from honed.sessions.analysis.aeg.states import abstract, check_abstraction, coarsen
 
 from .test_sessions import write_jsonl
 
@@ -199,8 +199,8 @@ def test_outcomes():
 
 
 def sequence(names, outcome="completed", case_id="c"):
-    from thearc.sessions.analysis.aeg.events import Case
-    from thearc.sessions.analysis.aeg.states import State
+    from honed.sessions.analysis.aeg.events import Case
+    from honed.sessions.analysis.aeg.states import State
 
     case = Case(case_id, case_id, case_id, case_id, "main", "pi", True, False, None, None, None)
     states = []

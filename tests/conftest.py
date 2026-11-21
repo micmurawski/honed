@@ -1,6 +1,6 @@
 import pytest
 
-from thearc.resources import MCP, AgentResource, ContextDocument, Hook, AgentConfig, Skill
+from honed.resources import MCP, AgentResource, ContextDocument, Hook, AgentConfig, Skill
 
 RETRY = """Intro line
 
@@ -47,7 +47,7 @@ def human() -> dict:
 @pytest.fixture
 def reviewed(agent, tmp_path):
     """A workspace whose journal holds one reflection rating ``Retry > Limits`` harmful."""
-    from thearc.reflection import Reflector
+    from honed.reflection import Reflector
 
     from .test_reflection import GOOD, SCHEMA, Scripted, answer
 
@@ -68,6 +68,6 @@ def candidates(agent, tmp_path):
 @pytest.fixture(autouse=True)
 def session_index(tmp_path, monkeypatch):
     """Every test's own session index (where sessions and reflections are kept), never the user's."""
-    path = tmp_path / "thearc-index.sqlite"
-    monkeypatch.setenv("THEARC_INDEX", str(path))
+    path = tmp_path / "honed-index.sqlite"
+    monkeypatch.setenv("HONED_INDEX", str(path))
     return path

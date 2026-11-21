@@ -23,9 +23,9 @@ from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from thearc.reflection import RUNTIMES, ReflectionError, Reflector
-from thearc.resources import CategoricalScale, ContextDocument, AgentConfig, ReflectionSchema, Skill
-from thearc.sessions import Event, Session, SourceReference
+from honed.reflection import RUNTIMES, ReflectionError, Reflector
+from honed.resources import CategoricalScale, ContextDocument, AgentConfig, ReflectionSchema, Skill
+from honed.sessions import Event, Session, SourceReference
 
 
 class Insight(BaseModel):

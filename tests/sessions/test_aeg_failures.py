@@ -5,12 +5,12 @@ import json
 
 from click.testing import CliRunner
 
-from thearc.cli import main
-from thearc.evolve.round import release_at
-from thearc.sessions import Session
-from thearc.sessions.analysis.aeg import ExecutionGraphView, export_execution_graph, focus, session_failures
-from thearc.sessions.analysis.aeg.events import cases_from_threads
-from thearc.sessions.analysis.aeg.failures import (
+from honed.cli import main
+from honed.evolve.round import release_at
+from honed.sessions import Session
+from honed.sessions.analysis.aeg import ExecutionGraphView, export_execution_graph, focus, session_failures
+from honed.sessions.analysis.aeg.events import cases_from_threads
+from honed.sessions.analysis.aeg.failures import (
     MODES,
     TAXONOMY,
     FailureReport,
@@ -20,10 +20,10 @@ from thearc.sessions.analysis.aeg.failures import (
     failure_mode_scale,
     kappa,
 )
-from thearc.sessions.analysis.aeg.graph import CaseSequence, outcome
-from thearc.sessions.analysis.aeg.judge import FailureJudge, agreement, check, choose, window
-from thearc.sessions.analysis.aeg.labels import label_case
-from thearc.sessions.analysis.aeg.states import abstract
+from honed.sessions.analysis.aeg.graph import CaseSequence, outcome
+from honed.sessions.analysis.aeg.judge import FailureJudge, agreement, check, choose, window
+from honed.sessions.analysis.aeg.labels import label_case
+from honed.sessions.analysis.aeg.states import abstract
 
 from . import test_aeg
 from .test_aeg import call, event, result, threads
@@ -243,7 +243,7 @@ def test_focus_for_reflectors_and_the_scale(store):
 
 
 def test_the_reflector_gets_the_focus(monkeypatch):
-    from thearc.reflection.reflector import Reflector
+    from honed.reflection.reflector import Reflector
 
     seen = {}
 
@@ -262,7 +262,7 @@ def test_the_reflector_gets_the_focus(monkeypatch):
 
 
 def _schema():
-    from thearc.evolve import SCHEMA
+    from honed.evolve import SCHEMA
 
     return SCHEMA
 

@@ -1,6 +1,6 @@
 import pytest
 
-from thearc.sessions import Event, Session, SourceReference
+from honed.sessions import Event, Session, SourceReference
 
 
 def event(number, *, kind="message", role="assistant", text="", **kwargs):

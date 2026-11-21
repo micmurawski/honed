@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel
 
-from thearc.reflection import Conversation, Reflection, ReflectionError, Reflector, Runtime, Submission, ToolEndpoint
-from thearc.reflection import runtimes as runtime_module
-from thearc.reflection.prompts import prompt_hash, schema_hash
-from thearc.reflection.reflector import events_digest, fingerprint
-from thearc.resources import CategoricalScale, ReflectionSchema, ResourceTarget
-from thearc.sessions import InstalledSession
+from honed.reflection import Conversation, Reflection, ReflectionError, Reflector, Runtime, Submission, ToolEndpoint
+from honed.reflection import runtimes as runtime_module
+from honed.reflection.prompts import prompt_hash, schema_hash
+from honed.reflection.reflector import events_digest, fingerprint
+from honed.resources import CategoricalScale, ReflectionSchema, ResourceTarget
+from honed.sessions import InstalledSession
 
 from .sessions.test_round_trip import SESSION
 
@@ -148,7 +148,7 @@ def test_the_tool_declares_the_item_schema(agent):
             (declared,) = json.loads(response.read())["result"]["tools"]
     items = declared["inputSchema"]["properties"]["items"]
     assert declared["name"] == "submit_reflection" and items["items"]["required"][:2] == ["ref", "rating"]
-    assert tool.qualified == ("mcp__thearc__submit_reflection",)
+    assert tool.qualified == ("mcp__honed__submit_reflection",)
 
 
 def test_an_empty_list_is_a_valid_reflection(agent):
@@ -199,7 +199,7 @@ def test_handoff_installs_the_history_and_forks_it(agent, tmp_path):
 
 
 def test_handoff_tells_the_reflector_what_the_record_leaves_out(agent, tmp_path, monkeypatch):
-    from thearc.reflection import reflector
+    from honed.reflection import reflector
 
     plain = Scripted(answer(GOOD))
     Reflector(runtime=plain, home=tmp_path).handoff("Review.", SESSION, agent, SCHEMA)
@@ -306,11 +306,11 @@ def test_cli_runtimes_connect_only_the_submit_tool(commands, tmp_path):
         assert TOOL.url in extension.read_text() and '"direct"' in extension.read_text()
     claude = calls[0]["command"]
     assert json.loads(claude[claude.index("--mcp-config") + 1]) == {
-        "mcpServers": {"thearc": {"type": "http", "url": TOOL.url}}
+        "mcpServers": {"honed": {"type": "http", "url": TOOL.url}}
     }
-    assert claude[claude.index("--allowedTools") + 1] == "mcp__thearc__submit_reflection"
+    assert claude[claude.index("--allowedTools") + 1] == "mcp__honed__submit_reflection"
     assert claude[claude.index("--tools") + 1] == "Read,Grep,Glob"
-    assert pi[pi.index("--tools") + 1] == "read,grep,find,ls,mcp__thearc__submit_reflection"
+    assert pi[pi.index("--tools") + 1] == "read,grep,find,ls,mcp__honed__submit_reflection"
 
 
 def test_antigravity_cannot_connect_the_submit_tool(tmp_path):
@@ -334,7 +334,7 @@ def test_to_dict_is_json_ready(agent):
 
 
 def test_a_prompt_is_known_by_its_name_version_and_hash(tmp_path, agent):
-    from thearc.reflection.prompts import Prompt
+    from honed.reflection.prompts import Prompt
 
     path = tmp_path / "reflect.md"
     path.write_text("---\nid: reflect\nversion: 2\n---\nReview the configuration.\n")
@@ -359,7 +359,7 @@ def test_cli_runs_get_a_closed_stdin(tmp_path):
 
 
 def test_handoff_on_a_root_thread_leaves_its_subagents_out(agent, tmp_path):
-    from thearc.sessions import Event, Session, SourceReference
+    from honed.sessions import Event, Session, SourceReference
 
     def message(number, run, text, *, role="user", parent=None):
         return Event(id=f"e{number}", source_id="fixture", harness="claude", session_id="s", run_id=run,
@@ -382,9 +382,9 @@ def test_handoff_on_a_root_thread_leaves_its_subagents_out(agent, tmp_path):
 
 
 def test_an_installed_prompts_stamp_is_not_part_of_the_question(tmp_path):
-    from thearc.reflection.prompts import Prompt
+    from honed.reflection.prompts import Prompt
 
     plain, stamped = tmp_path / "a.md", tmp_path / "b.md"
     plain.write_text("---\nid: reflect\nversion: 1\n---\nReview.\n")
-    stamped.write_text("---\nid: reflect\nversion: 1\n---\n<!-- thearc-evolve 0.2.0 -->\nReview.\n")
+    stamped.write_text("---\nid: reflect\nversion: 1\n---\n<!-- honed-evolve 0.2.0 -->\nReview.\n")
     assert Prompt.load(stamped).text == Prompt.load(plain).text == "Review.\n"

@@ -1,0 +1,321 @@
+"""Evolution: a workspace's history as one JSON dataset — revisions, sections, ratings, and changes.
+
+The dataset is what ``honed report`` renders; it is plain JSON so other tools can use it too.
+It combines the journals of every branch (ratings recorded on one, a curator's changes on
+another), follows sections by **lineage ID** across renames, and ties every revision to the
+commit where it first appears and to its configuration files (without markers).
+
+    {
+      "agent": {"name", "version"}, "generated_at", "head",
+      "scales": [{"name", "labels", "ordered", "meanings", "values", "colors"}],   (values/colors: CategoricalScale)
+      "files": {hash: text},   every distinct file text once
+      "revisions": [{"revision", "commit", "at", "message", "branches", "files": {path: hash},
+                     "spans": {section id: [path, line]}}],
+      "branches": [{"name", "head", "current", "commits": [{"commit", "at", "message", "revision"}]}],
+      "sections": [{"id", "address", "kind", "name", "section", "depth", "path", "removed", "names"}],
+      "cells": {section id: {revision: {"ratings": {scale: {value: count}}, "events": [kind, …]}}},
+      "changes": [{"section", "kind", "revision", "commit", "at", "reason", "author", "diff", "branches", "run", …}],
+      "ratings": [{"section", "revision", "scale", "value", "item", "reflection", "ref", "at", "metadata", "run"}],
+      "reflections": {id: {"markdown", "revision", "at", "reflector", "evidence"}},
+      "usage": [{"kind", "id", "at", "revision", "harness", "model", "usage", "run"}],
+      "graph": {"trunk", "bases", "runs", "releases"}   (honed.resources.graph)
+    }
+
+``usage`` lists every reflector, curator, and merger run that reported its tokens, once each, oldest first: ``kind``
+is ``reflection``, ``curation``, or ``merge``, and ``usage`` is ``honed.reflection.Usage.to_dict()``.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Iterable, Sequence
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from honed.resources.git import GitError, _git, agent_at, branch_prefix
+from honed.resources.graph import _utc
+from honed.resources.journal import (
+    Entry,
+    Journal,
+    Kept,
+    Modified,
+    Moved,
+    Rated,
+    Reflected,
+    _unified,
+    load_journal_records,
+)
+from honed.resources.ratings import CategoricalScale, RatingScale, rank_labels
+from honed.resources.targets import ResourceTarget
+from honed.resources.workspace import JOURNAL_FILE
+
+
+def evolution(
+    workspace: str | Path,
+    *,
+    refs: Sequence[str] | None = None,
+    scales: Sequence[RatingScale] = (),
+    reflections: str | Path | None = None,
+) -> dict[str, Any]:
+    """The evolution dataset of ``workspace`` across ``refs`` (default: every local branch).
+
+    ``scales`` give label order and meaning; without them, labels are ordered by common sentiment
+    words (harmful … helpful). The whole reflections kept in the journals are included as Markdown;
+    ``reflections`` adds a folder of saved ones (``Reflection.dump_items_to_json``), as older workspaces kept them.
+    """
+    root = Path(workspace).resolve()
+    head = _git(root, "rev-parse", "--abbrev-ref", "HEAD").decode().strip()
+    refs = list(refs) if refs is not None else _branches(root)
+    entries: dict[str, Entry] = {}
+    whole: dict[str, Reflected] = {}
+    found_in: dict[str, set[str]] = {}
+    for ref in refs:
+        try:
+            text = _git(root, "show", f"{ref}:{JOURNAL_FILE}").decode()
+        except GitError:
+            continue
+        loaded, kept = load_journal_records(text)
+        whole |= {reflection.id: reflection for reflection in kept}
+        for entry in loaded:
+            entries.setdefault(entry.id, entry)
+            found_in.setdefault(entry.id, set()).add(ref)
+    if (root / JOURNAL_FILE).is_file():  # Lines appended since the last commit, e.g. by add_reflection.
+        pending = Journal.load(root / JOURNAL_FILE)
+        whole |= {reflection.id: reflection for reflection in pending.reflections}
+        for entry in pending.entries:
+            entries.setdefault(entry.id, entry)
+            found_in.setdefault(entry.id, set()).add(head)
+    journal = Journal(entries=sorted(entries.values(), key=lambda entry: entry.id))
+
+    revisions, branches = _history(root, refs, head)
+    known = {revision["revision"] for revision in revisions}
+    for entry in journal.entries:  # Revisions only the journal knows (not committed yet).
+        if entry.revision not in known:
+            known.add(entry.revision)
+            revisions.append({"revision": entry.revision, "commit": None, "at": entry.at.isoformat(),
+                              "message": None, "branches": [], "files": {}, "spans": {}})
+
+    lineages = journal.lineages()
+    section_of = {entry.id: lineage.id for lineage in lineages for entry in lineage.entries}
+    by_address: dict[str, str] = {}  # Every address a section ever had → its lineage ID.
+    for lineage in lineages:
+        for entry in lineage.entries:
+            by_address[str(entry.target)] = lineage.id
+            if isinstance(entry, Moved):
+                by_address[str(entry.previous)] = lineage.id
+    for revision in revisions:  # Where each section starts, per revision: {section ID: [path, line]}.
+        revision["spans"] = {by_address[address]: place for address, place in revision.get("spans", {}).items()
+                             if address in by_address}
+    current = agent_at(root, head)
+    order = {target: index for index, target in enumerate(current.files().targets)} if current else {}
+    sections = [_section(lineage, order) for lineage in lineages]
+    sections.sort(key=lambda s: (s["order"] if s["order"] is not None else len(order), s["address"]))
+
+    cells: dict[str, dict[str, Any]] = {}
+    changes, ratings = [], []
+    for entry in journal.entries:
+        section = section_of[entry.id]
+        cell = cells.setdefault(section, {}).setdefault(entry.revision, {"ratings": {}, "events": []})
+        if isinstance(entry, Rated):
+            counts = cell["ratings"].setdefault(entry.scale, {})
+            counts[str(entry.value)] = counts.get(str(entry.value), 0) + 1
+            ratings.append({
+                "section": section, "revision": entry.revision, "scale": entry.scale, "value": entry.value,
+                "item": entry.item_id, "reflection": entry.extra.get("reflection"), "ref": entry.ref,
+                "at": entry.at.isoformat(), "metadata": entry.metadata,
+                "branches": sorted(found_in.get(entry.id, ())),
+            })
+            continue
+        cell["events"].append(entry.kind)
+        changes.append(_change(entry, section, sorted(found_in.get(entry.id, ()))))
+
+    targets: dict[str, list[ResourceTarget]] = {}
+    for line in lineages:
+        for entry in reversed(line.entries):  # Latest address first.
+            for target in (entry.target, *([entry.previous] if isinstance(entry, Moved) else [])):
+                if target not in targets.setdefault(line.id, []):
+                    targets[line.id].append(target)
+    from honed.resources.graph import evolution_graph
+
+    texts: dict[str, str] = {}  # Revisions share most file texts: each is stored once, by hash.
+    for revision in revisions:
+        hashed = {}
+        for path, text in revision["files"].items():
+            key = hashlib.sha256(text.encode()).hexdigest()[:16]
+            texts[key] = text
+            hashed[path] = key
+        revision["files"] = hashed
+
+    found = _journal_reflections(whole.values()) | (_reflections(reflections) if reflections else {})
+    graph = evolution_graph(root, refs, head, changes, ratings, targets)  # Gives changes and ratings their run.
+    return {
+        "agent": {"name": current.name if current else root.name, "version": current.version if current else None},
+        "generated_at": datetime.now(UTC).isoformat(),
+        "head": head,
+        "scales": _scales(scales, ratings),
+        "files": texts,
+        "revisions": revisions,
+        "branches": branches,
+        "sections": sections,
+        "cells": cells,
+        "changes": changes,
+        "ratings": ratings,
+        "reflections": found,
+        "usage": _usage(found, changes, ratings),
+        "graph": graph,
+    }
+
+
+def _branches(root: Path) -> list[str]:
+    """Every local branch of the workspace: in a project's repository, only those with the workspace's prefix."""
+    prefix = branch_prefix(root)
+    names = _git(root, "for-each-ref", "--format=%(refname:short)", f"refs/heads/{prefix}").decode().split()
+    return names or ["HEAD"]
+
+
+def _history(root: Path, refs: list[str], head: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Every revision in the order its commits were made, and each branch's commits."""
+    log = _git(root, "log", "--topo-order", "--reverse", "--format=%H%x00%cI%x00%s", *refs).decode()
+    revisions: dict[str, dict[str, Any]] = {}
+    revision_of: dict[str, str | None] = {}
+    for line in filter(None, log.split("\n")):  # A subject may hold U+2028, which splitlines() would cut at.
+        sha, at, message = line.split("\x00", 2)
+        at = _utc(at)
+        try:
+            agent = agent_at(root, sha)
+        except (GitError, ValueError):
+            agent = None
+        revision_of[sha] = agent.revision if agent else None
+        if agent is not None and agent.revision not in revisions:
+            agent_files = agent.files()
+            spans = {str(target): [agent_files.span(target).path, agent_files.span(target).start]
+                     for target in agent_files.targets}
+            revisions[agent.revision] = {"revision": agent.revision, "commit": sha, "at": at, "message": message,
+                                         "branches": [], "files": dict(agent_files.files), "spans": spans}
+    branches = []
+    for ref in refs:
+        lines = _git(root, "log", "--first-parent", "--reverse", "--format=%H%x00%cI%x00%s", ref).decode()
+        commits = []
+        for line in filter(None, lines.split("\n")):
+            sha, at, message = line.split("\x00", 2)
+            at = _utc(at)
+            revision = revision_of.get(sha)
+            commits.append({"commit": sha, "at": at, "message": message, "revision": revision})
+            if revision in revisions and ref not in revisions[revision]["branches"]:
+                revisions[revision]["branches"].append(ref)
+        branches.append({"name": ref, "head": commits[-1]["commit"] if commits else None, "current": ref == head,
+                         "commits": commits})
+    return list(revisions.values()), branches
+
+
+def _section(lineage: Any, order: dict[ResourceTarget, int]) -> dict[str, Any]:
+    target: ResourceTarget = lineage.target
+    path = target.section.split(" > ") if target.section else []
+    names = [{"revision": entry.revision, "at": entry.at.isoformat(), "address": str(entry.target),
+              "previous": str(entry.previous)} for entry in lineage.entries if isinstance(entry, Moved)]
+    return {
+        "id": lineage.id,
+        "address": str(target),
+        "kind": target.kind,
+        "name": target.name,
+        "section": target.section,
+        "path": path,
+        "depth": len(path),
+        "removed": lineage.removed,
+        "names": names,
+        "order": order.get(target),
+    }
+
+
+def _change(entry: Entry, section: str, branches: list[str]) -> dict[str, Any]:
+    change: dict[str, Any] = {
+        "section": section, "kind": entry.kind, "revision": entry.revision, "commit": entry.commit,
+        "at": entry.at.isoformat(), "address": str(entry.target), "branches": branches,
+        "author": entry.extra.get("author"), "extra": entry.extra,
+    }
+    if isinstance(entry, Kept):
+        return change | {"reason": entry.reason, "diff": ""}
+    reason = getattr(entry, "reason", None)
+    if isinstance(entry, Modified):
+        diff = _unified(entry.before, entry.after, entry.target, entry.target)
+    elif isinstance(entry, Moved):
+        diff = f"moved: {entry.previous} → {entry.target}"
+        change["previous"] = str(entry.previous)
+    else:
+        content = getattr(entry, "content", "")
+        diff = _unified(None, content, None, entry.target) if entry.kind == "added" else _unified(
+            content, None, entry.target, None)
+    return change | {"reason": reason, "diff": diff, "touched": getattr(entry, "touched", [])}
+
+
+def _scales(scales: Sequence[RatingScale], ratings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    given = {scale.name: scale for scale in scales}
+    seen: dict[str, list[str]] = {}
+    for rating in ratings:
+        seen.setdefault(rating["scale"], []).append(str(rating["value"]))
+    result = []
+    for name in sorted(set(seen) | set(given)):
+        scale = given.get(name)
+        if not isinstance(scale, CategoricalScale):
+            labels, ordered, numeric = rank_labels(seen.get(name, []))
+            if not numeric:
+                scale = CategoricalScale(name, labels, ordered=ordered)
+            else:
+                result.append({"name": name, "labels": labels, "ordered": True, "numeric": True, "meanings": {},
+                               "values": {label: float(label) for label in labels}, "colors": {}})
+                continue
+        result.append({"name": name, "labels": list(scale.labels), "ordered": scale.ordered,
+                       "meanings": scale.meanings, "values": scale.positions, "colors": scale.colors})
+    return result
+
+
+def _usage(reflections: dict[str, Any], changes: list[dict[str, Any]],
+           ratings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every agent run that reported its usage, once: reflections from their records, curations and merges from the
+    stamp their entries share."""
+    run_of = {rating["reflection"]: rating.get("run") for rating in ratings if rating.get("reflection")}
+    runs = [{"kind": "reflection", "id": identifier, "at": found["at"], "revision": found["revision"],
+             "harness": found["reflector"].get("harness"), "model": found["reflector"].get("model"),
+             "usage": found["reflector"]["usage"], "run": run_of.get(identifier)}
+            for identifier, found in reflections.items() if (found.get("reflector") or {}).get("usage")]
+    seen: set[str] = set()
+    for change in changes:
+        extra = change.get("extra") or {}
+        kind = "merge" if extra.get("merge") else "curation" if extra.get("curation") else None
+        if kind is None or not extra.get("usage") or extra[kind] in seen:
+            continue
+        seen.add(extra[kind])
+        runs.append({"kind": kind, "id": extra[kind], "at": change["at"], "revision": change["revision"],
+                     "harness": extra.get("merger" if kind == "merge" else "curator"), "model": extra.get("model"),
+                     "usage": extra["usage"], "run": change.get("run")})
+    return sorted(runs, key=lambda run: (run["at"], run["id"]))
+
+
+def _journal_reflections(kept: Iterable[Reflected]) -> dict[str, Any]:
+    from honed.reflection.markdown import to_markdown
+
+    return {r.id: {"markdown": to_markdown(r.output, level=3) if r.output is not None else "",
+                   "revision": r.revision, "at": r.at.isoformat(), "reflector": r.reflector, "evidence": r.evidence}
+            for r in kept}
+
+
+def _reflections(folder: str | Path) -> dict[str, Any]:
+    from honed.reflection.markdown import to_markdown
+
+    result = {}
+    for path in sorted(Path(folder).glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, dict) or "id" not in data:
+            continue
+        output = data.get("output", data.get("items"))
+        result[data["id"]] = {
+            "markdown": to_markdown(output, level=3) if output is not None else "",
+            "revision": data.get("revision"), "at": data.get("at"),
+            "reflector": data.get("reflector", {}), "evidence": data.get("evidence", {}), "file": path.name,
+        }
+    return result

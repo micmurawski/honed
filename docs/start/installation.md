@@ -1,9 +1,9 @@
 # Install
 
-`thearc` needs Python 3.11 or newer.
+`honed` needs Python 3.11 or newer.
 
 ```sh
-python -m pip install thearc
+python -m pip install honed
 ```
 
 or, for the latest unreleased changes, from a clone of the repository: `python -m pip install -e .`.
@@ -20,6 +20,6 @@ reflector, curator, or merger — `codex`, `claude`, or `pi` — and keep them o
 Check the command line:
 
 ```sh
-thearc --help
-thearc sessions --help
+honed --help
+honed sessions --help
 ```

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel, Field
 
-from thearc.resources import (
+from honed.resources import (
     CategoricalScale,
     LabelScale,
     ReflectionSchema,

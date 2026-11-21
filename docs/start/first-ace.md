@@ -6,7 +6,7 @@ configuration installed in a project.
 ## 1. Import the configuration into a workspace
 
 ```python
-from thearc.resources import AgentConfig
+from honed.resources import AgentConfig
 
 agent = AgentConfig.from_installation("codex", "tests/fastapi", name="graphify", version="0.9.68")
 agent = agent.init_workspace("artifacts/graphify", branch="reflections")
@@ -19,8 +19,8 @@ marker with its section's ID; ratings stay in the journal (`agent_outline` shows
 ## 2. Index sessions and pick evidence
 
 ```python
-from thearc.sessions import Sessions
-from thearc.sessions.scanner import ShellCommand
+from honed.sessions import Sessions
+from honed.sessions.scanner import ShellCommand
 
 with Sessions("artifacts/sessions.sqlite") as sessions:
     sessions.add("logs/codex-training")
@@ -33,7 +33,7 @@ with Sessions("artifacts/sessions.sqlite") as sessions:
 ```python
 from typing import Annotated
 from pydantic import BaseModel, Field
-from thearc.resources import CategoricalScale, Ref, ReflectionSchema
+from honed.resources import CategoricalScale, Ref, ReflectionSchema
 
 USEFULNESS = CategoricalScale("usefulness", {
     "harmful": "made the work worse", "neutral": "no visible effect", "helpful": "made the work better",
@@ -54,7 +54,7 @@ SCHEMA = ReflectionSchema(Lesson)
 ## 4. Reflect and record
 
 ```python
-from thearc.reflection import Reflector
+from honed.reflection import Reflector
 
 reflection = Reflector("codex").handoff("Review the configuration against this session.", session,
                                         agent, SCHEMA)
@@ -68,7 +68,7 @@ reflector starts from that history.
 ## 5. Curate and review
 
 ```python
-from thearc.curation import Curator
+from honed.curation import Curator
 
 curation = Curator("codex").curate("Address the reflections.", [reflection], agent, scales=[USEFULNESS])
 for commit in curation.commits:

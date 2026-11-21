@@ -3,8 +3,8 @@
 import re
 import time
 
-from thearc.flow import Flow, Node, viz
-from thearc.flow.viz import FlowTracker, log_files
+from honed.flow import Flow, Node, viz
+from honed.flow.viz import FlowTracker, log_files
 
 
 class Write(Node):
@@ -32,7 +32,7 @@ def test_each_log_file_is_a_tab_with_its_lines(tmp_path):
     levels = re.findall(r'<div class="log-line ([a-z]*)">', page)
     assert levels == ["", "warning", "error", "debug"]
     assert "Not created yet." in page and str(log) in page
-    assert 'id="thearc-theme"' in page and 'shared["log"]' not in page
+    assert 'id="honed-theme"' in page and 'shared["log"]' not in page
 
 
 def test_paths_are_named_after_their_files(tmp_path):

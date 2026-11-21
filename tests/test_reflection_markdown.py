@@ -1,7 +1,7 @@
 """Reflection output as Markdown: objects as headings, flat uniform lists as tables, the rest as lists."""
 
-from thearc.reflection import Reflector
-from thearc.reflection.markdown import title, to_markdown
+from honed.reflection import Reflector
+from honed.reflection.markdown import title, to_markdown
 
 from .test_reflection import Scripted
 from .test_reflection_shapes import ANSWER, LESSON

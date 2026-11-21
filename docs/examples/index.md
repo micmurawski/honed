@@ -2,7 +2,7 @@
 
 ## Quickstart: one /evolve round on a toy project
 
-`examples/quickstart/run.sh` needs nothing but thearc and Claude Code. It copies a tiny book-tracker project (a
+`examples/quickstart/run.sh` needs nothing but honed and Claude Code. It copies a tiny book-tracker project (a
 `CLAUDE.md` with one wrong instruction, and one skill) into a new git repository, sets it up for `/evolve`, runs three
 Claude Code sessions in it, then runs a round: reflections on each session, a curation, the proposal's diff, and the
 [report](quickstart-report.html).

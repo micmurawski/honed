@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from thearc.sessions import Sessions, SourceConfig
-from thearc.sessions.adapters import CodexAdapter
+from honed.sessions import Sessions, SourceConfig
+from honed.sessions.adapters import CodexAdapter
 
 
 @pytest.mark.parametrize(

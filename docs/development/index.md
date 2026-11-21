@@ -2,7 +2,7 @@
 
 ```sh
 python -m pip install -e '.[dev]'
-./lint.sh                 # ruff and mypy on thearc/
+./lint.sh                 # ruff and mypy on honed/
 python -m pytest -q       # tests/ ; the Graphify fixtures need the tests/fastapi submodule
 ```
 
@@ -18,13 +18,13 @@ call the real MCP tools. Live checks are the cookbook scripts.
 
 | Package | Holds |
 | --- | --- |
-| `thearc.resources` | AgentConfig, resources, workspace, journal, ratings, markers, git, installation |
-| `thearc.sessions` | Transcript indexing and selection; `analysis/` contains graph and pattern views, `scanner/` behavioural matching, and `export/` harness conversions |
-| `thearc.reflection` | Reflector, harness runtimes, the MCP tool server, Markdown rendering |
-| `thearc.curation` | Curator and Merger |
-| `thearc.evolve` | The `/evolve` skill: setup, rounds, and its recipe |
-| `thearc.flow` | Flow tracking and its visualisation |
+| `honed.resources` | AgentConfig, resources, workspace, journal, ratings, markers, git, installation |
+| `honed.sessions` | Transcript indexing and selection; `analysis/` contains graph and pattern views, `scanner/` behavioural matching, and `export/` harness conversions |
+| `honed.reflection` | Reflector, harness runtimes, the MCP tool server, Markdown rendering |
+| `honed.curation` | Curator and Merger |
+| `honed.evolve` | The `/evolve` skill: setup, rounds, and its recipe |
+| `honed.flow` | Flow tracking and its visualisation |
 
-Session analysis APIs are available from `thearc.sessions.analysis` (and the supported
-`thearc.sessions` package exports). The former flat imports such as `thearc.sessions.workgraph` have
+Session analysis APIs are available from `honed.sessions.analysis` (and the supported
+`honed.sessions` package exports). The former flat imports such as `honed.sessions.workgraph` have
 been removed.

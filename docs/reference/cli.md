@@ -1,10 +1,10 @@
 # CLI
 
 ```text
-thearc sessions [--index PATH] COMMAND      (alias: thearc s)
+honed sessions [--index PATH] COMMAND      (alias: honed s)
 ```
 
-The index defaults to `$THEARC_INDEX`, else `~/.thearc/learning.sqlite`. It keeps sessions and the reflections on them (`/reflect`, `/evolve`): unlike the sessions, which are read again from their transcripts, reflections live only there.
+The index defaults to `$HONED_INDEX`, else `~/.honed/learning.sqlite`. It keeps sessions and the reflections on them (`/reflect`, `/evolve`): unlike the sessions, which are read again from their transcripts, reflections live only there.
 
 | Command | Does |
 | --- | --- |
@@ -20,14 +20,14 @@ The index defaults to `$THEARC_INDEX`, else `~/.thearc/learning.sqlite`. It keep
 | `trace RUN` | A run's sub-agent runs and delegations. |
 
 ```text
-thearc report WORKSPACE [-o report.html] [--ref BRANCH …] [--reflections DIR]
+honed report WORKSPACE [-o report.html] [--ref BRANCH …] [--reflections DIR]
 ```
 
 Writes the [evolution report](../guides/report.md) of a workspace.
 
 ```text
-thearc agent install --repo URL|PATH --harness H [--version VERSION] [--project DIR | --global] [--force]
-thearc agent uninstall --name NAME --harness H [--project DIR | --global]
+honed agent install --repo URL|PATH --harness H [--version VERSION] [--project DIR | --global] [--force]
+honed agent uninstall --name NAME --harness H [--project DIR | --global]
 ```
 
 Installs an AgentConfig from its workspace repository (`--repo`, or its spellings `--url` and `--path`: a git URL is
@@ -40,11 +40,11 @@ exactly what the last install wrote. A global install for Claude skips MCP serve
 installs did not write.
 
 ```text
-thearc skills install self-evolve [--project DIR] --harness H [--runtime H] [--ignore PATTERN …] [--remote URL]
-thearc skills uninstall self-evolve [--project DIR]
-thearc evolve [--project DIR] [--json] [--recipe FILE] [--open] [--estimate]
-thearc evolve diff | amend -m WHY | apply [--push] | discard | status | ignore PATTERN… [--remove] | rollback VERSION
-thearc evolve init | remote URL
+honed skills install self-evolve [--project DIR] --harness H [--runtime H] [--ignore PATTERN …] [--remote URL]
+honed skills uninstall self-evolve [--project DIR]
+honed evolve [--project DIR] [--json] [--recipe FILE] [--open] [--estimate]
+honed evolve diff | amend -m WHY | apply [--push] | discard | status | ignore PATTERN… [--remove] | rollback VERSION
+honed evolve init | remote URL
 ```
 
 Set a project up for [/evolve](../guides/evolve-skill.md), and run its rounds.

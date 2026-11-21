@@ -10,8 +10,8 @@ import subprocess
 from pathlib import Path
 from uuid import UUID
 
-from thearc.resources import AgentConfig
-from thearc.resources.harness import HARNESSES, installed_agents
+from honed.resources import AgentConfig
+from honed.resources.harness import HARNESSES, installed_agents
 
 # The canonical skills: the Agent Skills copy the project ships (.agents/skills), which Claude and Codex
 # also load. Pi and OpenCode get the same text installed where they read it.

@@ -27,11 +27,11 @@ if __package__ in {None, ""}:
 
 from cookbook.live_ace import CURATION_PROMPT
 from cookbook.live_reflect import PROMPT, REPOSITORY, SCHEMA, SOURCES, USEFULNESS, graphify_agent
-from thearc.curation import Curator, Merger
-from thearc.reflection import Reflection, Reflector
-from thearc.resources import GitError, AgentConfig, agent_at
-from thearc.sessions import Sessions
-from thearc.sessions.scanner import ShellCommand
+from honed.curation import Curator, Merger
+from honed.reflection import Reflection, Reflector
+from honed.resources import GitError, AgentConfig, agent_at
+from honed.sessions import Sessions
+from honed.sessions.scanner import ShellCommand
 
 PIPELINES = 2  # Parallel pipelines, each its own worktree and candidate.
 SESSIONS_PER_PIPELINE = 3  # Sessions each pipeline reflects on before curating.

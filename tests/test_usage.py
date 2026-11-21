@@ -5,8 +5,8 @@ import json
 
 import pytest
 
-from thearc.reflection import Reflector, Usage, runtimes
-from thearc.resources.evolution import evolution
+from honed.reflection import Reflector, Usage, runtimes
+from honed.resources.evolution import evolution
 
 from .test_reflection import GOOD, SCHEMA, Scripted, answer
 from .test_report import curated

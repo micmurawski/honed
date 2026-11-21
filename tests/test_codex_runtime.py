@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from thearc.reflection import ReflectionError, runtimes
-from thearc.reflection.runtimes import CodexRuntime, ToolEndpoint
-from thearc.sessions import InstalledSession
+from honed.reflection import ReflectionError, runtimes
+from honed.reflection.runtimes import CodexRuntime, ToolEndpoint
+from honed.sessions import InstalledSession
 
 
 def turn(text, thread="t1"):
@@ -41,8 +41,8 @@ def test_a_reflection_starts_a_thread_then_resumes_it_with_its_tool_and_a_read_o
     assert calls[0]["stdin"] == "Review this session" and calls[0]["cwd"] == tmp_path
     for command in (first, second):
         settings = overrides(command)
-        assert 'mcp_servers.thearc.url="http://127.0.0.1/mcp"' in settings
-        assert 'mcp_servers.thearc.default_tools_approval_mode="approve"' in settings
+        assert 'mcp_servers.honed.url="http://127.0.0.1/mcp"' in settings
+        assert 'mcp_servers.honed.default_tools_approval_mode="approve"' in settings
         assert 'sandbox_mode="read-only"' in settings and 'approval_policy="never"' in settings
         assert 'model_reasoning_effort="high"' in settings and 'web_search="disabled"' in settings
         assert command[command.index("-m") + 1] == "gpt-x"

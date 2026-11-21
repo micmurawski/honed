@@ -1,6 +1,6 @@
 """Drift: hand edits to an installation are committed to the workspace before anything overwrites them."""
 
-from thearc.resources import Hook, AgentConfig
+from honed.resources import Hook, AgentConfig
 
 
 def installed(agent, tmp_path, *harnesses):
