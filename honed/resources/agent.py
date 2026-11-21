@@ -358,6 +358,24 @@ class AgentConfig(BaseModel):
             Journal.append(self._workspace / JOURNAL_FILE, [*new, *([whole] if kept else [])])
         return tuple(entry for entry in new if isinstance(entry, Rated))
 
+    def add_reflections(self, reflections: Iterable[Reflection]) -> dict[str, str]:
+        """``add_reflection`` for each of ``reflections``; one it cannot record (another revision's, or citing lines
+        the files do not have) is left out, and the rest still are. Returns those left out: ID → why."""
+        refused: dict[str, str] = {}
+        for reflection in reflections:
+            try:
+                self.add_reflection(reflection)
+            except ValueError as error:
+                refused[reflection.id] = str(error)
+        return refused
+
+    def reflections(self, schema: Any) -> list[Reflection]:
+        """The reflections on sessions the journal keeps for this agent's revision, read with ``schema``."""
+        from honed.reflection import Reflection
+
+        return [Reflection.from_dict(kept.model_dump(mode="json"), schema) for kept in self.journal.reflections
+                if kept.revision == self.revision and kept.session is not None]
+
     def release(
         self,
         version: str | None = None,

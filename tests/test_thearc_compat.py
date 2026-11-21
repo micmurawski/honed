@@ -43,10 +43,10 @@ def git(repo, *args):
     subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
 
 
-def test_a_project_thearc_set_up_is_refused_with_how_to_move_it(tmp_path):
+def test_a_project_thearc_set_up_is_refused_until_setup_moves_it(tmp_path):
     git(tmp_path, "init", "-q")
     (tmp_path / ".thearc").mkdir()
-    with pytest.raises(ValueError, match=r"git mv \.thearc \.honed"):
+    with pytest.raises(ValueError, match=r"run `honed setup`"):
         project_root(tmp_path)
     (tmp_path / ".honed").mkdir()
     assert project_root(tmp_path) == tmp_path.resolve()

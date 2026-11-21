@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from honed.evolve.cli import evolve, reflect, skills
+from honed.evolve.cli import evolve, reflect, setup_command, skills
 from honed.sessions.cli import sessions
 from honed.utils import AliasedGroup
 
@@ -106,5 +106,6 @@ def uninstall_agent(name: str, harness: str, project: Path | None, global_: bool
 
 main.add_command(sessions)
 main.add_command(skills)
+main.add_command(setup_command)
 main.add_command(evolve)
 main.add_command(reflect)

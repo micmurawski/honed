@@ -5,6 +5,8 @@ for H becomes an AgentConfig, and the evolve skill is installed beside it. ``hon
 (``round.run``) with the recipe in the evolve skill, which is given an ``Evolution``.
 """
 
+from honed.sessions.reflections import Part, Partition
+
 from .defaults import FAILURE_MODES, SCHEMA, USEFULNESS
 from .estimate import Estimate
 from .round import (
@@ -33,6 +35,8 @@ __all__ = [
     "Change",
     "Estimate",
     "Evolution",
+    "Part",
+    "Partition",
     "Proposal",
     "Setup",
     "adopt",

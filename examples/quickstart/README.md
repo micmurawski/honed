@@ -4,8 +4,9 @@
 wrong: it says to run the tests with `python3 tests/run_all.py`, which doesn't exist. The script works in the project
 the way you would, then lets honed learn from those sessions:
 
-1. copies `project/` into a new git repository and sets it up for evolution
-   (`honed skills install self-evolve --harness claude`);
+1. copies `project/` into a new folder and sets it up for evolution with one command
+   (`honed setup --harness claude --local`: `git init`, the evolve and reflect skills, and a commit of them; the
+   workspace stays on your machine, as the project is a throwaway);
 2. runs three Claude Code sessions in it, one per file in `tasks/`;
 3. runs a round (`honed evolve`): a reflector reviews `CLAUDE.md` and the skill against each session and rates the
    sections it can judge, and a curator edits the configuration from those ratings into a proposal;
@@ -16,7 +17,8 @@ examples/quickstart/run.sh            # in a new temporary folder; or give one: 
 MODEL=haiku examples/quickstart/run.sh   # the three work sessions on a cheaper model
 ```
 
-It needs honed (`python -m pip install -e .` in this repository) and Claude Code, installed and signed in.
+It needs git and Claude Code, installed and signed in. When `honed` is not on PATH, the script installs it from this
+checkout with `python3 -m pip install -e` (into the active virtual environment, if there is one).
 It makes real model calls: three short sessions, three reflections, and one curation: a few minutes, and about a dollar for the round on
 Claude Code's default model (the report's **Token usage** tab shows what each run cost).
 
@@ -33,4 +35,4 @@ honed evolve apply      # install it: the next session reads the new CLAUDE.md
 open <the report it printed>   # every section, its ratings, and what changed
 ```
 
-In your own project the round is the same: install the skill, work as usual, and type `/evolve` in Claude Code.
+In your own project the round is the same: run `honed setup` in it, work as usual, and type `/evolve` in Claude Code.

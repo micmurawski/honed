@@ -37,7 +37,10 @@ Event results carry ``match_ranges``, the spans of their text that the query's p
 ``select`` sets the unit a query matches. For ``event``, every event-level term must hold for the
 same event. For ``thread`` and ``session``, each event-level term needs some event in that thread or
 session, and a negated one needs none: ``shell:pytest -shell:--lf select:thread`` finds threads
-that ran pytest but never with ``--lf``.
+that ran pytest but never with ``--lf``. For ``reflection``, every reflection is a result, also one whose session
+is not indexed yet (``bound:no``): it has no session, so session terms do not hold for it.
+
+``count`` gives how many results a query has, without loading them.
 """
 
 from __future__ import annotations
@@ -189,6 +192,9 @@ FIELDS: dict[str, FieldSpec] = {
     # Reflections (``x``) and their ratings (``g``): see ``honed.sessions.reflections``. Reflection terms side by
     # side hold for the same reflection, and rating terms beside them for the same rating of it.
     "reflected": FieldSpec("", "session", help="yes or no: the session has a reflection"),
+    "reflection": FieldSpec("x.id", "reflection", help="reflection ID or ID prefix"),
+    "bound": FieldSpec("", "reflection", help="yes or no: the reflection is joined to its session (no: the session "
+                       "is not indexed yet)"),
     "prompt": FieldSpec("x.prompt_name", "reflection", help="what it was asked: reflect, reflect@1, or a hash p_…"),
     "asked": FieldSpec("x.asked", "reflection", help="the question's fingerprint (prompt and schema), or its prefix"),
     "schema": FieldSpec("x.schema_hash", "reflection", help="the schema's hash s_…, or its prefix"),
@@ -544,6 +550,16 @@ def _moment(value: str, now: datetime) -> str:
     return moment.astimezone(UTC).isoformat(timespec="microseconds")
 
 
+def quoted(value: str) -> str:
+    """``value`` as one query value: quoted, its quotes and backslashes escaped."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def any_of(field: str, values: Sequence[str]) -> str:
+    """A query term that holds when ``field`` is any of ``values``: ``(field:"a" OR field:"b")``."""
+    return "(" + " OR ".join(f"{field}:{quoted(value)}" for value in values) + ")"
+
+
 def _escape_like(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
@@ -639,7 +655,12 @@ class _Compiler:
                 return "honed_iequals(x.prompt_name, ?)"
             self.params.append(version)
             return "(honed_iequals(x.prompt_name, ?) AND x.prompt_version = ?)"
-        if term.field in {"asked", "schema"} and term.operator == "is":
+        if term.field == "bound":
+            answer = _BOOLEAN.get(value.lower())
+            if answer is None:
+                raise QuerySyntaxError("bound: takes yes or no", self.query.text, term.position)
+            return f"x.session_id IS {'NOT ' if answer else ''}NULL"
+        if term.field in {"asked", "schema", "reflection"} and term.operator == "is":
             self.params.append(_escape_like(value) + "%")
             return f"{FIELDS[term.field].expression} LIKE ? ESCAPE '\\'"
         if term.field == "revision" and term.operator == "is" and "@" not in value:
@@ -706,7 +727,9 @@ class _Compiler:
         elif term.operator == "is" and term.field == "cwd":
             folder = os.path.expanduser(term.value).rstrip("/") or "/"
             self.params.extend([folder, _escape_like(folder).rstrip("/") + "/%"])
-            match = "(s.cwd = ? OR s.cwd LIKE ? ESCAPE '\\')"
+            # A reflection's: its session's folder, or, not yet joined to one, the project it was made in.
+            cwd = "COALESCE(s.cwd, json_extract(x.data, '$.evidence.project'))" if unit == "reflection" else "s.cwd"
+            match = f"({cwd} = ? OR {cwd} LIKE ? ESCAPE '\\')"
         elif term.operator == "is" and term.field == "action":
             self.params.extend([term.value, _escape_like(term.value.lower()) + ".%"])
             match = f"(honed_iequals({spec.expression}, ?) OR lower({spec.expression}) LIKE ? ESCAPE '\\')"
@@ -774,7 +797,7 @@ def compile_query(query: Query, *, now: datetime | None = None, scoped: bool = F
     )
     if query.select == "reflection":
         scope = f" AND EXISTS (SELECT 1 FROM events e WHERE e.session_id=s.id AND e.id IN {SCOPE})" if scoped else ""
-        sql = (f"SELECT x.*, x.session_id AS session_id FROM reflections x JOIN sessions s ON s.id=x.session_id "
+        sql = (f"SELECT x.*, x.session_id AS session_id FROM reflections x LEFT JOIN sessions s ON s.id=x.session_id "
                f"WHERE {where}{scope} ORDER BY x.at DESC, x.id")
     elif query.select == "event":
         rank, order = "", ""
@@ -843,12 +866,12 @@ def _positive_terms(node: Node | None) -> list[Term]:
 
 @dataclass(frozen=True)
 class QueryMatch:
-    """One result: always its session; the thread for ``select:thread``; the event for ``select:event``, with
-    the spans of its text the query matched; the reflection for ``select:reflection``. ``history`` and
-    ``trajectory`` need a loader: results of
-    ``Sessions.query`` and ``EventSequence.query`` have one."""
+    """One result: its session (None only for a reflection not yet joined to one); the thread for
+    ``select:thread``; the event for ``select:event``, with the spans of its text the query matched; the reflection
+    for ``select:reflection``. ``history`` and ``trajectory`` need a loader: results of ``Sessions.query`` and
+    ``EventSequence.query`` have one."""
 
-    session: SessionMetadata
+    session: SessionMetadata | None
     thread: Run | None = None
     event: Event | None = None
     match_ranges: tuple[tuple[int, int], ...] = ()
@@ -860,6 +883,8 @@ class QueryMatch:
         """The session this result belongs to, with its events, threads and trajectories."""
         if self.loader is None:
             raise ValueError("This result has no session loader; use Sessions.query or EventSequence.query")
+        if self.session is None:
+            raise ValueError("This reflection is not joined to an indexed session")
         return self.loader(self.session.id)
 
     @property
@@ -885,7 +910,16 @@ class QueryMatch:
         if self.reflection is not None:
             return {"type": "reflection", "data": self.reflection}
         item = self.thread or self.session
+        assert item is not None  # Only a reflection may have no session.
         return {"type": self.type, "data": item.model_dump(mode="json")}
+
+
+def count(index: SessionIndex, query: str | Query, *, now: datetime | None = None) -> int:
+    """How many results ``query`` has in a ``SessionIndex`` (its ``count:`` aside), without loading them."""
+    parsed = parse(query) if isinstance(query, str) else query
+    sql, params = compile_query(parsed, now=now)
+    register_functions(index.connection)
+    return index.connection.execute(f"SELECT count(*) FROM ({sql})", params).fetchone()[0]
 
 
 def execute(
@@ -932,7 +966,8 @@ def execute(
             found = {key: row[key] for key in row.keys() if key not in {"data", "session_id"}}  # noqa: SIM118
             found["session_id"] = row["session_id"]
             found["data"] = json.loads(row["data"])
-            return QueryMatch(session(row["session_id"]), reflection=found, loader=loader)
+            bound = session(row["session_id"]) if row["session_id"] is not None else None
+            return QueryMatch(bound, reflection=found, loader=loader)
 
     elif parsed.select == "thread":
 

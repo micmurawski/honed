@@ -240,9 +240,12 @@ def query_command(
             prompt = found["prompt_name"] or found["prompt_hash"] or "-"
             prompt += f"@{found['prompt_version']}" if found["prompt_name"] and found["prompt_version"] else ""
             ratings = len((found["data"] or {}).get("items") or [])
-            click.echo(f"{found['id'][:22]:<22}  {session.id[:12]}  {prompt:<12} {found['mode']:<10} "
+            bound = session.id[:12] if session is not None else "(unbound)"
+            click.echo(f"{found['id'][:22]:<22}  {bound:<12}  {prompt:<12} {found['mode']:<10} "
                        f"{found['revision'][:24]:<24} {ratings:>3} rating(s)")
-        elif match.event is not None:
+            continue
+        assert session is not None  # Only a reflection may have no session.
+        if match.event is not None:
             event = match.event
             label = event.tool_name or event.role or ""
             # Show the text around the first match, as a search engine's snippet does.

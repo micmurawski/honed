@@ -39,9 +39,10 @@ def prompt_hash(text: str) -> str:
     return "p_" + hashlib.sha256(normalized(text).encode()).hexdigest()[:16]
 
 
-def schema_hash(schema: ReflectionSchema) -> str:
-    """A reflection schema's identity: ``s_`` and 16 hex digits of the SHA-256 of its JSON schema."""
-    text = json.dumps(schema.json_schema(), sort_keys=True, default=str)
+def schema_hash(schema: ReflectionSchema | Any) -> str:
+    """A reflection schema's identity (a ``ReflectionSchema``, or the model it is built from): ``s_`` and 16 hex
+    digits of the SHA-256 of its JSON schema."""
+    text = json.dumps(ReflectionSchema.of(schema).json_schema(), sort_keys=True, default=str)
     return "s_" + hashlib.sha256(text.encode()).hexdigest()[:16]
 
 

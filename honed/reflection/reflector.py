@@ -63,11 +63,11 @@ UNRECORDED = {
 }
 
 
-def fingerprint(prompt: str | Prompt, schema: ReflectionSchema) -> str:
+def fingerprint(prompt: str | Prompt, schema: ReflectionSchema | Any) -> str:
     """What a reflection was asked: its prompt (the body of a ``Prompt``) and schema, as a short digest. Two reflections
     on the same evidence and revision with the same fingerprint answer the same question (see
-    ``Evolution.remembered``)."""
-    asked = json.dumps([prompt_text(prompt), schema.json_schema()], sort_keys=True, default=str)
+    ``Sessions.partition``)."""
+    asked = json.dumps([prompt_text(prompt), ReflectionSchema.of(schema).json_schema()], sort_keys=True, default=str)
     return hashlib.sha256(asked.encode()).hexdigest()[:16]
 
 
@@ -309,13 +309,14 @@ class Reflector:
         history: EventSequence,
         installed: InstalledSession,
         agent: AgentConfig,
-        schema: ReflectionSchema,
+        schema: ReflectionSchema | Any,
         provenance: str | None,
         extra: dict[str, Any],
         counts: Counter[str],
         focus: str | None = None,
         judged_from: str | None = None,
     ) -> Reflection:
+        schema = ReflectionSchema.of(schema)
         session = history if isinstance(history, Session) else getattr(history, "session", None)
         ids = [event["id"] for event in records(history.selected_events)]
         judged = ids[ids.index(judged_from):] if judged_from in ids else ids
@@ -349,7 +350,7 @@ class Reflector:
         self,
         task: str,
         agent: AgentConfig,
-        schema: ReflectionSchema,
+        schema: ReflectionSchema | Any,
         *,
         fork: Any,
         evidence: dict[str, Any],
@@ -358,6 +359,7 @@ class Reflector:
         mcp_tools: Sequence[ToolSpec] = (),
         prompt: str | Prompt | None = None,
     ) -> Reflection:
+        schema = ReflectionSchema.of(schema)
         files = agent.files()
         submission = Submission(files, schema, agent.is_frozen)
         if agent.frozen:

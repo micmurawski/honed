@@ -6,6 +6,7 @@ import json
 from click.testing import CliRunner
 
 from honed.cli import main
+from honed.evolve import FAILURE_MODES
 from honed.evolve.round import release_at
 from honed.sessions import Session
 from honed.sessions.analysis.aeg import ExecutionGraphView, export_execution_graph, focus, session_failures
@@ -17,7 +18,6 @@ from honed.sessions.analysis.aeg.failures import (
     critical_step,
     detect,
     evaluate,
-    failure_mode_scale,
     kappa,
 )
 from honed.sessions.analysis.aeg.graph import CaseSequence, outcome
@@ -237,7 +237,7 @@ def test_focus_for_reflectors_and_the_scale(store):
     text = focus(*found[failing[0]])
     assert "may be false positives" in text and "- premature_done" in text and "- Critical step (check_failed" in text
     assert focus([], None) == ""
-    scale = failure_mode_scale()
+    scale = FAILURE_MODES
     assert set(scale.labels) == set(MODES) == {mode.id for mode in TAXONOMY}
     assert scale.validate("premature_done") == "premature_done"
 

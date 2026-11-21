@@ -17,13 +17,14 @@ two kinds of fields, by type and never by name:
         key_insight: str
         ratings: list[Rated]
 
-    schema = ReflectionSchema(Lesson)
+    Reflector(...).handoff(prompt, session, agent, Lesson)   # the model is the schema
 
 Every object holding a rating yields a ``ReflectionItem`` per rating field: its ref, value,
 scale, location in the output, and the object's other fields. Everything else stays in the
 reflection's output. ``ReflectionSchema(scale, Metadata)`` is shorthand for a list of
-``{ref, rating, …Metadata}`` items. APIs that take a schema (``Reflector.handoff``, …) also take what
-``ReflectionSchema`` is built from and wrap it, so passing ``Lesson`` alone is enough.
+``{ref, rating, …Metadata}`` items. Every API that takes a schema (``Reflector.handoff``, ``Submission``,
+``Evolution.partition``, a recipe's ``SCHEMA``, …) takes the model itself and wraps it with ``ReflectionSchema.of``;
+build a ``ReflectionSchema`` only for that shorthand, or to inspect ``scales``.
 """
 
 from __future__ import annotations

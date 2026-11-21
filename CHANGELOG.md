@@ -3,10 +3,41 @@
 Notable changes, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.4.0
+
+### Added
+
+- `honed setup` (`hnd su`) sets a project up for `/evolve` in one command: `git init` when the folder is not a
+  repository yet (never in the home folder; `--no-git-init` refuses instead), the harness detected from the project's
+  files or the one agent on PATH (`--harness` otherwise), the evolve and reflect skills installed, and one commit of
+  only what it installed (`--no-commit` leaves it to you; paths `.gitignore` ignores are listed, not committed). The
+  harness is its own runtime. Safe to run again.
+- `honed setup` asks where the workspace goes, in a terminal: a private GitHub repository it creates with `gh`
+  (`--create-remote [OWNER/NAME]`, default `<owner>/<project>-honed`), a repository URL (`--remote URL`), or this
+  machine only (`--local`).
+- `honed skills install reflect --global` (and `uninstall reflect --global`) installs `/reflect` for every project,
+  into the harness's own folder (`~/.claude/skills`, `$CODEX_HOME/skills`, `~/.pi/agent/skills`,
+  `~/.config/opencode/skills`).
 
 ### Changed
 
+- A workspace without a remote stays on this machine, in `.gitignore`, instead of becoming a submodule whose URL
+  (`./.honed/workspace`) no clone could fetch. `honed evolve remote URL` pushes the workspace (`main` and its
+  releases) and adds it to the project as a submodule with that URL. A project set up earlier without a remote keeps
+  its placeholder submodule until you run `honed evolve remote URL`.
+- `honed evolve apply` pushes the release when the workspace has a remote (`--no-push` holds it back); it pushed only
+  with `--push`.
+- The default `/evolve` recipe (`evolve.py`) is written as functions decorated with `@node`, one per step
+  (`find_sessions`, `partition`, `source`, `reflect`, `curate`), instead of `Node` classes with `prep`/`exec`/`post`;
+  the progress page names the steps after them. A recipe installed earlier keeps working as it is.
+- `@node` (`honed.flow.decorators`) passes live objects through a flow: `validate=False` hands arguments over as they
+  are in the shared state (annotations are still required), state a node returns keeps its objects instead of
+  failing to serialize them, a batch node's `item=` names the parameter each element of the list is passed as, a
+  and a value of `None` in the shared state counts as given.
+- The progress page (`FlowTracker`) leaves a flow's nodes as they were once a run ends, so the same nodes can run
+  (and be tracked) again: a recipe defines its steps and their graph once, at module level.
+- The quickstart (`examples/quickstart/run.sh`) installs honed from the checkout with pip when it is missing, and sets
+  its project up with `honed setup`.
 - thearc is renamed **honed**: the package (`pip install honed`), the module (`import honed`), the command (`honed`,
   and `hnd` for short), the repository (`micmurawski/honed`) and the docs (`micmurawski.github.io/honed`). In
   projects and in your home folder `.thearc/` becomes `.honed/`, `$THEARC_INDEX` becomes `$HONED_INDEX`, and
@@ -14,16 +45,18 @@ versions follow [Semantic Versioning](https://semver.org/).
 - Reflectors take the output model itself where they took a `ReflectionSchema`: `Reflector.reflect`,
   `reflect_with_tools`, `handoff`, `WorkGraphReflector`, `Reflection.from_dict` and `Reflection.load` wrap it with
   the new `ReflectionSchema.of`, so `handoff(prompt, session, agent, Lesson)` is enough. A `ReflectionSchema` still
-  works as before.
+  works as before. The rest of the pipeline takes it too: `Submission`, `fingerprint`, `schema_hash`, the
+  `Evolution` methods, and a recipe's `SCHEMA`, which `/reflect` (`honed reflect begin`) used to ignore unless it
+  was a `ReflectionSchema`. The default schema is `honed.evolve.SCHEMA = Lesson`.
 
 ### Migrating from thearc
 
 - The session index thearc made stays in use: `$THEARC_INDEX` is read when `$HONED_INDEX` is unset, and
   `~/.thearc/learning.sqlite` while `~/.honed/learning.sqlite` does not exist. Move it with
   `mv ~/.thearc ~/.honed` when you like.
-- A project thearc set up is refused until its folder is moved: `git mv .thearc .honed` (the workspace submodule and
-  the install record move with it), `mv .thearc/cache .honed/` if a cache is left, then reinstall the skills with
-  `hnd skills install self-evolve --project . --harness <harness>`: the installed `evolve.py` imports `thearc`.
+- A project thearc set up is moved by `honed setup`: `.thearc` becomes `.honed` (`git mv` for what git tracks, the
+  local cache too), the install record's `thearc-*` agents become `honed-*`, `.gitignore` follows, and the skills are
+  reinstalled (the installed `evolve.py` imported `thearc`). Other commands refuse such a project until then.
 - Workspaces thearc made keep their branch names: the prefix is still read from `thearc.<agent>.prefix` in git
   config.
 - `--format thearc` still exports sessions, as `honed`.

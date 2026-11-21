@@ -218,6 +218,11 @@ class Journal(BaseModel):
     def reflection(self, identifier: str) -> Reflected | None:
         return next((r for r in self.reflections if r.id == identifier), None)
 
+    @property
+    def curations(self) -> set[str]:
+        """The IDs of the curations whose changes (or decisions to keep) the journal records."""
+        return {entry.extra["curation"] for entry in self.entries if entry.extra.get("curation")}
+
     def record(self, *entries: Entry) -> None:
         known = {entry.id for entry in self.entries}
         for entry in entries:

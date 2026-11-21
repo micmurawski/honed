@@ -111,6 +111,11 @@ def test_begin_and_submit_an_in_session_reflection(project, session_index):
     with Sessions() as index:
         stored = index.index.connection.execute("SELECT id, session_id FROM reflections").fetchall()
     assert [tuple(row) for row in stored] == [(reflection.id, None)]
+    with Sessions() as index:  # A query finds it before its session is indexed: by its ID, and by its project.
+        (match,) = index.query("select:reflection bound:no")
+        assert match.session is None and match.reflection["id"] == reflection.id
+        assert index.count(f'select:reflection reflection:{reflection.id[:16]} cwd:"{project}"') == 1
+        assert index.count("select:reflection bound:yes") == index.count("select:reflection harness:claude") == 0
     with pytest.raises(ValueError, match="no reflection was begun"):  # One answer per marker.
         live.submit(project, begun.marker, answer)
 
