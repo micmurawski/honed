@@ -11,7 +11,7 @@ from typing import Any
 
 import click
 
-from honed.utils import AliasedGroup
+from honed.utils import AliasedCommand, AliasedGroup
 
 from .setup import HARNESSES, REFLECT_HARNESSES, RUNTIMES
 
@@ -202,7 +202,7 @@ def _ask_for_remote(project: Path, *, quiet: bool) -> tuple[str | None, str | No
     return None, None
 
 
-@click.command(name="setup")
+@click.command(name="setup", cls=AliasedCommand, aliases=["su"])
 @click.argument("project", type=PROJECT, default=Path("."), required=False)
 @click.option("--harness", type=click.Choice(HARNESSES),
               help="The harness to evolve (default: detected from the project's files, else the one on PATH).")
@@ -283,9 +283,6 @@ def setup_command(project: Path, harness: str | None, ignore: tuple[str, ...], r
     if done.command is None:
         click.echo(f"Warning: `{done.setup.harness}` is not on PATH; install it to work in the project.", err=True)
     click.echo(f"Next: work in the project with {done.setup.harness}; after three sessions or more, type /evolve.")
-
-
-setup_command.aliases = ["su"]  # type: ignore[attr-defined]
 
 
 # --- evolve -------------------------------------------------------------------------------------------------------
