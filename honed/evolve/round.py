@@ -676,10 +676,10 @@ def amend(project: str | Path = ".", message: str = "", *, author: str = "user")
         return tools.commits[-1].changed
 
 
-def apply(project: str | Path = ".", *, push: bool = False) -> Applied:
-    """Release the open proposal, move the workspace's ``main`` to it, and install it. With ``push``, ``main`` and the
-    release branch are pushed to the workspace's ``origin``. The project then shows the submodule moved, next to the
-    installed files: commit them together."""
+def apply(project: str | Path = ".", *, push: bool | None = None) -> Applied:
+    """Release the open proposal, move the workspace's ``main`` to it, and install it. With ``push`` (by default,
+    when the workspace has a remote), ``main`` and the release branch are pushed to the workspace's ``origin``. The
+    project then shows the submodule moved, next to the installed files: commit them together."""
     place = _place(project)
     workspace = place.workspace
     with _locked(place.cache):
@@ -689,6 +689,8 @@ def apply(project: str | Path = ".", *, push: bool = False) -> Applied:
         if pending := _pending(workspace):
             raise ValueError(f"amend or undo the workspace's edits first: {pending}")
         remote = remote_of(place.root)
+        if push is None:
+            push = remote is not None
         if push and remote is None:
             raise ValueError("the workspace has no remote to push to: run `honed evolve remote URL` first")
         proposal_branch = _current_branch(workspace)
@@ -704,7 +706,7 @@ def apply(project: str | Path = ".", *, push: bool = False) -> Applied:
         released = AgentConfig.from_workspace(workspace)
         installed = released.install(place.harness, place.root, force=True).files
         if push:
-            _git(workspace, "push", "-q", "origin", "main", branch_name(workspace, "release", version))
+            _git(workspace, "push", "-q", "origin", main, branch_name(workspace, "release", version))
         return Applied(released.version or version, (place.harness,), tuple(installed), remote if push else None)
 
 

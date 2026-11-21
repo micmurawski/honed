@@ -8,19 +8,27 @@ and apply it.
 
 ## Set a project up
 
-The project must be a git repository.
+One command, in the project's folder:
 
 ```bash
-honed skills install self-evolve --project . --harness claude
+honed setup                    # or: honed setup PATH --harness claude
 ```
 
-This:
+It runs `git init` when the folder is not in a git repository yet (`--no-git-init` to refuse instead), detects the
+harness from the project's files (`.claude/`, `CLAUDE.md`, `.codex/`, `.pi/`, `.opencode/`) or else the only agent on
+PATH (`--harness` when it can't tell), installs the skills as below, and commits only what it installed
+(`--no-commit` to leave that to you). Run again, it reinstalls the skills.
+
+`honed skills install self-evolve --project . --harness claude` is the same install without the git steps: the
+project must already be a git repository, and you commit. Either way, this:
 
 1. **Adopts** the project's configuration for that harness (for Claude: `.claude/skills/*`, `CLAUDE.md`, its hooks
    and MCP servers) as an AgentConfig named after the project, version `1.0.0`.
-2. Keeps it in a **workspace** at `.honed/workspace`: a repository of its own (`main`, `release/…`), added to the
-   project as a git submodule, so each project commit pins the workspace commit its installed files came from. With
-   `--remote URL` the workspace's `origin` is set and `main` pushed, and the submodule records that URL.
+2. Keeps it in a **workspace** at `.honed/workspace`: a repository of its own (`main`, `release/…`). With a remote
+   (`--remote URL`, or `honed setup --create-remote` for a private GitHub repository made with `gh`; `honed setup`
+   asks in a terminal) its `main` is pushed there and the project holds it as a git submodule with that URL, so each
+   project commit pins the workspace commit its installed files came from, and a clone fetches it. Without one it is
+   local: kept out of the project (in `.gitignore`), so no clone gets a submodule it can't fetch.
 3. Installs the **evolve skill** into the harness's skills folder (`.claude/skills/evolve/`): `SKILL.md`, the recipe
    `evolve.py` and its prompts in `prompts/`. It is not part of the AgentConfig (`agent.json` holds
    `"ignore": ["skill:evolve"]`), so nothing evolves it.
@@ -29,9 +37,11 @@ A project evolves one harness: installing for another harness is refused. `--run
 reflections and curation (default: `--harness`). Run the install again to reinstall the evolve skill.
 
 The workspace is where new versions are made; `.claude/` (or the harness's own folders) holds the installed copy the
-harness reads. Commit the installed files, `.gitmodules`, `.honed/workspace`, `.gitignore` and
-`.honed/installed.json`. A teammate who clones the project with `--recurse-submodules` has the workspace; otherwise
-`honed evolve init` checks it out. `honed evolve remote URL` gives the workspace a remote later.
+harness reads. Commit the installed files, `.gitignore`, `.honed/installed.json` and, with a remote, `.gitmodules`
+and `.honed/workspace` (`honed setup` commits them). A teammate who clones the project with `--recurse-submodules`
+has the workspace; otherwise `honed evolve init` checks it out. `honed evolve remote URL` gives a local workspace a
+remote later: it pushes the workspace there and adds the submodule. `honed evolve apply` pushes each release to the
+remote (`--no-push` to hold it back).
 
 ## A round
 

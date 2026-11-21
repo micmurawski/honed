@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
 from importlib import metadata, resources
@@ -19,7 +21,7 @@ from typing import cast
 
 from honed.harnesses import Harness
 from honed.resources import AgentConfig, Skill
-from honed.resources.git import GitError, _git
+from honed.resources.git import GitError, _git, branch_name
 from honed.resources.markdown import split_frontmatter
 
 SKILL = "evolve"
@@ -71,18 +73,50 @@ def reflect_skill(harness: Harness) -> Skill:
                  metadata={"honed": honed_version()})
 
 
-def project_root(path: str | Path) -> Path:
-    """The root of the git repository holding ``path``; a project must be one."""
+def _toplevel(path: str | Path) -> Path:
     try:
-        root = Path(_git(Path(path), "rev-parse", "--show-toplevel").decode().strip()).resolve()
+        return Path(_git(Path(path), "rev-parse", "--show-toplevel").decode().strip()).resolve()
     except GitError:
         raise ValueError(f"{Path(path).resolve()} is not in a git repository; evolution keeps its history there "
-                         "(run `git init` first)") from None
+                         "(run `honed setup`, or `git init` first)") from None
+
+
+def project_root(path: str | Path) -> Path:
+    """The root of the git repository holding ``path``; a project must be one."""
+    root = _toplevel(path)
     if (root / ".thearc").exists() and not (root / ".honed").exists():
-        raise ValueError(f"{root} was set up by thearc, as honed was called before 0.4. Move its folder with "
-                         "`git mv .thearc .honed` (then `mv .thearc/cache .honed/` if a cache is left), and "
-                         "reinstall the skill: `hnd skills install self-evolve --project . --harness <harness>`")
+        raise ValueError(f"{root} was set up by thearc, as honed was called before 0.4: run `honed setup` in it "
+                         "to move .thearc to .honed and reinstall the skills")
     return root
+
+
+def migrate_thearc(project: str | Path) -> bool:
+    """Move a project set up by thearc (honed before 0.4) to honed's layout: ``.thearc`` becomes ``.honed`` (with
+    ``git mv`` for what git tracks, the local cache too), the install record's ``thearc-*`` agents become
+    ``honed-*``, and ``.gitignore`` names ``.honed``. Returns whether there was anything to move."""
+    from honed.resources.harness import RECORD
+
+    root = _toplevel(project)
+    old, new = root / ".thearc", root / ".honed"
+    if not old.exists() or new.exists():
+        return False
+    if _git(root, "ls-files", "--", ".thearc").strip():
+        _git(root, "mv", ".thearc", ".honed")
+    if old.exists():  # Untracked: the cache, or the whole folder.
+        new.mkdir(exist_ok=True)
+        for child in old.iterdir():
+            child.rename(new / child.name)
+        old.rmdir()
+    record = root / RECORD
+    if record.is_file():
+        data = json.loads(record.read_text(encoding="utf-8"))
+        data["agents"] = {re.sub(r"^thearc-", "honed-", name): agent for name, agent in data.get("agents", {}).items()}
+        record.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    gitignore = root / ".gitignore"
+    if gitignore.is_file():
+        text = gitignore.read_text(encoding="utf-8")
+        gitignore.write_text(text.replace("/.thearc/", "/.honed/"), encoding="utf-8")
+    return True
 
 
 def project_harness(project: str | Path) -> Harness:
@@ -91,8 +125,7 @@ def project_harness(project: str | Path) -> Harness:
 
     root = project_root(project)
     if not (root / WORKSPACE / ".git").exists():
-        raise ValueError("this project is not set up for evolution: run "
-                         "`honed skills install self-evolve --project . --harness <harness>`")
+        raise ValueError("this project is not set up for evolution: run `honed setup` in it")
     name = AgentConfig.from_workspace(root / WORKSPACE, journal=False).name
     harnesses = list(installed_agents(root).get(name, {}))
     if len(harnesses) != 1:
@@ -169,14 +202,12 @@ def install_evolve_skill(project: str | Path, harness: Harness, *, runtime: Harn
         if remote is not None:
             set_remote(root, remote)
     else:
-        _unignore_in_git(root, f"/{WORKSPACE.as_posix()}/")  # An earlier honed kept it out of the project.
         agent = adopt(root, harness, ignore=ignore).init_workspace(
             folder, reason=f"Adopt {root.name}'s {harness} configuration")
         if remote is not None:
-            _git(folder, "remote", "add", "origin", remote)
-            _git(folder, "push", "-q", "-u", "origin", "main")
-        # An existing repository at the path is added as it is; without a remote the URL is a placeholder.
-        _git(root, "submodule", "add", "-q", remote or f"./{WORKSPACE.as_posix()}", WORKSPACE.as_posix())
+            set_remote(root, remote)  # Pushed, and added to the project as a submodule.
+        else:  # Local until it has a remote: kept out of the project, so no clone gets a submodule it can't fetch.
+            _ignore_in_git(root, f"/{WORKSPACE.as_posix()}/")
         agent.install(harness, root, force=True)
     if reflect and harness in installed_agents(root).get(REFLECT_AGENT, {}):  # Installed on its own: taken over.
         uninstall(harness, root, name=REFLECT_AGENT)
@@ -232,6 +263,182 @@ def uninstall_reflect_skill(project: str | Path, harnesses: Sequence[Harness] | 
     return removed
 
 
+def install_reflect_skill_global(harnesses: Sequence[Harness]) -> list[Path]:
+    """Install the reflect skill on its own into each harness's own folder (``~/.claude/skills/reflect``, ...), so
+    ``/reflect`` is offered in every project. Returns the folders it was installed into."""
+    from honed.resources.harness import GLOBAL_HARNESSES, RECORD, InstallConflict, global_layout, install
+
+    done: list[Path] = []
+    for harness in harnesses:
+        if harness not in GLOBAL_HARNESSES:
+            raise ValueError(f"cannot install the reflect skill globally for {harness!r}; harnesses: "
+                             f"{', '.join(GLOBAL_HARNESSES)}")
+        root, layout = global_layout(harness)
+        mine = root / layout.location("skills") / REFLECT / "SKILL.md"
+        record = root / RECORD
+        owned: set[str] = set()
+        if record.is_file():
+            agents = json.loads(record.read_text(encoding="utf-8")).get("agents", {})
+            files = agents.get(REFLECT_AGENT, {}).get("harnesses", {}).get(harness, {}).get("files", [])
+            owned = {Path(path).as_posix() for path in files}  # The record keeps them as ./skills/...
+        if mine.is_file() and mine.relative_to(root).as_posix() not in owned:
+            raise ValueError(f"{mine} is a skill of your own named {REFLECT!r}; rename it to install the reflect skill")
+        tool = AgentConfig(name=REFLECT_AGENT, version=honed_version(), skills={REFLECT: reflect_skill(harness)})
+        try:
+            install(tool, layout, root)
+        except InstallConflict as error:
+            raise ValueError(str(error)) from None
+        done.append(mine.parent)
+    return done
+
+
+def uninstall_reflect_skill_global(harnesses: Sequence[Harness] | None = None) -> list[Harness]:
+    """Remove the reflect skill from the harnesses' own folders (default: every one that has it)."""
+    from honed.resources.harness import GLOBAL_HARNESSES, global_layout, installed_agents, uninstall
+
+    removed: list[Harness] = []
+    for harness in harnesses or GLOBAL_HARNESSES:
+        root, layout = global_layout(harness)
+        if harness in installed_agents(root).get(REFLECT_AGENT, {}):
+            uninstall(layout, root, name=REFLECT_AGENT)
+            removed.append(harness)
+    return removed
+
+
+# --- one-command setup --------------------------------------------------------------------------------------------
+
+# A harness's marks in a project folder, and the command that runs it.
+_MARKERS: dict[Harness, tuple[str, ...]] = {
+    "claude": (".claude", "CLAUDE.md", ".mcp.json"),
+    "codex": (".codex",),
+    "pi": (".pi",),
+    "opencode": (".opencode", "opencode.json", "opencode.jsonc"),
+}
+_COMMANDS: dict[Harness, str] = {"claude": "claude", "codex": "codex", "pi": "pi", "opencode": "opencode"}
+
+
+def detect_harness(project: str | Path) -> Harness:
+    """The harness to evolve in ``project``: the only one whose configuration is in the folder, else the only one
+    installed on this machine (on PATH). Ambiguous or none: a ValueError that names the candidates."""
+    root = Path(project).resolve()
+    found = [harness for harness, marks in _MARKERS.items() if any((root / mark).exists() for mark in marks)]
+    if len(found) == 1:
+        return found[0]
+    if not found:
+        found = [harness for harness, command in _COMMANDS.items() if shutil.which(command)]
+        if len(found) == 1:
+            return found[0]
+        if not found:
+            raise ValueError(f"no coding agent found in {root} or on PATH; install one of "
+                             f"{', '.join(HARNESSES)}, or pass --harness")
+    raise ValueError(f"{root} could evolve {', '.join(found)}; pick one with --harness (a project evolves one)")
+
+
+def harness_command(harness: Harness) -> str | None:
+    """Where ``harness``'s command is on PATH, if it is."""
+    return shutil.which(_COMMANDS[harness])
+
+
+def ensure_repository(project: str | Path, *, init: bool = True) -> tuple[Path, bool]:
+    """The root of the git repository holding ``project``, and whether it was just created: with ``init``, a folder
+    outside any repository gets ``git init`` (never the home folder or the file system's root)."""
+    folder = Path(project).expanduser().resolve()
+    if shutil.which("git") is None:
+        raise ValueError("git is not installed; honed keeps the configuration's history in git")
+    try:
+        return _toplevel(folder), False
+    except ValueError:
+        if not init:
+            raise
+    if folder in {Path.home().resolve(), Path(folder.anchor)}:
+        raise ValueError(f"{folder} is not a project folder; run setup inside a project")
+    folder.mkdir(parents=True, exist_ok=True)
+    _git(folder, "init", "-q")
+    return _toplevel(folder), True
+
+
+def setup_paths(root: Path) -> list[str]:
+    """What setting a project up wrote, relative to its root: the submodule, the install record, .gitignore, and
+    every file, context document, hooks file and MCP file the install record names."""
+    from honed.resources.harness import RECORD, get_harness
+
+    paths = [".gitmodules", *([WORKSPACE.as_posix()] if is_submodule(root) else []), RECORD, ".gitignore"]
+    record = json.loads((root / RECORD).read_text(encoding="utf-8")) if (root / RECORD).is_file() else {}
+    for agent in record.get("agents", {}).values():
+        paths += list(agent.get("context", {}))
+        for harness, entry in agent.get("harnesses", {}).items():
+            paths += entry.get("files", [])
+            layout = get_harness(harness)
+            if entry.get("hooks") and layout.hooks_file:
+                paths.append(layout.hooks_file)
+            if entry.get("mcps") and layout.mcp_file:
+                paths.append(layout.mcp_file)
+    existing = [path for path in dict.fromkeys(paths) if (root / path).exists()]
+    try:  # thearc's folder, moved: its removal goes into the same commit.
+        if _git(root, "ls-tree", "-r", "--name-only", "HEAD", "--", ".thearc").strip():
+            existing.append(".thearc")
+    except GitError:  # No commit yet.
+        pass
+    return existing
+
+
+def commit_setup(root: Path, harness: Harness) -> tuple[str | None, list[str]]:
+    """Commit what setup wrote, and nothing else the index holds: the new commit's short hash (None when there was
+    nothing to commit), and the paths left out because .gitignore ignores them. Needs a git identity."""
+    paths = setup_paths(root)
+    present = [path for path in paths if (root / path).exists()]
+    try:
+        ignored = _git(root, "check-ignore", "--", *present).decode().split() if present else []
+    except GitError:  # Exit status 1: none is ignored.
+        ignored = []
+    paths = [path for path in paths if path not in ignored]
+    if added := [path for path in present if path not in ignored]:
+        _git(root, "add", "--", *added)
+    if not paths or not _git(root, "status", "--porcelain", "--", *paths).strip():
+        return None, ignored
+    try:
+        _git(root, "commit", "-q", "-m", f"Set up honed to evolve the {harness} configuration", "--", *paths)
+    except GitError as error:
+        if "identity" in str(error) or "user.email" in str(error):
+            raise ValueError("git has no identity to commit with: set it with `git config --global user.name "
+                             "'Your Name'` and `git config --global user.email you@example.com`, or pass "
+                             "--no-commit") from None
+        raise
+    return _git(root, "rev-parse", "--short", "HEAD").decode().strip(), ignored
+
+
+@dataclass(frozen=True)
+class ProjectSetup:
+    setup: Setup
+    root: Path
+    git_initialized: bool
+    commit: str | None  # The setup commit, if one was made.
+    command: str | None  # Where the harness's command is, or None when it is not on PATH.
+    migrated: bool = False  # Moved from thearc's .thearc first.
+    ignored: tuple[str, ...] = ()  # Installed, but not committed: .gitignore ignores them.
+    remote: str | None = None  # The workspace's origin; None while it is on this machine only.
+
+
+def setup_project(project: str | Path = ".", *, harness: Harness | None = None, ignore: Sequence[str] = (),
+                  remote: str | None = None, github: str | None = None, reflect: bool = True,
+                  init_git: bool = True, commit: bool = True) -> ProjectSetup:
+    """Everything ``/evolve`` needs, in one call: a git repository (``git init`` with ``init_git``), the harness
+    (detected unless given), the evolve and reflect skills (``install_evolve_skill``), and with ``commit`` one commit
+    of what was installed. The workspace gets ``remote``, or the GitHub repository ``github`` (``OWNER/NAME``, created
+    if missing); without either it stays on this machine. The harness reflects and curates its own sessions (its
+    runtime is itself). A project set up by thearc is moved to honed's layout first. Run again, it reinstalls the
+    skills and commits what changed."""
+    root, created = ensure_repository(project, init=init_git)
+    migrated = migrate_thearc(root)
+    harness = harness or (project_harness(root) if (root / WORKSPACE / ".git").exists() else detect_harness(root))
+    if github is not None and remote is None:
+        remote = create_github_remote(root, github)
+    done = install_evolve_skill(root, harness, ignore=ignore, remote=remote, reflect=reflect)
+    made, ignored = commit_setup(root, harness) if commit else (None, [])
+    return ProjectSetup(done, root, created, made, harness_command(harness), migrated, tuple(ignored),
+                        remote_of(root))
+
+
 def _installed_files(root: Path, name: str, harness: Harness) -> set[str]:
     """The files agent ``name`` installed for ``harness`` in the project, by its install record."""
     from honed.resources.harness import RECORD
@@ -243,13 +450,74 @@ def _installed_files(root: Path, name: str, harness: Harness) -> set[str]:
     return set(record.get("agents", {}).get(name, {}).get("harnesses", {}).get(harness, {}).get("files", []))
 
 
+def is_submodule(project: str | Path) -> bool:
+    """Whether the project holds its workspace as a git submodule (it does once the workspace has a remote)."""
+    root = project_root(project)
+    try:
+        _git(root, "config", "-f", ".gitmodules", f"submodule.{WORKSPACE.as_posix()}.path")
+    except GitError:
+        return False
+    return True
+
+
 def set_remote(project: str | Path, url: str) -> None:
-    """Point the workspace's ``origin`` at ``url``, and the project's submodule too (``.gitmodules``)."""
+    """Point the workspace's ``origin`` at ``url`` and push its ``main`` and releases there; then the project holds
+    the workspace as a submodule with that URL (added now if the workspace was local), so a clone fetches it."""
     root = project_root(project)
     folder = root / WORKSPACE
     remotes = _git(folder, "remote").decode().split()
     _git(folder, "remote", "set-url" if "origin" in remotes else "add", "origin", url)
-    _git(root, "submodule", "set-url", WORKSPACE.as_posix(), url)
+    main, releases = branch_name(folder, "main", "").rstrip("/"), f"refs/heads/{branch_name(folder, 'release', '')}"
+    _git(folder, "push", "-q", "-u", "origin", main)
+    if _git(folder, "for-each-ref", "--format=%(refname)", releases).strip():
+        _git(folder, "push", "-q", "origin", f"{releases}*:{releases}*")
+    if is_submodule(root):
+        _git(root, "submodule", "set-url", WORKSPACE.as_posix(), url)
+    else:
+        _unignore_in_git(root, f"/{WORKSPACE.as_posix()}/")
+        _git(root, "submodule", "add", "-q", url, WORKSPACE.as_posix())  # The repository at the path, as it is.
+
+
+_GITHUB = re.compile(r"github\.com[:/](?P<owner>[^/]+)/(?P<name>[^/]+?)(?:\.git)?/?$")
+
+
+def github_suggestion(project: str | Path) -> str | None:
+    """``OWNER/NAME`` for a new GitHub repository to hold the workspace: the project's GitHub owner (else the
+    signed-in account) and ``<project>-honed``. None without an authenticated GitHub CLI (``gh``)."""
+    if shutil.which("gh") is None:
+        return None
+    if subprocess.run(["gh", "auth", "status"], capture_output=True, check=False).returncode != 0:
+        return None
+    root = project_root(project)
+    owner = None
+    try:
+        if match := _GITHUB.search(_git(root, "remote", "get-url", "origin").decode().strip()):
+            owner = match["owner"]
+    except GitError:
+        pass
+    if owner is None:
+        login = subprocess.run(["gh", "api", "user", "--jq", ".login"], capture_output=True, text=True, check=False)
+        owner = login.stdout.strip() or None
+    return f"{owner}/{root.name}-honed" if owner else None
+
+
+def create_github_remote(project: str | Path, repository: str) -> str:
+    """Create the private GitHub repository ``OWNER/NAME`` (or reuse it, if it exists) with ``gh``; its clone URL,
+    over SSH when the project's own origin is."""
+    if shutil.which("gh") is None:
+        raise ValueError("creating the workspace's repository needs the GitHub CLI (gh); or pass --remote URL")
+    root = project_root(project)
+    created = subprocess.run(
+        ["gh", "repo", "create", repository, "--private",
+         "--description", f"honed workspace: the versions of {root.name}'s agent configuration"],
+        capture_output=True, text=True, check=False)
+    if created.returncode != 0 and "already exists" not in created.stderr + created.stdout:
+        raise ValueError(f"gh repo create {repository}: {created.stderr.strip() or created.stdout.strip()}")
+    try:
+        ssh = _git(root, "remote", "get-url", "origin").decode().strip().startswith("git@")
+    except GitError:
+        ssh = False
+    return f"git@github.com:{repository}.git" if ssh else f"https://github.com/{repository}.git"
 
 
 def remote_of(project: str | Path) -> str | None:

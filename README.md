@@ -15,11 +15,23 @@ installing it. It works across Claude Code, Codex, Pi, OpenCode, and Antigravity
 
 ```sh
 python -m pip install honed
-cd your-project                                       # a git repository
-honed skills install self-evolve --harness claude    # or codex, pi, opencode
+cd your-project
+honed setup
 ```
 
-Commit what it installs (the skill, and the workspace as the submodule `.honed/workspace`).
+`honed setup` makes the folder a git repository if it is not one, detects the agent (Claude Code, Codex, Pi or
+OpenCode; pass `--harness claude` when it can't tell), installs the `/evolve` and `/reflect` skills, and commits only
+what it installed. It is safe to run again.
+
+The **workspace** (`.honed/workspace`) keeps every version of the configuration and why it changed. Give it a remote:
+setup asks, and offers to create a private GitHub repository with `gh` (`--create-remote` does it without asking;
+`--remote URL` uses one you have). It is pushed there, the project holds it as a submodule so a clone fetches it, and
+`honed evolve apply` pushes each release. Without a remote (`--local`) it stays on your machine, out of the project,
+until `honed evolve remote URL` gives it one.
+
+Evolution is per project: each project keeps its own versioned configuration and learns from its own sessions.
+`/reflect` alone can be installed for every project, into the agent's own folder (`~/.claude/skills`, ...):
+`honed skills install reflect --global --harness claude`.
 
 Work in the project as usual. After three sessions or more, type `/evolve` in the agent: it reflects on the last
 week's sessions, curates, and proposes a new version of the project's instructions and skills. `/evolve diff` shows

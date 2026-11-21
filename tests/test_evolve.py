@@ -80,8 +80,7 @@ def test_install_adopts_the_harness_configuration_beside_the_evolve_skill(projec
     setup = evolve.install_evolve_skill(project, "claude")
     workspace = project / WORKSPACE
     assert git(workspace, "rev-parse", "--abbrev-ref", "HEAD") == "main"  # A repository of its own…
-    assert git(project, "ls-files", "--stage", WORKSPACE).startswith("160000")  # …added as a submodule.
-    assert "path = .honed/workspace" in (project / ".gitmodules").read_text()
+    assert not (project / ".gitmodules").exists()  # …kept out of the project until it has a remote.
     assert not git(project, "for-each-ref", "refs/heads/honed")  # No workspace branches in the project.
     assert setup.agent.name == "app" and set(setup.agent.skills) == {"retry"}
     assert setup.agent.ignore == ["skill:evolve", "skill:reflect"] and not setup.agent.frozen  # Never evolved.
@@ -92,7 +91,7 @@ def test_install_adopts_the_harness_configuration_beside_the_evolve_skill(projec
     record = json.loads((project / ".honed/installed.json").read_text())["agents"]
     assert ".claude/skills/evolve/SKILL.md" in record["honed-evolve"]["harnesses"]["claude"]["files"]
     ignored = set((project / ".gitignore").read_text().splitlines())
-    assert "/.honed/cache/" in ignored and "/.honed/workspace/" not in ignored
+    assert "/.honed/cache/" in ignored and "/.honed/workspace/" in ignored
     assert git(project, "rev-parse", "--abbrev-ref", "HEAD") == "main"  # The project's checkout is untouched.
     status = evolve.status(project)
     assert status["installed"] == "1.0.0" and status["runtime"] == "claude" and status["harness"] == "claude"
@@ -138,7 +137,7 @@ def test_a_round_proposes_amends_and_applies(project):
     assert git(workspace, "rev-parse", "--abbrev-ref", "HEAD") == "main"
     branches = git(workspace, "for-each-ref", "--format=%(refname:short)", "refs/heads").split()
     assert "release/1.0.1" in branches and not any("proposal" in b for b in branches)
-    assert git(project, "status", "--porcelain", WORKSPACE).endswith("M .honed/workspace")  # The submodule moved.
+    assert git(project, "status", "--porcelain", WORKSPACE) == ""  # Local, so not the project's (no submodule).
     assert AgentConfig.from_workspace(workspace).version == "1.0.1"
 
     installed = project / ".claude/skills/retry/SKILL.md"  # A hand edit before the next round…
@@ -272,16 +271,21 @@ def test_a_teammate_gets_the_workspace_with_the_project(project, tmp_path, monke
     assert evolve.status(clone)["remote"] == str(shared)
 
 
-def test_apply_pushes_the_workspace_when_asked(project, tmp_path, monkeypatch):
+def test_a_remote_makes_the_workspace_a_submodule_and_apply_pushes_to_it(project, tmp_path, monkeypatch):
+    for key, value in (("COUNT", "1"), ("KEY_0", "protocol.file.allow"), ("VALUE_0", "always")):
+        monkeypatch.setenv(f"GIT_CONFIG_{key}", value)  # Local paths as remotes, for the test.
     evolve.install_evolve_skill(project, "claude")
     evolve.run(project, recipe=scripted_recipe([("max 3", "max 2", "Two tries")], {}))
     with pytest.raises(ValueError, match="no remote"):
         evolve.apply(project, push=True)
     shared = tmp_path / "workspace.git"
     git(tmp_path, "init", "-q", "--bare", str(shared))
-    evolve.setup.set_remote(project, str(shared))
-    assert f"url = {shared}" in (project / ".gitmodules").read_text()
-    applied = evolve.apply(project, push=True)
+    evolve.setup.set_remote(project, str(shared))  # A local workspace gets its remote later.
+    assert git(shared, "rev-parse", "main") == git(project / WORKSPACE, "rev-parse", "main")  # Pushed now…
+    assert f"url = {shared}" in (project / ".gitmodules").read_text()  # …and a submodule of the project.
+    assert git(project, "ls-files", "--stage", WORKSPACE).startswith("160000")
+    assert "/.honed/workspace/" not in (project / ".gitignore").read_text()
+    applied = evolve.apply(project)  # Pushed by default, with a remote.
     assert applied.pushed == str(shared)
     assert git(shared, "rev-parse", "main") == git(project / WORKSPACE, "rev-parse", "main")
     assert git(shared, "rev-parse", "--verify", "release/1.0.1")

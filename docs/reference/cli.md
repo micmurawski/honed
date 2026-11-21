@@ -40,13 +40,25 @@ exactly what the last install wrote. A global install for Claude skips MCP serve
 installs did not write.
 
 ```text
+honed setup [DIR] [--harness H] [--ignore PATTERN …] [--remote URL | --create-remote [OWNER/NAME] | --local]
+            [--no-git-init] [--no-commit]
 honed skills install self-evolve [--project DIR] --harness H [--runtime H] [--ignore PATTERN …] [--remote URL]
 honed skills uninstall self-evolve [--project DIR]
 honed evolve [--project DIR] [--json] [--recipe FILE] [--open] [--estimate]
-honed evolve diff | amend -m WHY | apply [--push] | discard | status | ignore PATTERN… [--remove] | rollback VERSION
+honed evolve diff | amend -m WHY | apply [--push/--no-push] | discard | status | ignore PATTERN… [--remove] | rollback VERSION
 honed evolve init | remote URL
 ```
 
-Set a project up for [/evolve](../guides/evolve-skill.md), and run its rounds.
+Set a project up for [/evolve](../guides/evolve-skill.md), and run its rounds. `honed setup` does the whole setup
+in one step (`git init` if needed, the harness detected, a commit of what it installed); `skills install self-evolve`
+is the install alone.
+
+```text
+honed skills install reflect (--project DIR | --global) --harness H [--harness H …]
+honed skills uninstall reflect [--project DIR | --global] [--harness H …]
+```
+
+`/reflect` on its own, for a project or, with `--global`, for every project (into the harness's own folder, as
+`agent install --global`). `/evolve` itself is per project: its workspace and sessions belong to one project.
 
 Run any command with `--help` for every option.
