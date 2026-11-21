@@ -10,7 +10,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from honed.resources import CategoricalScale, Ref, ReflectionSchema
+from honed.resources import CategoricalScale, Ref
 from honed.sessions.analysis.aeg.failures import failure_mode_scale
 
 USEFULNESS = CategoricalScale(
@@ -54,4 +54,4 @@ class Lesson(BaseModel):
     ratings: list[Rated] = Field(description="The configuration lines that shaped the behaviour, each rated.")
 
 
-SCHEMA = ReflectionSchema(Lesson)
+SCHEMA = Lesson  # Anything that takes a schema takes the model itself.

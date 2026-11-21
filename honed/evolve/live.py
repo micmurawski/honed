@@ -108,7 +108,7 @@ def judged(root: Path, harness: Harness, version: str | None = None) -> Judged:
         return Judged(_release(root, version), prompt, schema, True)
     agent = AgentConfig.from_installation(harness, root, name=root.name,
                                         ignore=["skill:reflect", "skill:evolve"])
-    return Judged(agent, default_prompt(), SCHEMA, False)
+    return Judged(agent, default_prompt(), ReflectionSchema.of(SCHEMA), False)
 
 
 def default_prompt() -> Prompt:
@@ -149,7 +149,7 @@ def _recipe(root: Path, harness: Harness) -> tuple[Prompt, ReflectionSchema]:
         schema = getattr(load_recipe(folder / "evolve.py"), "SCHEMA", SCHEMA)
     except (OSError, TypeError, ValueError, ImportError):
         schema = SCHEMA
-    return prompt, schema if isinstance(schema, ReflectionSchema) else SCHEMA
+    return prompt, ReflectionSchema.of(schema)  # The model itself (``SCHEMA = Lesson``), or a ReflectionSchema.
 
 
 def _files_folder(root: Path, release: AgentConfig) -> Path:

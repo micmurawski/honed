@@ -171,7 +171,7 @@ class Evolution:
         return self._sessions.add_reflection(reflection)
 
     def partition(self, histories: Sequence[Session | Thread], prompt: str | Prompt,
-                  schema: ReflectionSchema = SCHEMA, *, revision: str | None = None, match: str = "version",
+                  schema: ReflectionSchema | Any = SCHEMA, *, revision: str | None = None, match: str = "version",
                   modes: Sequence[str] = ("in-session", "handoff"), tail_min: int = 1) -> Partition:
         """Split ``histories`` by what earlier reflections cover of them: reflections (in the index: files, journals,
         in-session ones) on that session, of ``revision`` (default: the release's), in one of ``modes``, that answer
@@ -232,7 +232,7 @@ class Evolution:
         return recorded
 
     def estimate(self, sessions: Sequence[Session | Thread], runtime: str, *, curations: int = 1,
-                 prompt: str | Prompt | None = None, schema: ReflectionSchema = SCHEMA,
+                 prompt: str | Prompt | None = None, schema: ReflectionSchema | Any = SCHEMA,
                  sourced: int = 0) -> Estimate:
         """What reflecting on ``sessions`` with ``runtime`` and curating ``curations`` times will cost, from the size of
         the sessions and the cost of earlier runs in this workspace (see ``estimate``); logged, and kept for the
@@ -245,7 +245,7 @@ class Evolution:
         self.log.info(f"estimate: {self.estimated}")
         return self.estimated
 
-    def remembered(self, session: Session | Thread, prompt: str | Prompt, schema: ReflectionSchema = SCHEMA,
+    def remembered(self, session: Session | Thread, prompt: str | Prompt, schema: ReflectionSchema | Any = SCHEMA,
                    revision: str | None = None) -> Reflected | None:
         """An earlier reflection on exactly ``session`` (the same events), of ``revision`` (default: the installed
         release's), asked ``prompt`` with ``schema``: kept in the journal of any branch of the workspace, such as a
@@ -260,7 +260,7 @@ class Evolution:
         return None if row is None else Reflected.model_validate(json.loads(row["data"]))
 
     def recall(self, session: Session | Thread, candidate: AgentConfig, prompt: str | Prompt,
-               schema: ReflectionSchema = SCHEMA) -> Reflection | None:
+               schema: ReflectionSchema | Any = SCHEMA) -> Reflection | None:
         """Record in ``candidate`` the reflection on ``session`` that an earlier round made (see ``remembered``), and
         return it; None when there is none, and the session has to be reflected on."""
         kept = self.remembered(session, prompt, schema, candidate.revision)
@@ -290,7 +290,7 @@ class Evolution:
                    and kept.evidence.get("to_event", last) == last
                    for kept in candidate.reload().journal.reflections)
 
-    def reflections(self, candidate: AgentConfig, schema: ReflectionSchema = SCHEMA) -> list[Reflection]:
+    def reflections(self, candidate: AgentConfig, schema: ReflectionSchema | Any = SCHEMA) -> list[Reflection]:
         """The reflections on sessions that ``candidate``'s journal holds for its revision, read with ``schema``."""
         journal = candidate.reload().journal
         return [Reflection.from_dict(kept.model_dump(mode="json"), schema) for kept in journal.reflections
