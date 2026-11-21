@@ -230,9 +230,9 @@ class Lesson(BaseModel):
     correct_approach: str = Field(description="What should the model have done instead?")
     key_insight: str = Field(description="What should be remembered to avoid this error?")
     ratings: list[Tagged]
-
-schema = ReflectionSchema(Lesson)
 ```
+
+`Lesson` itself is the schema: everything that takes one wraps it in a `ReflectionSchema`.
 
 Every object holding a rating yields one **item** per rating field: its ref,
 value, scale, its location in the output (a JSON pointer such as

@@ -99,7 +99,7 @@ def create_prep(signature: inspect.Signature) -> Callable[[Node, Any], dict]:
         res = {}
         for name, field in signature.parameters.items():
             res[name] = shared.get(name)
-            if res[name] is None:
+            if res[name] is None and (name not in shared or field.default is not inspect._empty):
                 if field.kind == inspect.Parameter.VAR_KEYWORD:
                     res[name] = {}
                 elif field.kind == inspect.Parameter.VAR_POSITIONAL:
@@ -115,16 +115,27 @@ def create_prep(signature: inspect.Signature) -> Callable[[Node, Any], dict]:
 
 def create_batch_prep(
     signature: inspect.Signature,
-    input_model: BaseModel,
+    input_model: BaseModel | None,
     items_key: str = "items",
     items_type: type[list | dict] = dict,
+    item: str | None = None,
 ) -> Callable[[Any, Any], list[dict]]:
-    """Prep for batch/parallel_batch nodes: reads shared[items_key] and returns a list of validated item dicts."""
+    """Prep for batch/parallel_batch nodes: reads shared[items_key] and returns a list of validated item dicts. With
+    ``item``, each element of shared[items_key] is passed as that parameter, whatever it is, and the node's other
+    parameters come from shared (or their defaults). Without ``input_model``, nothing is validated."""
 
     def prep_inner(self, shared: Any) -> list[dict]:
         raw_items = shared.get(items_key)
         if raw_items is None:
             raw_items = []
+        if item is not None:
+            if not isinstance(raw_items, (list, tuple)):
+                raise TypeError(f"shared[{items_key!r}] must be a list, got {type(raw_items).__name__}")
+            others = create_prep(inspect.Signature([p for p in signature.parameters.values() if p.name != item]))
+            common = others(self, shared)
+            if input_model is None:
+                return [{**common, item: raw} for raw in raw_items]
+            return [_validated_kwargs(input_model, {**common, item: raw}) for raw in raw_items]
         if not isinstance(raw_items, list):
             raise TypeError(
                 f"For batch/parallel_batch nodes, shared[{items_key!r}]"
@@ -141,6 +152,9 @@ def create_batch_prep(
                 )
             if items_type is dict:
                 injected = {name: shared[name] for name in signature.parameters if name not in raw and name in shared}
+                if input_model is None:
+                    prepped.append({**injected, **raw})
+                    continue
                 validated = input_model(**injected, **raw)
                 prepped.append(
                     _deep_materialize(
@@ -167,7 +181,7 @@ def __reduce_shared(self, shared, prep_res, exec_res):
 
     if not isinstance(state, dict):
         raise TypeError(f"Error at {self.__name__}: state must be a dict, got {type(state)}")
-    state = _deep_materialize(state)
+    state = _deep_materialize(state, preserve_custom_objects=True)  # Plain containers rebuilt; objects as they are.
     shared.update(state)
     return action
 
@@ -220,6 +234,8 @@ def node(
     results_key: str = "results",
     results_type: type[list | dict] = list,
     metadata: dict[str, Any] | None = None,
+    validate: bool = True,
+    item: str | None = None,
 ):
     """
     Decorator that creates a PocketFlow Node instance from a function.
@@ -241,7 +257,15 @@ def node(
         results_key (str): Key in shared where batch results are stored (default: "results").
         results_type (list | dict): If list (default), store a list of per-item results.
         If dict, each item should return (key, value) and results are merged into shared[results_key] as a dict.
+        metadata (dict): Shown with the node on a flow's progress page.
+        validate (bool): If True (default), arguments are validated against the parameters' annotations with
+        pydantic. If False they are passed as they are in shared: for live objects such as sessions, dataclasses
+        or open resources, which validation would copy or reject. Annotations are still required.
+        item (str): For a batch node: the parameter each element of shared[items_key] is passed as (the elements
+        may be anything); the other parameters come from shared. Without it, each element is a dict of arguments.
 
+    A node's state is returned as a dict merged into shared (optionally with an action: ``return state, "go"``);
+    objects in it are kept as they are.
     Returns:
         A Node instance with the function name as the class name
     """
@@ -260,8 +284,14 @@ def node(
         if is_method or is_class_method:
             parameters = parameters[1:]
             signature = inspect.Signature(parameters)
-        input_model = signature_to_input_model(class_name, signature)
+        signature_to_field_definitions(class_name, signature.parameters)  # Every parameter must be annotated.
+        checked = signature_to_input_model(class_name, signature) if validate else None
         is_method_or_cls = is_method or is_class_method
+
+        def arguments(prep_res):  # Batch items with ``item`` were validated in prep already.
+            if checked is None or (is_batch and item is not None):
+                return prep_res
+            return _validated_kwargs(checked, prep_res)
 
         def make_node_init(owner_param: bool):
             def node_init(self, owner=None, **kwargs):
@@ -276,13 +306,14 @@ def node(
             is_batch = node_class is BatchNode
             items_type = dict if results_type is list else list
             prep_fn = (
-                create_batch_prep(signature, input_model, items_key, items_type) if is_batch else create_prep(signature)
+                create_batch_prep(signature, checked, items_key, items_type, item) if is_batch
+                else create_prep(signature)
             )
             post_fn = create_batch_post(results_key, results_type) if is_batch else __reduce_shared
             if is_method_or_cls:
 
                 def exec_sync(self, prep_res):
-                    return func(self.owner, **_validated_kwargs(input_model, prep_res))
+                    return func(self.owner, **arguments(prep_res))
 
                 node_class = type(
                     class_name,
@@ -303,7 +334,7 @@ def node(
                 (node_class,),
                 {
                     "__init__": make_node_init(False),
-                    "exec": lambda self, prep_res: func(**_validated_kwargs(input_model, prep_res)),
+                    "exec": lambda self, prep_res: func(**arguments(prep_res)),
                     "prep": prep_fn,
                     "post": post_fn,
                     "__doc__": func.__doc__,
@@ -319,11 +350,12 @@ def node(
             elif batch:
                 node_class = AsyncBatchNode
             is_batch = node_class in (AsyncBatchNode, AsyncParallelBatchNode)
-            prep_fn = create_batch_prep(signature, input_model, items_key) if is_batch else create_prep(signature)
+            prep_fn = (create_batch_prep(signature, checked, items_key, item=item) if is_batch
+                       else create_prep(signature))
             post_fn = create_batch_post(results_key, results_type) if is_batch else __reduce_shared
 
             async def exec_async(self, prep_res):
-                kwargs = _validated_kwargs(input_model, prep_res)
+                kwargs = arguments(prep_res)
                 if is_method_or_cls:
                     return await func(self.owner, **kwargs)
                 return await func(**kwargs)

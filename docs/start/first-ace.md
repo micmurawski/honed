@@ -33,7 +33,7 @@ with Sessions("artifacts/sessions.sqlite") as sessions:
 ```python
 from typing import Annotated
 from pydantic import BaseModel, Field
-from honed.resources import CategoricalScale, Ref, ReflectionSchema
+from honed.resources import CategoricalScale, Ref
 
 USEFULNESS = CategoricalScale("usefulness", {
     "harmful": "made the work worse", "neutral": "no visible effect", "helpful": "made the work better",
@@ -48,7 +48,7 @@ class Lesson(BaseModel):
     key_insight: str = Field(description="What should be remembered?")
     ratings: list[Rated]
 
-SCHEMA = ReflectionSchema(Lesson)
+SCHEMA = Lesson  # The model is the schema.
 ```
 
 ## 4. Reflect and record
