@@ -175,7 +175,7 @@ def test_the_default_recipe_is_the_installed_one_and_waits_for_enough_sessions(p
     assert proposal.version is None and proposal.reason == "0 session(s) in the last 7 days; 3 needed"
     assert not (project / ".claude/skills/evolve/__pycache__").exists()
     page = Path(proposal.progress).read_text()  # The round's flow, as it ran: it stopped at "too few".
-    assert 'class="chip success">success' in page and "TooFew" in page and "0 claude session(s)" in page
+    assert 'class="chip success">success' in page and "too_few" in page and "0 claude session(s)" in page
 
 
 def test_the_default_recipe_shows_its_progress_and_proposes(project, monkeypatch):
@@ -213,7 +213,7 @@ def test_the_default_recipe_shows_its_progress_and_proposes(project, monkeypatch
     proposal = evolve.run(project)
     assert proposal.version == "1.0.1" and proposal.sessions == 3 and "max 2" in proposal.diff
     page = Path(proposal.progress).read_text()
-    assert page.count('class="chip success">success') == 5  # FindSessions, Partition, Source, Reflect, Curate.
+    assert page.count('class="chip success">success') == 5  # find_sessions, partition, source, reflect, curate.
     assert "3 claude session(s)" in page and "1 rating(s) (1 harmful)" in page and "Two tries are enough" in page
     assert f"{failed[0]}: no reflection (ended without a submission); going on without it" in page
     assert (project / ".honed/cache/progress.html").read_text() == page
@@ -302,7 +302,7 @@ def test_a_round_can_be_estimated_first_and_stops_over_its_budget(project, monke
     estimated = evolve.run(project, estimate_only=True)
     assert estimated.version is None and estimated.estimate is not None and estimated.estimate.sessions == 3
     assert estimated.estimate.cost is None and "no cost history yet" in estimated.reason
-    assert estimated.estimate.tokens > 0 and "Stop" in Path(estimated.progress).read_text()
+    assert estimated.estimate.tokens > 0 and ">stop<" in Path(estimated.progress).read_text()
     assert not list((project / ".honed/cache/rounds").glob("*/candidates"))  # Nothing was set up for reflecting.
 
     recipe = project / ".claude/skills/evolve/evolve.py"

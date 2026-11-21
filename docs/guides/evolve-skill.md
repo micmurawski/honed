@@ -109,8 +109,11 @@ the round ends; a copy stays in the round's folder, `.honed/cache/rounds/<round>
 ## Change the recipe
 
 `evolve.py` and `prompts/reflect.md` and `prompts/curate.md` in the installed evolve skill are plain files: edit them,
-and the next round uses them. The recipe is a [flow](https://github.com/micmurawski/honed/tree/main/honed/flow) of three nodes, run with
-`evolution.track(flow, shared)` so it shows on the progress page:
+and the next round uses them. The recipe is a [flow](https://github.com/micmurawski/honed/tree/main/honed/flow) of
+steps, run with `evolution.track(flow, shared)` so it shows on the progress page. Each step is a function decorated
+with `@node`: its parameters are read from the round's shared state by name, and the dict it returns is merged back
+into it; `return state, "action"` picks the next step. `validate=False` hands over the round's live objects (the
+evolution, its sessions, the candidate worktree) as they are.
 
 ```python
 HARNESS = "claude"  # Whose sessions are read: the harness this project evolves (set at install).
@@ -119,23 +122,44 @@ WINDOW = timedelta(days=7)
 MIN_SESSIONS = 3
 BUDGET: float | None = None  # In USD: stop before reflecting when the round is estimated to cost more.
 TIMEOUT = 900  # Seconds an agent's turn may take before it counts as stalled and fails.
+SCHEMA = Lesson  # What a reflection answers: a pydantic model (the default is honed.evolve.SCHEMA).
+
+
+@node(validate=False)
+def find_sessions(evolution: Evolution):
+    """The harness's sessions run in this project in the last WINDOW; enough of them to learn from?"""
+    sessions = evolution.sessions(harness=HARNESS, since=WINDOW)
+    if len(sessions) < MIN_SESSIONS:
+        evolution.nothing(f"{len(sessions)} session(s); {MIN_SESSIONS} needed")
+        return None, "too few"
+    return {"sessions": sessions}, "enough"
+
+...
+
+
+find_sessions - "too few" >> too_few
+find_sessions - "enough" >> partition
+partition - "stop" >> stop
+partition - "go" >> source >> reflect >> curate
 
 
 def propose(evolution: Evolution) -> AgentConfig | None:
-    find, too_few, stop, reflect, curate = FindSessions(), TooFew(), Stop(), Reflect(), Curate()
-    find - "too few" >> too_few
-    find - "stop" >> stop
-    find - "enough" >> reflect >> curate
-    shared = evolution.track(Flow(start=find), {"evolution": evolution})
-    return shared.get("proposal")
+    return evolution.track(Flow(start=find_sessions), {"evolution": evolution}).get("proposal")
 ```
 
-- `FindSessions` takes `evolution.sessions(harness=HARNESS, since=WINDOW)`, needs at least `MIN_SESSIONS`, and
-  estimates the round; it stops there for `--estimate` or a round over `BUDGET`.
-- `Reflect` is a batch node: one `Reflector(RUNTIME, timeout=TIMEOUT).handoff(...)` per session, skipping those a
-  stopped round already reflected on (`evolution.reflected`) and reusing an earlier round's reflection where there is
-  one (`evolution.recall`).
-- `Curate` runs `Curator(RUNTIME, timeout=TIMEOUT).curate(...)` on `evolution.candidate()` and returns it as the proposal.
+- `find_sessions` takes `evolution.sessions(harness=HARNESS, since=WINDOW)` and needs at least `MIN_SESSIONS`.
+- `partition` splits them by what reflections made already cover (in the sessions, by `/reflect`, or by earlier
+  rounds), runs the failure rules for the reflector's hints (`FOCUS`, `SELECT`), and estimates the round: it stops
+  there for `--estimate` or a round over `BUDGET`, and otherwise sets up the candidate (`evolution.candidate()`).
+- `source` records the reflections made already into the candidate, without a model call.
+- `reflect` is a batch node (`@node(batch=True, items_key="to_reflect", item="handed")`): one
+  `Reflector(RUNTIME, timeout=TIMEOUT).handoff(...)` per session left, skipping those a stopped round already
+  reflected on (`evolution.reflected`) and reusing an earlier round's reflection where there is one
+  (`evolution.recall`).
+- `curate` runs `Curator(RUNTIME, timeout=TIMEOUT).curate(...)` on the candidate and returns it as the proposal.
+
+The steps and the graph are defined once, at module level; `propose` only runs the flow. A step with an argument it
+doesn't find in the shared state, and no default for it, fails with its name.
 
 Each node writes to `evolution.log`. `evolution.track(flow, shared, logs={"name": path})` adds more log files as tabs.
 A recipe may curate several candidates in parallel (`evolution.candidate("a")`, `evolution.candidate("b")`) and

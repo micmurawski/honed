@@ -24,9 +24,9 @@ from .runtimes import TOOL, ToolEndpoint
 class Submission:
     """Checks submitted reflections; ``output`` and ``items`` hold the last accepted one (``None`` until then)."""
 
-    def __init__(self, files: AgentFiles, schema: ReflectionSchema,
+    def __init__(self, files: AgentFiles, schema: ReflectionSchema | Any,
                  frozen: Callable[[ResourceTarget], bool] = lambda target: False):
-        self.files, self.schema, self.frozen = files, schema, frozen
+        self.files, self.schema, self.frozen = files, ReflectionSchema.of(schema), frozen
         self.output: Any = None
         self.items: list[ReflectionItem] | None = None
         self.attempts = 0

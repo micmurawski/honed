@@ -27,6 +27,15 @@ versions follow [Semantic Versioning](https://semver.org/).
   its placeholder submodule until you run `honed evolve remote URL`.
 - `honed evolve apply` pushes the release when the workspace has a remote (`--no-push` holds it back); it pushed only
   with `--push`.
+- The default `/evolve` recipe (`evolve.py`) is written as functions decorated with `@node`, one per step
+  (`find_sessions`, `partition`, `source`, `reflect`, `curate`), instead of `Node` classes with `prep`/`exec`/`post`;
+  the progress page names the steps after them. A recipe installed earlier keeps working as it is.
+- `@node` (`honed.flow.decorators`) passes live objects through a flow: `validate=False` hands arguments over as they
+  are in the shared state (annotations are still required), state a node returns keeps its objects instead of
+  failing to serialize them, a batch node's `item=` names the parameter each element of the list is passed as, a
+  and a value of `None` in the shared state counts as given.
+- The progress page (`FlowTracker`) leaves a flow's nodes as they were once a run ends, so the same nodes can run
+  (and be tracked) again: a recipe defines its steps and their graph once, at module level.
 - The quickstart (`examples/quickstart/run.sh`) installs honed from the checkout with pip when it is missing, and sets
   its project up with `honed setup`.
 - thearc is renamed **honed**: the package (`pip install honed`), the module (`import honed`), the command (`honed`,
@@ -36,7 +45,9 @@ versions follow [Semantic Versioning](https://semver.org/).
 - Reflectors take the output model itself where they took a `ReflectionSchema`: `Reflector.reflect`,
   `reflect_with_tools`, `handoff`, `WorkGraphReflector`, `Reflection.from_dict` and `Reflection.load` wrap it with
   the new `ReflectionSchema.of`, so `handoff(prompt, session, agent, Lesson)` is enough. A `ReflectionSchema` still
-  works as before.
+  works as before. The rest of the pipeline takes it too: `Submission`, `fingerprint`, `schema_hash`, the
+  `Evolution` methods, and a recipe's `SCHEMA`, which `/reflect` (`honed reflect begin`) used to ignore unless it
+  was a `ReflectionSchema`. The default schema is `honed.evolve.SCHEMA = Lesson`.
 
 ### Migrating from thearc
 

@@ -9,6 +9,7 @@ import time
 from collections import deque
 from collections.abc import Mapping
 from contextlib import contextmanager
+from typing import Any
 
 from honed.ui import FONTS, THEME_CSS, THEME_JS
 
@@ -546,8 +547,7 @@ class FlowTracker:
             }
             for n in self._graph["nodes"]
         }
-        for n in self._graph["nodes"]:
-            self._instrument(n["id"], n["is_batch"], n["is_async"])
+        self._instrumented: list[tuple[Any, type]] = []  # (node, its own class) while a run is tracked.
         self._write_html()
 
     def _set_status(self, node_id, status, error=None):
@@ -591,6 +591,8 @@ class FlowTracker:
             while not stop.wait(self._refresh_interval):
                 self._write_html()
 
+        for n in self._graph["nodes"]:
+            self._instrument(n["id"], n["is_batch"], n["is_async"])
         self._live = threading.Thread(target=rewrite, name="flow-tracker", daemon=True)
         self._live.start()
         try:
@@ -598,6 +600,9 @@ class FlowTracker:
         finally:
             stop.set()
             self._live.join()
+            for node, cls in reversed(self._instrumented):  # The flow's nodes as they were: reusable, untracked.
+                node.__class__ = cls
+            self._instrumented.clear()
             self._flow_done = True
             self._write_html()
 
@@ -681,6 +686,7 @@ class FlowTracker:
 
         TrackerNode.__name__ = f"TrackerNode_{original_cls.__name__}"
         TrackerNode.__qualname__ = TrackerNode.__name__
+        self._instrumented.append((node, original_cls))
         node.__class__ = TrackerNode
 
     def _find_node(self, node_id):

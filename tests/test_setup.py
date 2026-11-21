@@ -158,3 +158,33 @@ def test_setup_asks_where_the_workspace_goes(tmp_path, monkeypatch):
 
     result = CliRunner().invoke(main, ["setup", str(tmp_path / "app"), "--harness", "claude"])
     assert "Workspace remote" not in result.output  # It has one: not asked again.
+
+
+def test_a_recipe_declares_its_schema_as_the_model_itself(tmp_path):
+    from honed.evolve import live
+
+    root = tmp_path / "app"
+    setup.setup_project(root, harness="claude", commit=False)
+    recipe = root / ".claude/skills/evolve/evolve.py"
+    recipe.write_text(recipe.read_text() + '''
+
+from typing import Annotated
+
+from pydantic import BaseModel
+from honed.resources import Ref
+
+
+class MyRated(BaseModel):
+    ref: Ref
+    usefulness: Annotated[str, USEFULNESS]
+
+
+class MyLesson(BaseModel):
+    summary: str
+    ratings: list[MyRated]
+
+
+SCHEMA = MyLesson  # No ReflectionSchema(...) around it.
+''')
+    begun = live.begin(root, harness="claude")
+    assert "summary" in begun.schema["properties"] and "root_cause_analysis" not in json.dumps(begun.schema)
