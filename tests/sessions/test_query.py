@@ -344,7 +344,7 @@ def test_cwd_expands_the_home_folder(tmp_path, monkeypatch):
 
 def test_help_explains_the_syntax_with_examples():
     output = CliRunner().invoke(main, ["sessions", "query", "--help"]).output
-    for part in ("Terms and operators", "Pattern types", "Filters", "Modifiers", "Examples", "a OR b", "lexical"):
+    for part in ("Terms and operators", "Pattern types", "Filters", "Modifiers", "Examples", "hnd s q", "a OR b", "lexical"):
         assert part in output
 
 

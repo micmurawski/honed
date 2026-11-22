@@ -51,6 +51,7 @@ nav:
   - Reference:
       - Runtime support: reference/runtimes.md
       - CLI: reference/cli.md
+      - Query language: reference/query.md
   - Development:
       - Contributing: development/index.md
       - Package releases: development/releases.md
