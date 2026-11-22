@@ -23,13 +23,19 @@ import json
 import sqlite3
 import subprocess
 from collections import defaultdict
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from honed.reflection import Prompt, Reflection
+
     from .index import SessionIndex
     from .models import SyncReport
+    from .session import Session
+    from .sessions import Sessions
+    from .threads import Thread
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS reflection_sources(id TEXT PRIMARY KEY, kind TEXT NOT NULL, root TEXT NOT NULL);
@@ -354,6 +360,13 @@ def _fill_legacy_segments(connection: sqlite3.Connection) -> None:
                                (judged[0], judged[-1], reflection_id))
 
 
+def furthest(domain: Sequence[str], ends: Iterable[str | None]) -> int | None:
+    """Coverage: the position in ``domain`` (event IDs, in order) of the furthest of ``ends`` (the last events
+    reflections judged) that it holds; None when it holds none of them."""
+    place = {identifier: i for i, identifier in enumerate(domain)}
+    return max((place[end] for end in ends if end in place), default=None)
+
+
 def refresh_coverage(connection: sqlite3.Connection) -> None:
     """Per session, question (``asked``) and revision: the furthest event its reflections judged, against the last
     event of the session (or of the thread its reflections judged); ``tail`` events are left after it."""
@@ -370,8 +383,7 @@ def refresh_coverage(connection: sqlite3.Connection) -> None:
         thread_ids = set(threads.split("\x1f"))
         domain = [event["id"] for event in events if event["id"] not in skipped
                   and ("" in thread_ids or len(thread_ids) != 1 or event["run_id"] in thread_ids)]
-        place = {identifier: i for i, identifier in enumerate(domain)}
-        covered = max((place[end] for end in ends.split("\x1f") if end in place), default=None)
+        covered = furthest(domain, ends.split("\x1f"))
         tail = len(domain) - (covered + 1 if covered is not None else 0)
         connection.execute("INSERT INTO reflection_coverage VALUES (?,?,?,?,?,?,?,?)",
                            (session_id, asked, revision, prompt,
@@ -392,3 +404,79 @@ def _record(connection: sqlite3.Connection, resolved: dict[str, dict[str, Any]])
             data["evidence"] = {**evidence, **segment}
             connection.execute("UPDATE reflections SET data=? WHERE id=?",
                                (json.dumps(data, ensure_ascii=False), reflection_id))
+
+
+# --- partitioning histories by what reflections cover -------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Part:
+    """One session (or a thread of it) in a ``Partition``: the reflections on it that ask the question, and what
+    they leave: ``tail`` events from ``tail_from`` on."""
+
+    history: Session | Thread
+    reflections: tuple[Reflection, ...] = ()
+    tail: int = 0
+    tail_from: str | None = None
+
+    @property
+    def session(self) -> Session:
+        return self.history.session
+
+
+@dataclass(frozen=True)
+class Partition:
+    """Histories by what earlier reflections cover of them (``Sessions.partition``): ``covered`` need no new
+    reflection, ``partial`` only one on their tail, ``unreflected`` one on all of them."""
+
+    covered: tuple[Part, ...] = ()
+    partial: tuple[Part, ...] = ()
+    unreflected: tuple[Part, ...] = ()
+
+    @property
+    def sourced(self) -> list[Reflection]:
+        """The existing reflections to take: those on covered and partly covered histories."""
+        return [reflection for part in (*self.covered, *self.partial) for reflection in part.reflections]
+
+    def __str__(self) -> str:
+        return (f"{len(self.covered)} covered, {len(self.partial)} partly covered, "
+                f"{len(self.unreflected)} not reflected on")
+
+
+def partition(sessions: Sessions, histories: Sequence[Session | Thread], prompt: str | Prompt, schema: Any, *,
+              revision: str, tail_min: int = 1) -> Partition:
+    """See ``Sessions.partition``."""
+    from honed.reflection import Prompt, Reflection
+    from honed.reflection.prompts import schema_hash
+    from honed.reflection.reflector import fingerprint
+
+    from .events import records
+    from .query import any_of, quoted
+
+    same = [f"asked:{quoted(fingerprint(prompt, schema))}"]
+    if isinstance(prompt, Prompt) and prompt.name and prompt.version:
+        same.append(f"(prompt:{quoted(f'{prompt.name}@{prompt.version}')} schema:{quoted(schema_hash(schema))})")
+    question = f"revision:{quoted(revision)} {any_of('mode', ('in-session', 'handoff'))} ({' OR '.join(same)})"
+    parts: dict[str, list[Part]] = {"covered": [], "partial": [], "unreflected": []}
+    for history in histories:
+        found = sessions.query(f"select:reflection session:{quoted(history.session_id)} {question}")
+        rows = sorted((match.reflection for match in found if match.reflection is not None),
+                      key=lambda row: (row["at"], row["id"]))
+        domain = [event["id"] for event in records(history.selected_events)]
+        reached = [row for row in rows if row["to_event"] in set(domain)]
+        end = furthest(domain, (row["to_event"] for row in reached))
+        if end is None:
+            parts["unreflected"].append(Part(history))
+            continue
+        kept = tuple(Reflection.from_dict(_joined(row["data"], history.session), schema) for row in reached)
+        tail = len(domain) - end - 1
+        parts["partial" if tail >= tail_min else "covered"].append(
+            Part(history, kept, tail, domain[end + 1] if tail else None))
+    return Partition(*(tuple(parts[name]) for name in ("covered", "partial", "unreflected")))
+
+
+def _joined(data: dict[str, Any], session: Session) -> dict[str, Any]:
+    """A reflection's record with the session the index joined it to (by native ID or marker) in its evidence."""
+    data["evidence"] = {**(data.get("evidence") or {}), "session": session.id,
+                        "native_session": session.metadata.native_id}
+    return data

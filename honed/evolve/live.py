@@ -108,7 +108,7 @@ def judged(root: Path, harness: Harness, version: str | None = None) -> Judged:
         return Judged(_release(root, version), prompt, schema, True)
     agent = AgentConfig.from_installation(harness, root, name=root.name,
                                         ignore=["skill:reflect", "skill:evolve"])
-    return Judged(agent, default_prompt(), SCHEMA, False)
+    return Judged(agent, default_prompt(), ReflectionSchema.of(SCHEMA), False)
 
 
 def default_prompt() -> Prompt:
@@ -149,7 +149,7 @@ def _recipe(root: Path, harness: Harness) -> tuple[Prompt, ReflectionSchema]:
         schema = getattr(load_recipe(folder / "evolve.py"), "SCHEMA", SCHEMA)
     except (OSError, TypeError, ValueError, ImportError):
         schema = SCHEMA
-    return prompt, schema if isinstance(schema, ReflectionSchema) else SCHEMA
+    return prompt, ReflectionSchema.of(schema)  # The model itself (``SCHEMA = Lesson``), or a ReflectionSchema.
 
 
 def _files_folder(root: Path, release: AgentConfig) -> Path:
@@ -235,11 +235,10 @@ def submit(project: str | Path, marker: str, raw: Any) -> Accepted:
         except Exception:  # noqa: BLE001, S110 -- never lose an accepted reflection over reading transcripts
             pass
         sessions.add_reflection(reflection)
-        row = sessions.index.connection.execute("SELECT session_id FROM reflections WHERE id=?",
-                                                (reflection.id,)).fetchone()
+        bound = sessions.count(f'select:reflection reflection:"{reflection.id}" bound:yes') > 0
         where = sessions.path
     state_file.unlink(missing_ok=True)
-    return Accepted(reflection, where, bool(row and row[0]))
+    return Accepted(reflection, where, bound)
 
 
 # --- citations of installed files ---------------------------------------------------------------------------------

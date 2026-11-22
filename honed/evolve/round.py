@@ -35,15 +35,14 @@ from typing import Any
 from honed.curation.curator import CurationTools
 from honed.harnesses import Harness
 from honed.reflection import Prompt, Reflection
-from honed.reflection.prompts import schema_hash
-from honed.reflection.reflector import events_digest, fingerprint
 from honed.resources import AgentConfig, bump_version
 from honed.resources.git import GitError, _git, agent_at, branch_name, commit, commit_journal, record_commits
-from honed.resources.journal import Journal, Reflected, load_journal
+from honed.resources.journal import Journal, load_journal
 from honed.resources.reflection import ReflectionSchema
 from honed.resources.workspace import JOURNAL_FILE
 from honed.sessions import Session, Sessions, Thread, default_index
-from honed.sessions.events import records
+from honed.sessions.query import quoted
+from honed.sessions.reflections import Partition
 
 from .defaults import SCHEMA
 from .estimate import Estimate, estimate
@@ -57,49 +56,14 @@ class Batch(list[Session]):
     """The sessions a round reflects on, newest first."""
 
 
-@dataclass(frozen=True)
-class Part:
-    """One session (or the thread of it a recipe reflects on) in a ``Partition``: the reflections on it that answer
-    the round's question at the release's revision, and what they leave: ``tail`` events from ``tail_from`` on."""
-
-    history: Session | Thread
-    reflections: tuple[Reflection, ...] = ()
-    tail: int = 0
-    tail_from: str | None = None
-
-    @property
-    def session(self) -> Session:
-        return self.history if isinstance(self.history, Session) else self.history.session
-
-
-@dataclass(frozen=True)
-class Partition:
-    """A round's sessions by what earlier reflections cover of them (``Evolution.partition``): ``covered`` need no
-    new reflection, ``partial`` only one on their tail, ``unreflected`` one on all of them."""
-
-    covered: tuple[Part, ...] = ()
-    partial: tuple[Part, ...] = ()
-    unreflected: tuple[Part, ...] = ()
-
-    @property
-    def sourced(self) -> list[Reflection]:
-        """The existing reflections the round takes: those on covered and partly covered sessions."""
-        return [reflection for part in (*self.covered, *self.partial) for reflection in part.reflections]
-
-    def __str__(self) -> str:
-        return (f"{len(self.covered)} covered, {len(self.partial)} partly covered, "
-                f"{len(self.unreflected)} not reflected on")
-
-
 class Evolution:
-    """What a recipe's ``propose(evolution)`` is given: the project's sessions, a candidate per harness, and where a
-    stopped round left off. Made by ``run``."""
+    """What a recipe's ``propose(evolution)`` is given: the round (its release, folder and log), the project's sessions
+    with the reflections on them, and candidates of the release, a stopped round's if it made them. Made by ``run``."""
 
     def __init__(self, project: Path, release: AgentConfig, round_id: str, folder: Path, sessions: Sessions,
-                 harnesses: Sequence[str], since: datetime | None, *, progress: Path | None = None,
-                 estimate_only: bool = False):
-        self.project, self.release, self.round, self.folder_path = project, release, round_id, folder
-        self._sessions, self.harnesses, self._since = sessions, list(harnesses), since
+                 harness: str, since: datetime | None, *, progress: Path | None = None, estimate_only: bool = False):
+        self.project, self.release, self.round, self.folder = project, release, round_id, folder
+        self._sessions, self.harness, self._since = sessions, harness, since
         self.estimate_only = estimate_only  # ``honed evolve --estimate``: the recipe stops after ``estimate``.
         self.estimated: Estimate | None = None
         self._reflections_registered = False
@@ -142,14 +106,13 @@ class Evolution:
         """The sessions of ``harness`` (default: the harness the project evolves) run in the project with the installed
         release, newest first: started after ``since`` (an age or a time) and after the release was installed, never
         one that ran ``/evolve``. At most ``limit``."""
-        harnesses = [harness] if harness is not None else self.harnesses
+        harness = harness or self.harness
         cutoff = datetime.now(UTC) - since if isinstance(since, timedelta) else since
         cutoffs = [moment for moment in (cutoff, self._since) if moment is not None]
-        for name in harnesses:
-            self._sessions.add_harness_store(name, self.project)  # type: ignore[arg-type]
+        self._sessions.add_harness_store(harness, self.project)  # type: ignore[arg-type]
         self._register_reflections()
-        terms = ["select:session", f"cwd:{_quoted(str(Path(self.project).resolve()))}",
-                 f'-call:{_quoted(EVOLVE_COMMAND)}', "(" + " OR ".join(f"harness:{name}" for name in harnesses) + ")"]
+        terms = ["select:session", f"cwd:{quoted(str(Path(self.project).resolve()))}",
+                 f'-call:{quoted(EVOLVE_COMMAND)}', f"harness:{quoted(harness)}"]
         if cutoffs:
             terms.append(f"after:{max(cutoffs).astimezone(UTC).isoformat()}")
         found = [match.session for match in self._sessions.query(" ".join(terms))]
@@ -165,156 +128,45 @@ class Evolution:
             self._reflections_registered = True
         self._sessions.sync(source_ids=[])
 
-    def keep(self, reflection: Reflection) -> str:
-        """Keep a new reflection in the session index, beside the session it judged, so later rounds (and queries)
-        find it; returns its ID."""
-        return self._sessions.add_reflection(reflection)
+    def record(self, candidate: AgentConfig, reflection: Reflection) -> None:
+        """Record a new reflection in ``candidate``, and keep it in the session index beside the session it judged,
+        so later rounds (a resumed or discarded one's next included) and queries find it."""
+        self._sessions.add_reflection(reflection)
+        candidate.add_reflection(reflection)
 
     def partition(self, histories: Sequence[Session | Thread], prompt: str | Prompt,
-                  schema: ReflectionSchema = SCHEMA, *, revision: str | None = None, match: str = "version",
-                  modes: Sequence[str] = ("in-session", "handoff"), tail_min: int = 1) -> Partition:
-        """Split ``histories`` by what earlier reflections cover of them: reflections (in the index: files, journals,
-        in-session ones) on that session, of ``revision`` (default: the release's), in one of ``modes``, that answer
-        ``prompt`` with ``schema``. ``match`` says which earlier prompts count as the same question: ``"hash"`` (the
-        same text), ``"version"`` (the same ``name@version``, or the same text) or ``"name"`` (any version).
-
-        A session is covered when fewer than ``tail_min`` of its events (of a thread: of the thread's) come after
-        the furthest event its reflections judged; partly covered when more do; not reflected on when no reflection
-        reaches into it. Reflections of other revisions are never taken: their citations are of other lines."""
+                  schema: ReflectionSchema | Any = SCHEMA, *, tail_min: int = 1) -> Partition:
+        """``histories`` by what the reflections of the release's revision cover of them (``Sessions.partition``):
+        in-session ones, and those earlier rounds handed off, a stopped or discarded one's included. Reflections of
+        other revisions are never taken: their citations are of other lines."""
         self._register_reflections()
-        revision = revision or self.release.revision
-        asked = fingerprint(prompt, schema)
-        named = prompt if isinstance(prompt, Prompt) and prompt.name else None
-        if match not in {"hash", "version", "name"}:
-            raise ValueError(f"match must be hash, version or name, not {match!r}")
-        conditions: list[str] = ["asked = ?"]
-        params: list[Any] = [asked]
-        if named is not None and match in {"version", "name"}:
-            same = "prompt_name = ? AND schema_hash = ?" + (" AND prompt_version = ?" if match == "version" else "")
-            conditions.append(f"({same})")
-            params += [named.name, schema_hash(schema), *([named.version] if match == "version" else [])]
-        covered: list[Part] = []
-        partial: list[Part] = []
-        unreflected: list[Part] = []
-        connection = self._sessions.index.connection
-        for history in histories:
-            rows = connection.execute(
-                f"SELECT data, to_event FROM reflections WHERE session_id = ? AND revision = ? "
-                f"AND mode IN ({','.join('?' for _ in modes)}) AND ({' OR '.join(conditions)}) ORDER BY at, id",
-                (session_id(history), revision, *modes, *params)).fetchall()
-            ids = [event["id"] for event in records(history.selected_events)]
-            place = {identifier: i for i, identifier in enumerate(ids)}
-            reached = [row for row in rows if row["to_event"] in place]
-            if not reached:
-                unreflected.append(Part(history))
-                continue
-            furthest = max(place[row["to_event"]] for row in reached)
-            kept = tuple(Reflection.from_dict(_bound(json.loads(row["data"]), history), schema) for row in reached)
-            tail = len(ids) - furthest - 1
-            part = Part(history, kept, tail, ids[furthest + 1] if tail else None)
-            (partial if tail >= tail_min else covered).append(part)
-        return Partition(tuple(covered), tuple(partial), tuple(unreflected))
-
-    def source(self, candidate: AgentConfig, reflections: Sequence[Reflection]) -> int:
-        """Record existing ``reflections`` in ``candidate`` (no model call); those its journal holds already, or that
-        judged another revision, are skipped. Returns how many were recorded."""
-        journal = candidate.reload().journal
-        recorded = 0
-        for reflection in reflections:
-            if journal.reflection(reflection.id) is not None or reflection.revision != candidate.revision:
-                continue
-            try:
-                candidate.add_reflection(reflection)
-            except ValueError as error:  # E.g. a citation the files do not have: the rest still count.
-                self.log.warning(f"{reflection.id}: not sourced ({error})")
-                continue
-            recorded += 1
-        return recorded
+        return self._sessions.partition(histories, prompt, schema, revision=self.release.revision or "",
+                                        tail_min=tail_min)
 
     def estimate(self, sessions: Sequence[Session | Thread], runtime: str, *, curations: int = 1,
-                 prompt: str | Prompt | None = None, schema: ReflectionSchema = SCHEMA,
-                 sourced: int = 0) -> Estimate:
+                 reused: int = 0) -> Estimate:
         """What reflecting on ``sessions`` with ``runtime`` and curating ``curations`` times will cost, from the size of
-        the sessions and the cost of earlier runs in this workspace (see ``estimate``); logged, and kept for the
-        proposal. With ``prompt``, sessions already reflected on with it (``remembered``) cost nothing, and so do the
-        ``sourced`` ones whose reflections are taken from a ``partition`` (counted as reused). A recipe calls it
-        before reflecting, and stops when ``estimate_only`` is set."""
-        fresh = [s for s in sessions if prompt is None or self.remembered(s, prompt, schema) is None]
-        reused = len(sessions) - len(fresh) + sourced
-        self.estimated = estimate(fresh, runtime, self.release, curations=curations, reused=reused)
+        the sessions and the cost of earlier runs in this workspace (see ``estimate``); ``reused`` sessions, whose
+        reflections a ``partition`` takes, cost nothing. Logged, and kept for the proposal. A recipe calls it before
+        reflecting, and stops when ``estimate_only`` is set."""
+        self.estimated = estimate(sessions, runtime, self.release, curations=curations, reused=reused)
         self.log.info(f"estimate: {self.estimated}")
         return self.estimated
-
-    def remembered(self, session: Session | Thread, prompt: str | Prompt, schema: ReflectionSchema = SCHEMA,
-                   revision: str | None = None) -> Reflected | None:
-        """An earlier reflection on exactly ``session`` (the same events), of ``revision`` (default: the installed
-        release's), asked ``prompt`` with ``schema``: kept in the journal of any branch of the workspace, such as a
-        candidate of a round whose proposal was discarded or changed nothing. Reusing it costs nothing. A thread
-        (such as a session's root thread) is matched by its session and the thread's own events."""
-        self._register_reflections()
-        row = self._sessions.index.connection.execute(
-            "SELECT data FROM reflections WHERE session_id = ? AND events_digest = ? AND revision = ? AND asked = ? "
-            "ORDER BY at DESC, id LIMIT 1",
-            (session_id(session), events_digest(session), revision or self.release.revision,
-             fingerprint(prompt, schema))).fetchone()
-        return None if row is None else Reflected.model_validate(json.loads(row["data"]))
-
-    def recall(self, session: Session | Thread, candidate: AgentConfig, prompt: str | Prompt,
-               schema: ReflectionSchema = SCHEMA) -> Reflection | None:
-        """Record in ``candidate`` the reflection on ``session`` that an earlier round made (see ``remembered``), and
-        return it; None when there is none, and the session has to be reflected on."""
-        kept = self.remembered(session, prompt, schema, candidate.revision)
-        if kept is None:
-            return None
-        reflection = Reflection.from_dict(kept.model_dump(mode="json"), schema)
-        if candidate.reload().journal.reflection(reflection.id) is None:
-            candidate.add_reflection(reflection)
-        return reflection
 
     def candidate(self, name: str = "candidate") -> AgentConfig:
         """A candidate: a worktree of the release on ``honed/candidate/<round>/<name>``; the one a stopped round made,
         if there is one. A recipe that curates several in parallel names each, and merges them."""
-        folder = self.folder("candidates") / name
+        folder = self.folder / "candidates" / name
         if folder.exists():
             return AgentConfig.from_workspace(folder)
         root = self.release.workspace
         assert root is not None
         return self.release.to_worktree(folder, branch=branch_name(root, "candidate", f"{self.round}/{name}"))
 
-    def reflected(self, session: Session | Thread, candidate: AgentConfig) -> bool:
-        """Whether ``candidate``'s journal already holds a reflection on ``session`` that reaches its last event (a
-        stopped round's; a sourced one on only part of the session does not count)."""
-        ids = [event["id"] for event in records(session.selected_events)]
-        last = ids[-1] if ids else None
-        return any(kept.session == session_id(session) and kept.revision == candidate.revision
-                   and kept.evidence.get("to_event", last) == last
-                   for kept in candidate.reload().journal.reflections)
-
-    def reflections(self, candidate: AgentConfig, schema: ReflectionSchema = SCHEMA) -> list[Reflection]:
-        """The reflections on sessions that ``candidate``'s journal holds for its revision, read with ``schema``."""
-        journal = candidate.reload().journal
-        return [Reflection.from_dict(kept.model_dump(mode="json"), schema) for kept in journal.reflections
-                if kept.revision == candidate.revision and kept.session is not None]
-
     def curated(self, candidate: AgentConfig) -> bool:
-        """Whether a stopped round already curated ``candidate``."""
-        root = candidate.workspace
-        return root is not None and _git(root, "log", "-1", "--format=%s").decode().startswith("Record curation")
-
-    def merged(self) -> AgentConfig | None:
-        """The merged candidate a stopped round made, if there is one."""
-        folder = self.folder("merged")
-        return AgentConfig.from_workspace(folder) if (folder / ".git").exists() else None
-
-    def provenance(self, session: Session) -> str:
-        """What the reflector should know about how ``session`` ran: which configuration was installed for it."""
-        return (f"The session ran in this project with {self.release.name} {self.release.version} installed for "
-                f"{session.metadata.harness}: the files you are given, which the harness loaded when the session "
-                "started.")
-
-    def folder(self, name: str) -> Path:
-        """A path in this round's folder (not created)."""
-        return self.folder_path / name
+        """Whether a stopped round already curated ``candidate``: its journal records a curation the release's does
+        not."""
+        return bool(candidate.reload().journal.curations - self.release.journal.curations)
 
     def nothing(self, reason: str) -> None:
         """Say why the round proposes nothing (``propose`` then returns None)."""
@@ -492,24 +344,6 @@ def load_recipe(path: Path) -> ModuleType:
     return module
 
 
-def _bound(data: dict[str, Any], history: Session | Thread) -> dict[str, Any]:
-    """A reflection's record with the session the index bound it to (by native ID or marker) in its evidence."""
-    session = history if isinstance(history, Session) else history.session
-    data["evidence"] = {**(data.get("evidence") or {}), "session": session.id,
-                        "native_session": session.metadata.native_id}
-    return data
-
-
-def _quoted(value: str) -> str:
-    """``value`` as one query value: quoted, its quotes and backslashes escaped."""
-    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
-
-
-def session_id(history: Session | Thread) -> str:
-    """The ID of the session ``history`` is, or is a thread of: what reflections on it record as their session."""
-    return history.id if isinstance(history, Session) else history.session_id
-
-
 def _changes(workspace: Path, base: str, head: str) -> tuple[Change, ...]:
     """The changes recorded between ``base`` and ``head``, with who made each."""
     commits = set(_git(workspace, "rev-list", f"{base}..{head}").decode().split())
@@ -583,7 +417,7 @@ def run(project: str | Path = ".", *, recipe: str | Path | Recipe | None = None,
             module = load_recipe(Path(recipe) if recipe is not None
                                  else recipe_folder(root, place.harness) / "evolve.py")
         with Sessions(default_index()) as sessions:  # Where sessions and their reflections are kept.
-            evolution = Evolution(root, release, round_id, folder, sessions, [place.harness],
+            evolution = Evolution(root, release, round_id, folder, sessions, place.harness,
                                   _installed_at(workspace, release), progress=progress_page(root),
                                   estimate_only=estimate_only)
             evolution.log.info(f"round {round_id} on {release.name} {release.version} ({place.harness})")
@@ -676,10 +510,10 @@ def amend(project: str | Path = ".", message: str = "", *, author: str = "user")
         return tools.commits[-1].changed
 
 
-def apply(project: str | Path = ".", *, push: bool = False) -> Applied:
-    """Release the open proposal, move the workspace's ``main`` to it, and install it. With ``push``, ``main`` and the
-    release branch are pushed to the workspace's ``origin``. The project then shows the submodule moved, next to the
-    installed files: commit them together."""
+def apply(project: str | Path = ".", *, push: bool | None = None) -> Applied:
+    """Release the open proposal, move the workspace's ``main`` to it, and install it. With ``push`` (by default,
+    when the workspace has a remote), ``main`` and the release branch are pushed to the workspace's ``origin``. The
+    project then shows the submodule moved, next to the installed files: commit them together."""
     place = _place(project)
     workspace = place.workspace
     with _locked(place.cache):
@@ -689,6 +523,8 @@ def apply(project: str | Path = ".", *, push: bool = False) -> Applied:
         if pending := _pending(workspace):
             raise ValueError(f"amend or undo the workspace's edits first: {pending}")
         remote = remote_of(place.root)
+        if push is None:
+            push = remote is not None
         if push and remote is None:
             raise ValueError("the workspace has no remote to push to: run `honed evolve remote URL` first")
         proposal_branch = _current_branch(workspace)
@@ -704,7 +540,7 @@ def apply(project: str | Path = ".", *, push: bool = False) -> Applied:
         released = AgentConfig.from_workspace(workspace)
         installed = released.install(place.harness, place.root, force=True).files
         if push:
-            _git(workspace, "push", "-q", "origin", "main", branch_name(workspace, "release", version))
+            _git(workspace, "push", "-q", "origin", main, branch_name(workspace, "release", version))
         return Applied(released.version or version, (place.harness,), tuple(installed), remote if push else None)
 
 
@@ -786,23 +622,12 @@ def _reflection_status(place: Place, release: AgentConfig | None) -> dict[str, A
         "index": str(default_index()),
     }
     with Sessions(default_index()) as sessions:
-        connection = sessions.index.connection
-        folder = str(place.root)
-        inside = "(s.cwd = ? OR s.cwd LIKE ? ESCAPE '\\')"
-        under = (folder, folder.replace("%", "\\%").replace("_", "\\_") + "/%")
-        bound = connection.execute(
-            f"SELECT count(*) FROM reflections x JOIN sessions s ON s.id = x.session_id WHERE {inside}",
-            under).fetchone()[0]
-        state["unbound"] = connection.execute(
-            "SELECT count(*) FROM reflections WHERE session_id IS NULL "
-            "AND json_extract(data, '$.evidence.project') = ?", (folder,)).fetchone()[0]
-        state["reflections"] = bound + state["unbound"]
+        project = f"cwd:{quoted(str(place.root))}"
+        state["unbound"] = sessions.count(f"select:reflection {project} bound:no")
+        state["reflections"] = sessions.count(f"select:reflection {project}")
         if release is not None:
-            where = f"s.harness = ? AND {inside}"
-            params = (place.harness, *under)
-            total = connection.execute(f"SELECT count(*) FROM sessions s WHERE {where}", params).fetchone()[0]
-            reflected = connection.execute(
-                f"SELECT count(*) FROM sessions s WHERE {where} AND EXISTS (SELECT 1 FROM reflections x "
-                "WHERE x.session_id = s.id AND x.revision = ?)", (*params, release.revision)).fetchone()[0]
+            ours = f"select:session {project} harness:{quoted(place.harness)}"
+            total = sessions.count(ours)
+            reflected = sessions.count(f"{ours} revision:{quoted(release.revision or '')}")
             state["sessions_reflected"] = f"{reflected} of {total} indexed session(s) on {release.version}"
     return state

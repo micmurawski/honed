@@ -14,6 +14,7 @@ from honed import evolve
 from honed.curation import Curator
 from honed.reflection import Reflector
 from honed.resources import AgentConfig, install
+from honed.sessions.events import records
 
 from .test_curation import ScriptedCurator, edit
 from .test_reflection import GOOD, SCHEMA, Scripted, answer
@@ -80,8 +81,7 @@ def test_install_adopts_the_harness_configuration_beside_the_evolve_skill(projec
     setup = evolve.install_evolve_skill(project, "claude")
     workspace = project / WORKSPACE
     assert git(workspace, "rev-parse", "--abbrev-ref", "HEAD") == "main"  # A repository of its own…
-    assert git(project, "ls-files", "--stage", WORKSPACE).startswith("160000")  # …added as a submodule.
-    assert "path = .honed/workspace" in (project / ".gitmodules").read_text()
+    assert not (project / ".gitmodules").exists()  # …kept out of the project until it has a remote.
     assert not git(project, "for-each-ref", "refs/heads/honed")  # No workspace branches in the project.
     assert setup.agent.name == "app" and set(setup.agent.skills) == {"retry"}
     assert setup.agent.ignore == ["skill:evolve", "skill:reflect"] and not setup.agent.frozen  # Never evolved.
@@ -92,7 +92,7 @@ def test_install_adopts_the_harness_configuration_beside_the_evolve_skill(projec
     record = json.loads((project / ".honed/installed.json").read_text())["agents"]
     assert ".claude/skills/evolve/SKILL.md" in record["honed-evolve"]["harnesses"]["claude"]["files"]
     ignored = set((project / ".gitignore").read_text().splitlines())
-    assert "/.honed/cache/" in ignored and "/.honed/workspace/" not in ignored
+    assert "/.honed/cache/" in ignored and "/.honed/workspace/" in ignored
     assert git(project, "rev-parse", "--abbrev-ref", "HEAD") == "main"  # The project's checkout is untouched.
     status = evolve.status(project)
     assert status["installed"] == "1.0.0" and status["runtime"] == "claude" and status["harness"] == "claude"
@@ -138,7 +138,7 @@ def test_a_round_proposes_amends_and_applies(project):
     assert git(workspace, "rev-parse", "--abbrev-ref", "HEAD") == "main"
     branches = git(workspace, "for-each-ref", "--format=%(refname:short)", "refs/heads").split()
     assert "release/1.0.1" in branches and not any("proposal" in b for b in branches)
-    assert git(project, "status", "--porcelain", WORKSPACE).endswith("M .honed/workspace")  # The submodule moved.
+    assert git(project, "status", "--porcelain", WORKSPACE) == ""  # Local, so not the project's (no submodule).
     assert AgentConfig.from_workspace(workspace).version == "1.0.1"
 
     installed = project / ".claude/skills/retry/SKILL.md"  # A hand edit before the next round…
@@ -176,7 +176,7 @@ def test_the_default_recipe_is_the_installed_one_and_waits_for_enough_sessions(p
     assert proposal.version is None and proposal.reason == "0 session(s) in the last 7 days; 3 needed"
     assert not (project / ".claude/skills/evolve/__pycache__").exists()
     page = Path(proposal.progress).read_text()  # The round's flow, as it ran: it stopped at "too few".
-    assert 'class="chip success">success' in page and "TooFew" in page and "0 claude session(s)" in page
+    assert 'class="chip success">success' in page and "too_few" in page and "0 claude session(s)" in page
 
 
 def test_the_default_recipe_shows_its_progress_and_proposes(project, monkeypatch):
@@ -214,7 +214,7 @@ def test_the_default_recipe_shows_its_progress_and_proposes(project, monkeypatch
     proposal = evolve.run(project)
     assert proposal.version == "1.0.1" and proposal.sessions == 3 and "max 2" in proposal.diff
     page = Path(proposal.progress).read_text()
-    assert page.count('class="chip success">success') == 5  # FindSessions, Partition, Source, Reflect, Curate.
+    assert page.count('class="chip success">success') == 5  # find_sessions, partition, source, reflect, curate.
     assert "3 claude session(s)" in page and "1 rating(s) (1 harmful)" in page and "Two tries are enough" in page
     assert f"{failed[0]}: no reflection (ended without a submission); going on without it" in page
     assert (project / ".honed/cache/progress.html").read_text() == page
@@ -272,16 +272,21 @@ def test_a_teammate_gets_the_workspace_with_the_project(project, tmp_path, monke
     assert evolve.status(clone)["remote"] == str(shared)
 
 
-def test_apply_pushes_the_workspace_when_asked(project, tmp_path, monkeypatch):
+def test_a_remote_makes_the_workspace_a_submodule_and_apply_pushes_to_it(project, tmp_path, monkeypatch):
+    for key, value in (("COUNT", "1"), ("KEY_0", "protocol.file.allow"), ("VALUE_0", "always")):
+        monkeypatch.setenv(f"GIT_CONFIG_{key}", value)  # Local paths as remotes, for the test.
     evolve.install_evolve_skill(project, "claude")
     evolve.run(project, recipe=scripted_recipe([("max 3", "max 2", "Two tries")], {}))
     with pytest.raises(ValueError, match="no remote"):
         evolve.apply(project, push=True)
     shared = tmp_path / "workspace.git"
     git(tmp_path, "init", "-q", "--bare", str(shared))
-    evolve.setup.set_remote(project, str(shared))
-    assert f"url = {shared}" in (project / ".gitmodules").read_text()
-    applied = evolve.apply(project, push=True)
+    evolve.setup.set_remote(project, str(shared))  # A local workspace gets its remote later.
+    assert git(shared, "rev-parse", "main") == git(project / WORKSPACE, "rev-parse", "main")  # Pushed now…
+    assert f"url = {shared}" in (project / ".gitmodules").read_text()  # …and a submodule of the project.
+    assert git(project, "ls-files", "--stage", WORKSPACE).startswith("160000")
+    assert "/.honed/workspace/" not in (project / ".gitignore").read_text()
+    applied = evolve.apply(project)  # Pushed by default, with a remote.
     assert applied.pushed == str(shared)
     assert git(shared, "rev-parse", "main") == git(project / WORKSPACE, "rev-parse", "main")
     assert git(shared, "rev-parse", "--verify", "release/1.0.1")
@@ -298,7 +303,7 @@ def test_a_round_can_be_estimated_first_and_stops_over_its_budget(project, monke
     estimated = evolve.run(project, estimate_only=True)
     assert estimated.version is None and estimated.estimate is not None and estimated.estimate.sessions == 3
     assert estimated.estimate.cost is None and "no cost history yet" in estimated.reason
-    assert estimated.estimate.tokens > 0 and "Stop" in Path(estimated.progress).read_text()
+    assert estimated.estimate.tokens > 0 and ">stop<" in Path(estimated.progress).read_text()
     assert not list((project / ".honed/cache/rounds").glob("*/candidates"))  # Nothing was set up for reflecting.
 
     recipe = project / ".claude/skills/evolve/evolve.py"
@@ -326,8 +331,10 @@ def test_a_later_round_reuses_the_reflections_of_one_that_was_discarded(project,
         def handoff(self, prompt, session, agent, schema, *, provenance=None, focus=None, judged_from=None):
             reflected.append(session.id)
             reflection = Reflector(runtime=Scripted([lesson])).reflect(prompt, agent, schema)
-            return dataclasses.replace(reflection, evidence={
-                "session": session.id, "digest": events_digest(session), "asked": fingerprint(prompt, schema)})
+            ids = [event["id"] for event in records(session.selected_events)]
+            return dataclasses.replace(reflection, mode="handoff", evidence={
+                "session": session.id, "digest": events_digest(session), "asked": fingerprint(prompt, schema),
+                "from_event": ids[0], "to_event": ids[-1]})
 
     def curator(harness, **options):
         def script(root, tool):
@@ -356,12 +363,12 @@ def test_a_later_round_reuses_the_reflections_of_one_that_was_discarded(project,
     again = evolve.run(project)
     assert again.version == "1.0.1" and "max 2" in again.diff
     assert len(reflected) == 3  # No reflector ran: the discarded round's reflections were reused.
-    assert "from an earlier round (no model call)" in Path(again.progress).read_text()
+    assert "3 covered, 0 partly covered, 0 not reflected on" in Path(again.progress).read_text()
     stamp = Path(first.progress).parent.name  # Rounds: the first, the estimate, this one.
     assert Path(again.progress).parent.name == f"{stamp}-3"
 
-    recipe = project / ".claude/skills/evolve/prompts/reflect.md"
-    recipe.write_text(recipe.read_text() + "\nAlso note anything slow.\n")  # A new question: reflect again.
+    recipe = project / ".claude/skills/evolve/prompts/reflect.md"  # A new question: reflect again.
+    recipe.write_text(recipe.read_text().replace("version: 1", "version: 2") + "\nAlso note anything slow.\n")
     evolve.discard(project)
     evolve.run(project)
     assert len(reflected) == 6
@@ -392,8 +399,11 @@ def test_the_recipe_can_reflect_on_root_threads_only(project, monkeypatch):
             handed.append(history)
             owner = history.session if isinstance(history, Thread) else history
             reflection = Reflector(runtime=Scripted([lesson])).reflect(prompt, agent, schema)
-            return dataclasses.replace(reflection, evidence={
-                "session": owner.id, "digest": events_digest(history), "asked": fingerprint(prompt, schema)})
+            ids = [event["id"] for event in records(history.selected_events)]
+            return dataclasses.replace(reflection, mode="handoff", evidence={
+                "session": owner.id, "digest": events_digest(history), "asked": fingerprint(prompt, schema),
+                "from_event": ids[0], "to_event": ids[-1],
+                **({"thread": history.id} if isinstance(history, Thread) else {})})
 
     def curator(harness, **options):
         def script(root, tool):
@@ -550,16 +560,12 @@ def test_a_round_sources_existing_reflections_and_reflects_only_on_the_rest(proj
     evolve.discard(project)
 
     handed.clear()
-    recipe = project / ".claude/skills/evolve/evolve.py"
-    recipe.write_text(recipe.read_text().replace("SOURCE = True", "SOURCE = False"))
-    evolve.run(project)
-    assert sorted(native for native, _, _ in handed) == ["s1", "s2", "s3"]  # Whatever covers them.
-    evolve.discard(project)
-    handed.clear()
 
-    prompt_file = project / ".claude/skills/evolve/prompts/reflect.md"  # Same version, new text: by hash, a new
-    prompt_file.write_text(prompt_file.read_text() + "\nAlso note anything slow.\n")  # question.
-    recipe.write_text(recipe.read_text().replace("SOURCE = False", "SOURCE = True")
-                      .replace('SOURCE_MATCH = "version"', 'SOURCE_MATCH = "hash"'))
+    prompt_file = project / ".claude/skills/evolve/prompts/reflect.md"  # New text, same version: the same question.
+    prompt_file.write_text(prompt_file.read_text() + "\nAlso note anything slow.\n")
+    evolve.run(project)
+    assert handed == []  # Every session is covered now, by the first round's reflections too.
+    evolve.discard(project)
+    prompt_file.write_text(prompt_file.read_text().replace("version: 1", "version: 2"))  # A new question.
     evolve.run(project)
     assert sorted(native for native, _, _ in handed) == ["s1", "s2", "s3"]

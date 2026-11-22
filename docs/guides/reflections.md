@@ -18,7 +18,7 @@ is yours.
 ```python
 from typing import Annotated
 from pydantic import BaseModel, Field
-from honed.resources import CategoricalScale, NumericScale, Ref, ReflectionSchema
+from honed.resources import CategoricalScale, NumericScale, Ref
 
 usefulness = CategoricalScale("usefulness", {"harmful": "…", "neutral": "…", "helpful": "…"}, ordered=True)
 
@@ -32,9 +32,11 @@ class Lesson(BaseModel):
     key_insight: str = Field(description="What should be remembered?")
     ratings: list[Rated]
     see_also: list[Ref] = []
-
-schema = ReflectionSchema(Lesson)
 ```
+
+`Lesson` is the schema: pass it as it is to `Reflector.reflect`/`handoff`, `Submission`, `Evolution.partition`, or
+as a recipe's `SCHEMA`. They wrap it in a `ReflectionSchema` themselves; build one only for the
+`ReflectionSchema(scale, Metadata)` shorthand below, or to inspect its `scales`.
 
 Scales are `CategoricalScale` (labels, optionally ordered from worst to best, each with a meaning),
 `LabelScale` (open-ended tags), and `NumericScale` (bounded numbers). Descriptions of fields, labels,

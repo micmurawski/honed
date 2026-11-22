@@ -3,6 +3,16 @@ from typing import Any
 import click
 
 
+class AliasedCommand(click.Command):
+    """A standalone command that declares ``aliases``, for adding to an ``AliasedGroup`` with ``add_command``:
+    ``@click.command(cls=AliasedCommand, aliases=["su"])``.
+    """
+
+    def __init__(self, *args: Any, aliases: tuple[str, ...] | list[str] = (), **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.aliases = list(aliases)
+
+
 class AliasedGroup(click.Group):
     """A group whose subcommands may declare ``aliases``; they resolve to the command and show in help.
 
