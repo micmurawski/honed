@@ -21,6 +21,9 @@ with Sessions("sessions.sqlite") as sessions:
     session = sessions.get(records[0].id)                     # any ID, native ID, or unique prefix
 ```
 
+The query language — terms, filters, modifiers and many examples — is described in
+[Query language](../reference/query.md); `honed sessions query --help` prints a summary.
+
 ## Trajectories
 
 A **trajectory** is one user prompt and the subsequent recorded work in a single thread. The split

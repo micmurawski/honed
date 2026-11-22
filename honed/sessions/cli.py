@@ -173,9 +173,10 @@ def query_command(
     needs some event in that thread or session, and a negated term needs none.
 
     \b
-    Examples
+    Examples (`hnd s q` is short for `honed sessions query`)
       # Root threads that ran graphify in a shell
       honed sessions query shell:graphify at:root select:thread
+      hnd s q shell:graphify at:root select:thread
     \b
       # Failed pytest runs in the last week, as JSON
       honed sessions query --json 'shell.startswith:pytest status:failure after:7d'
