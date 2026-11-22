@@ -37,4 +37,5 @@ artifacts/
 archive/
 .rtk/
 /.honed/cache/
+/.honed/workspace/
 RELEASE_PLAN.md
