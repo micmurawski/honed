@@ -8,16 +8,13 @@ The index defaults to `$HONED_INDEX`, else `~/.honed/learning.sqlite`. It keeps 
 
 | Command | Does |
 | --- | --- |
-| `add PATHS… [--harness H] [--format native\|dataclaw] [--source-id ID] [--no-sync]` | Register transcript directories and synchronize them. |
-| `sources` | Show registered sources. |
-| `sync [--source-id ID]` | Read new and changed transcripts. |
-| `list [--harness H] [--since T] [--until T] [--json]` | Indexed sessions, newest first. |
-| `search [TEXT] [--mode literal\|lexical] [--kind K] [--tool T] [--status S] [--json]` | Events matching text and filters. |
-| `show EVENT_ID [--context N]` | An event with its surrounding events. |
-| `trajectories SESSION` (alias `t`) | A session's trajectories. |
-| `render [SESSION] [--trajectory N] [--through] [--format F] [--best-effort]` | Markdown, or a harness's transcript format. |
-| `install [REFERENCES…] --to H [--trajectory N] [--through] [--all]` | Install sessions where a harness can resume or fork them. |
-| `trace RUN` | A run's sub-agent runs and delegations. |
+| `sync [PATHS…] [--harness H] [--format native\|dataclaw] [--source-id ID]` (alias `sy`) | Register transcript directories as sources, then read new and changed transcripts. |
+| `query QUERY [--limit N] [--offset N] [--json] [--fields]` (alias `q`) | Events, threads, sessions or reflections matching a query; see [Query language](query.md). |
+| `show EVENT_ID [--context N]` (alias `sh`) | An event with its surrounding events. |
+| `trajectories [SESSION]` (alias `t`) | A session's trajectories. |
+| `render [SESSION] [--trajectory N] [--through] [--format F] [--best-effort]` (alias `r`) | Markdown, or a harness's transcript format. |
+| `install [REFERENCES…] --to H [--trajectory N] [--through]` (alias `i`) | Install sessions where a harness can resume or fork them. |
+| `graph COMMAND` (alias `g`) | Graph the sessions a query selected, and query the graphs (`graph query`). |
 
 ```text
 honed report WORKSPACE [-o report.html] [--ref BRANCH …] [--reflections DIR]
